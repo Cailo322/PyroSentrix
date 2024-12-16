@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "793357600802",
+    "firebase_url": "https://firedetection-640fa-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "firedetection-640fa",
+    "storage_bucket": "firedetection-640fa.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793357600802:android:727a8bada0efce1ff5227b",
+        "android_client_info": {
+          "package_name": "com.example.pyrosentrixapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDK4C83XSNbmLaVyV8x4lMoECU95CsxKBQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793357600802:android:d08b0e102a1b045af5227b",
+        "android_client_info": {
+          "package_name": "firebase.package.firedetection"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDK4C83XSNbmLaVyV8x4lMoECU95CsxKBQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
