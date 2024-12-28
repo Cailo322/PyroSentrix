@@ -1,13 +1,22 @@
 buildscript {
-    ext.kotlin_version = '1.8.22' // Ensure this version is compatible with your Firebase libraries
+    ext {
+        // Define the Kotlin version here
+        kotlin_version = '1.7.10'  // Replace with the Kotlin version you need
+    }
+
     repositories {
-        google()
-        mavenCentral()
+        google()  // Required for Google's services
+        mavenCentral()  // General repository for other dependencies
     }
     dependencies {
+        // Kotlin Gradle plugin (replace $kotlin_version with the actual version you're using)
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath 'com.android.tools.build:gradle:7.0.4'
-        classpath 'com.google.gms:google-services:4.3.15'  // Firebase plugin
+
+        // Android Gradle plugin (ensure the version is appropriate for your Android Studio version)
+        classpath 'com.android.tools.build:gradle:8.2.1'  // Updated to the latest version
+
+        // Google Services plugin for Firebase and other services
+        classpath 'com.google.gms:google-services:4.3.15'  // Updated to the latest version
     }
 }
 
