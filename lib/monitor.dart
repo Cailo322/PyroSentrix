@@ -114,12 +114,22 @@ class MonitorScreen extends StatelessWidget {
                               backgroundColor: Colors.red,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                             ),
-                            onPressed: () {
-                              // Acknowledge alerts when HUSH is pressed
-                              _acknowledgedAlerts.addAll(exceededWarningsForDialog);
-                              _notificationService.stopAlarmSound();
-                              _isDialogOpen = false;
-                              Navigator.of(context).pop();
+                            onPressed: () async {
+                              try {
+                                // Update the isHushed variable in Firestore
+                                await FirebaseFirestore.instance
+                                    .collection('BooleanConditions')
+                                    .doc('Alarm')
+                                    .update({'isHushed': true}); // Update the isHushed field to true
+
+                                // Acknowledge alerts when HUSH is pressed
+                                _acknowledgedAlerts.addAll(exceededWarningsForDialog);
+                                _notificationService.stopAlarmSound();
+                                _isDialogOpen = false;
+                                Navigator.of(context).pop();
+                              } catch (e) {
+                                print('Error updating Firestore: $e');
+                              }
                             },
                             child: Text('HUSH', style: TextStyle(color: Colors.white)),
                           ),
