@@ -24,53 +24,61 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _confirmPasswordController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
 
-  // Your Google API key for Geocoding (Make sure to store it securely, do not expose in production)
   final String googleApiKey = 'AIzaSyD21izdTx2qn4vPFcFzkSDB5xhdWxtoXuM';
 
-  // Function to request location permission and fetch current address
+  String? _emailError;
+  String? _passwordError;
+
+  List<String> _passwordRequirements = [
+    "At least 8 characters",
+    "At least 1 special character",
+    "At least 1 capital letter",
+  ];
+  Map<String, bool> _passwordStatus = {
+    "At least 8 characters": false,
+    "At least 1 special character": false,
+    "At least 1 capital letter": false,
+  };
+
+  void _updatePasswordStatus(String password) {
+    setState(() {
+      _passwordStatus["At least 8 characters"] = password.length >= 8;
+      _passwordStatus["At least 1 special character"] =
+          RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password);
+      _passwordStatus["At least 1 capital letter"] =
+          RegExp(r'[A-Z]').hasMatch(password);
+    });
+  }
+
   Future<void> _getCurrentLocation() async {
-    // Request location permission
     PermissionStatus permission = await Permission.location.request();
 
     if (permission.isGranted) {
-      // Get current location
       Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-
-      // Log position to verify lat/lon
       print('Current Position: Lat: ${position.latitude}, Lon: ${position.longitude}');
-
-      // Call Google Geocoding API to convert lat/lon to address
       await _getAddressFromCoordinates(position.latitude, position.longitude);
     } else {
-      // If permission is denied, show a message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Location permission is required to use this feature')),
       );
     }
   }
 
-  // Function to get address from latitude and longitude using Google Geocoding API
   Future<void> _getAddressFromCoordinates(double latitude, double longitude) async {
     final String url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng=$latitude,$longitude&key=$googleApiKey';
 
-    // Send HTTP request to the Google Geocoding API
     try {
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
-        // Parse the response
         Map<String, dynamic> data = json.decode(response.body);
 
         if (data['status'] == 'OK') {
-          // Extract the formatted address from the response
           String address = data['results'][0]['formatted_address'];
-
-          // Update the address field with the human-readable address
           setState(() {
             _addressController.text = address;
           });
-
-          print('Address: $address'); // Log the result for debugging
+          print('Address: $address');
         } else {
           setState(() {
             _addressController.text = "Address not found";
@@ -93,53 +101,63 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _registerUser() async {
     if (_passwordController.text != _confirmPasswordController.text) {
-      // Show error if passwords do not match
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Passwords do not match')),
-      );
+      setState(() {
+        _passwordError = "Password does not match.";
+      });
       return;
+    } else {
+      setState(() {
+        _passwordError = null;
+      });
+    }
+
+    if (!_isValidEmail(_emailController.text.trim())) {
+      setState(() {
+        _emailError = "Please enter a valid email address.";
+      });
+      return;
+    } else {
+      setState(() {
+        _emailError = null;
+      });
     }
 
     try {
-      // Create user with email and password
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // Update display name
       await userCredential.user!.updateDisplayName(_nameController.text.trim());
-
-      // Send email verification
       await userCredential.user!.sendEmailVerification();
 
-      // Fetch fire stations based on user address
       final fireStations = await ApiService().fetchFireStations(_addressController.text.trim());
 
-      // Store user information in Firestore
       await _firestore.collection('users').doc(userCredential.user!.uid).set({
         'name': _nameController.text.trim(),
         'email': _emailController.text.trim(),
         'address': _addressController.text.trim(),
-        'fire_stations': fireStations, // Include fire stations with contact info
+        'fire_stations': fireStations,
       });
 
-      // Show message to check email for verification
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Registration successful! Please verify your email before logging in.')),
       );
 
-      // Navigate to verification screen
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => VerificationScreen()),
       );
     } catch (e) {
-      // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Registration failed: ${e.toString()}')),
       );
     }
+  }
+
+  bool _isValidEmail(String email) {
+    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    return emailRegex.hasMatch(email);
   }
 
   @override
@@ -158,14 +176,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Logo
               SizedBox(
                 width: 150,
                 height: 150,
                 child: Image.asset('assets/flashlogo.png'),
               ),
               SizedBox(height: 20),
-              // Register Title (No shadow applied here)
               Text(
                 'Register',
                 style: TextStyle(
@@ -176,7 +192,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               SizedBox(height: 5),
-              // Underline with Rounded Edges for Register Title
               Container(
                 height: 3,
                 width: 20,
@@ -186,47 +201,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               SizedBox(height: 20),
-              // Name Input
               _buildTextInput('Enter Name', _nameController),
               SizedBox(height: 20),
-              // Email Input
-              _buildTextInput('Enter Email', _emailController),
+              _buildEmailInput(),
               SizedBox(height: 20),
-              // Password Input
-              _buildPasswordInput('Enter Password', _passwordController),
+              _buildPasswordInput('Enter Password', _passwordController, showRequirements: true),
               SizedBox(height: 20),
-              // Confirm Password Input
-              _buildPasswordInput('Confirm Password', _confirmPasswordController),
+              _buildPasswordInput('Confirm Password', _confirmPasswordController, error: _passwordError, showRequirements: false),
               SizedBox(height: 20),
-              // Address Input
               _buildTextInput('Enter Address', _addressController),
               SizedBox(height: 10),
-              // Use Current Location Text
               GestureDetector(
                 onTap: _getCurrentLocation,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Image.asset(
-                      'assets/location.png', // Location icon on the left
+                      'assets/location.png',
                       height: 20,
                       width: 20,
                     ),
-                    SizedBox(width: 8), // Spacing between the icon and text
+                    SizedBox(width: 8),
                     Text(
                       "Use my current location as my address",
                       style: TextStyle(
-                        color: Color(0xFF8B8B8B), // Text color
-                        fontSize: 14, // Smaller font size
+                        color: Color(0xFF8B8B8B),
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        decoration: TextDecoration.underline, // Underline the text
+                        decoration: TextDecoration.underline,
                       ),
                     ),
                   ],
                 ),
               ),
               SizedBox(height: 40),
-              // Done Button
               ElevatedButton(
                 onPressed: _registerUser,
                 style: ElevatedButton.styleFrom(
@@ -238,7 +246,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               SizedBox(height: 20),
-              // Login Redirect Text
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -265,7 +272,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.blue,
-                        decoration: TextDecoration.underline, // Underline the text
+                        decoration: TextDecoration.underline,
                       ),
                     ),
                   ),
@@ -278,7 +285,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // Helper method to build text input fields with box shadow
   Widget _buildTextInput(String labelText, TextEditingController controller) {
     return Container(
       width: 300,
@@ -327,8 +333,81 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // Helper method to build password input fields with box shadow
-  Widget _buildPasswordInput(String labelText, TextEditingController controller) {
+  Widget _buildEmailInput() {
+    return Container(
+      width: 300,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Enter Email',
+            style: TextStyle(
+              fontFamily: 'Jost',
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF494949),
+              shadows: [
+                Shadow(
+                  blurRadius: 3,
+                  color: Colors.black.withOpacity(0.2),
+                  offset: Offset(1, 1),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: _emailError != null ? Colors.orange[50] : Color(0xFFDDDDDD),
+              borderRadius: BorderRadius.circular(5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 5,
+                  offset: Offset(0, 2),
+                ),
+              ],
+              border: Border.all(
+                color: _emailError != null ? Colors.orange : Colors.transparent,
+                width: 2,
+              ),
+            ),
+            child: TextField(
+              controller: _emailController,
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(horizontal: 10),
+              ),
+            ),
+          ),
+          if (_emailError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Row(
+                children: [
+                  Image.asset(
+                    'assets/warning2.png', // Add the warning icon
+                    height: 16,
+                    width: 16,
+                  ),
+                  SizedBox(width: 8), // Add some space between the icon and the text
+                  Text(
+                    _emailError!,
+                    style: TextStyle(
+                      color: Colors.orange,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPasswordInput(String labelText, TextEditingController controller, {String? error, bool showRequirements = false}) {
     return Container(
       width: 300,
       child: Column(
@@ -353,7 +432,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
-              color: Color(0xFFDDDDDD),
+              color: error != null ? Colors.orange[50] : Color(0xFFDDDDDD),
               borderRadius: BorderRadius.circular(5),
               boxShadow: [
                 BoxShadow(
@@ -362,6 +441,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   offset: Offset(0, 2),
                 ),
               ],
+              border: Border.all(
+                color: error != null ? Colors.orange : Colors.transparent,
+                width: 2,
+              ),
             ),
             child: TextField(
               controller: controller,
@@ -370,10 +453,66 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(horizontal: 10),
               ),
+              onChanged: (value) {
+                if (showRequirements) {
+                  _updatePasswordStatus(value);
+                }
+              },
             ),
           ),
+          if (showRequirements) ...[
+            SizedBox(height: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _passwordRequirements.map((requirement) {
+                return Row(
+                  children: [
+                    Icon(
+                      _passwordStatus[requirement] == true
+                          ? Icons.check_circle
+                          : Icons.cancel,
+                      color: _passwordStatus[requirement] == true
+                          ? Colors.green
+                          : Colors.red,
+                      size: 16,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      requirement,
+                      style: TextStyle(
+                        color: _passwordStatus[requirement] == true
+                            ? Colors.green
+                            : Colors.red,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ],
+          if (error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Row(
+                children: [
+                  Icon(Icons.warning, color: Colors.orange, size: 16),
+                  SizedBox(width: 8),
+                  Text(
+                    error,
+                    style: TextStyle(
+                      color: Colors.orange,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
   }
+
 }
