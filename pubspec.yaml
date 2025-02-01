@@ -50,6 +50,7 @@ dependencies:
   geocoding: ^3.0.0
   url_launcher: ^6.1.7
   audioplayers: ^6.1.0
+  cached_network_image: ^3.2.3
 
 
 
@@ -96,6 +97,8 @@ flutter:
     - assets/caution.png
     - assets/warning.png
     - assets/reset.png
+    - assets/gallery.png
+    - assets/warning2.png
 
   fonts:
     - family: Jost

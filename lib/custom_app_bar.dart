@@ -232,15 +232,15 @@ class _CustomDrawerState extends State<CustomDrawer> {
             ),
             ListTile(
               leading: Image.asset(
-                'assets/devices.png',
+                'assets/gallery.png',
                 width: 28,
                 height: 28,
                 fit: BoxFit.contain,
               ),
-              title: Text('Picture',
+              title: Text('Images',
                   style: TextStyle(color: Color(0xFF494949), fontSize: 18)),
               onTap: () {
-                Navigator.pushNamed(context, '/DevicesScreen');
+                Navigator.pushNamed(context, '/ImageStreamScreen');
               },
             ),
             ListTile(
