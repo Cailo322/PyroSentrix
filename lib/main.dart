@@ -48,7 +48,7 @@ class MyApp extends StatelessWidget {
         '/LoginScreen': (context) => LoginScreen(),
         '/AboutScreen': (context) => AboutScreen(),
         '/ResetSystemScreen': (context) => ResetSystemScreen(),
-
+        '/devices': (context) => DevicesScreen(),
       },
     );
   }
