@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart'; // Add this import
+import 'package:cloud_firestore/cloud_firestore.dart'; // Add this import
 import 'package:esp_smartconfig/esp_smartconfig.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'custom_app_bar.dart';
@@ -11,6 +13,7 @@ class AddDeviceScreen extends StatefulWidget {
 
 class _AddDeviceScreenState extends State<AddDeviceScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance; // Firestore instance
   int _currentStep = 0; // Stepper state
   String? _scannedMacAddress; // Scanned MAC address
   String? _scannedProductId; // Scanned Product ID
@@ -85,7 +88,38 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
     }
   }
 
-  void _onDeviceProvisioned(ProvisioningResponse response) {
+  Future<void> _saveActivationDetails() async {
+    try {
+      // Get the current user
+      User? user = _auth.currentUser;
+      if (user == null) {
+        throw Exception("User not logged in");
+      }
+
+      // Get the current timestamp in the required format
+      String timestamp = DateTime.now().toUtc().toIso8601String();
+
+      // Save the activation details to Firestore
+      await _firestore.collection('ProductActivation').add({
+        'mac_address': _scannedMacAddress,
+        'product_code': _scannedProductId,
+        'user_email': user.email,
+        'timestamp': timestamp,
+      });
+
+      debugPrint("Activation details saved to Firestore");
+    } catch (e) {
+      debugPrint("Error saving activation details: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving activation details: $e')),
+      );
+    }
+  }
+
+  void _onDeviceProvisioned(ProvisioningResponse response) async {
+    // Save activation details to Firestore
+    await _saveActivationDetails();
+
     showDialog(
       context: context,
       builder: (context) {
