@@ -16,7 +16,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   bool _isLoading = false;
-  String? _errorMessage;
+  String? _emailErrorMessage;
+  String? _passwordErrorMessage;
 
   @override
   void initState() {
@@ -32,8 +33,30 @@ class _LoginScreenState extends State<LoginScreen> {
   void _loginUser(BuildContext context) async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
+      _emailErrorMessage = null;
+      _passwordErrorMessage = null;
     });
+
+    // Validate email and password
+    if (_emailController.text.trim().isEmpty) {
+      setState(() {
+        _emailErrorMessage = "Please enter your email.";
+      });
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+
+    if (_passwordController.text.trim().isEmpty) {
+      setState(() {
+        _passwordErrorMessage = "Please enter your password.";
+      });
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
 
     try {
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
@@ -59,16 +82,9 @@ class _LoginScreenState extends State<LoginScreen> {
         await _auth.signOut();
       }
     } on FirebaseAuthException catch (e) {
-      String message;
-      if (e.code == 'user-not-found') {
-        message = 'No user found for that email.';
-      } else if (e.code == 'wrong-password') {
-        message = 'Wrong password provided.';
-      } else {
-        message = e.message ?? 'An error occurred';
-      }
+      String message = 'Invalid Credentials'; // Unified error message
       setState(() {
-        _errorMessage = message;
+        _emailErrorMessage = message; // Display the message
       });
     } finally {
       setState(() {
@@ -128,18 +144,39 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               SizedBox(height: 20),
               // Email Input
-              _buildTextInput('Enter Email', _emailController),
-              SizedBox(height: 20),
-              // Password Input
-              _buildTextInput('Enter Password', _passwordController, obscureText: true),
-              SizedBox(height: 40),
-              // Error Message
-              if (_errorMessage != null)
-                Text(
-                  _errorMessage!,
-                  style: TextStyle(color: Colors.red),
+              _buildTextInput('Enter Email', _emailController, errorMessage: _emailErrorMessage),
+              if (_emailErrorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 40.0, top: 8.0), // Adjusted padding
+                  child: Row(
+                    children: [
+                      Image.asset('assets/warning2.png', width: 20, height: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        _emailErrorMessage!,
+                        style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
                 ),
               SizedBox(height: 20),
+              // Password Input
+              _buildTextInput('Enter Password', _passwordController, obscureText: true, errorMessage: _passwordErrorMessage),
+              if (_passwordErrorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 40.0, top: 8.0), // Adjusted padding
+                  child: Row(
+                    children: [
+                      Image.asset('assets/warning2.png', width: 20, height: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        _passwordErrorMessage!,
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+              SizedBox(height: 40),
               // Login Button or Loading Indicator
               _isLoading
                   ? CircularProgressIndicator()
@@ -196,7 +233,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // Helper method to build text input fields with drop shadow
-  Widget _buildTextInput(String labelText, TextEditingController controller, {bool obscureText = false}) {
+  Widget _buildTextInput(String labelText, TextEditingController controller, {bool obscureText = false, String? errorMessage}) {
     return Container(
       width: 300,
       child: Column(
@@ -221,8 +258,9 @@ class _LoginScreenState extends State<LoginScreen> {
           SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
-              color: Color(0xFFDDDDDD),
+              color: errorMessage != null ? Color(0xFFFFF2D5) : Color(0xFFDDDDDD), // Lighter orange if error
               borderRadius: BorderRadius.circular(5),
+              border: errorMessage != null ? Border.all(color: Colors.orange, width: 2) : Border.all(color: Colors.transparent),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),

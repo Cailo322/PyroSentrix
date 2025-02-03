@@ -232,6 +232,19 @@ class _CustomDrawerState extends State<CustomDrawer> {
             ),
             ListTile(
               leading: Image.asset(
+                'assets/gallery.png',
+                width: 28,
+                height: 28,
+                fit: BoxFit.contain,
+              ),
+              title: Text('Images',
+                  style: TextStyle(color: Color(0xFF494949), fontSize: 18)),
+              onTap: () {
+                Navigator.pushNamed(context, '/ImageStreamScreen');
+              },
+            ),
+            ListTile(
+              leading: Image.asset(
                 'assets/logout.png',
                 width: 28,
                 height: 28,

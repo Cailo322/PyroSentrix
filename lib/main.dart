@@ -13,6 +13,7 @@ import 'login.dart';
 import 'notification_service.dart'; // Add the notification service import
 import 'about.dart';
 import 'reset_system.dart';
+import 'imagestream.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +50,7 @@ class MyApp extends StatelessWidget {
         '/AboutScreen': (context) => AboutScreen(),
         '/ResetSystemScreen': (context) => ResetSystemScreen(),
         '/devices': (context) => DevicesScreen(),
+        '/ImageStreamScreen': (context) => ImageStreamScreen(),
       },
     );
   }

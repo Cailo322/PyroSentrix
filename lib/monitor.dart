@@ -16,6 +16,25 @@ class MonitorScreen extends StatelessWidget {
     _notificationService.initialize(); // Initialize notification service
   }
 
+  Future<Map<String, dynamic>?> fetchLatestImage() async {
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection('camera')
+          .orderBy('timestamp', descending: true)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        return querySnapshot.docs.first.data() as Map<String, dynamic>;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching latest image: $e');
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -84,10 +103,14 @@ class MonitorScreen extends StatelessWidget {
                 }
               }
 
-              // Show the alert dialog if new warnings exist
+              //Alert pop up
+
               if (exceededWarningsForDialog.isNotEmpty && !_isDialogOpen) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
+                WidgetsBinding.instance.addPostFrameCallback((_) async {
                   _isDialogOpen = true;
+
+                  // Fetch the latest image
+                  var latestImage = await fetchLatestImage();
 
                   showDialog(
                     context: context,
@@ -96,57 +119,79 @@ class MonitorScreen extends StatelessWidget {
                         content: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Image.asset('assets/warningpop.png', width: 48, height: 48),
-                            SizedBox(height: 10),
+                            // Text appears first
                             Text(
                               exceededWarningsForDialog.join("\n"),
-                              textAlign: TextAlign.center,
+                              textAlign: TextAlign.justify,
                               style: TextStyle(
                                 fontFamily: 'Inter',
+                                fontWeight: FontWeight.w600,
                                 color: Color(0xFF414141),
                               ),
                             ),
+                            SizedBox(height: 10), // Space between text and image
+                            // Show the latest image below the text
+                            if (latestImage != null)
+                              Image.network(
+                                latestImage['imageUrl'],
+                                width: 200,
+                                height: 200,
+                                fit: BoxFit.cover,
+                              ),
+                            if (latestImage == null)
+                              Image.asset('assets/warningpop.png', width: 48, height: 48),
+                            SizedBox(height: 20), // Space before the dividing line
+                            Divider(color: Colors.grey, thickness: 2), // Thicker dividing line
                           ],
                         ),
+                        actionsAlignment: MainAxisAlignment.center, // Center the buttons
                         actions: [
-                          TextButton(
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                            ),
-                            onPressed: () async {
-                              try {
-                                // Update the isHushed variable in Firestore
-                                await FirebaseFirestore.instance
-                                    .collection('BooleanConditions')
-                                    .doc('Alarm')
-                                    .update({'isHushed': true}); // Update the isHushed field to true
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              TextButton(
+                                style: TextButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                  padding: EdgeInsets.symmetric(horizontal: 17, vertical: 12), // Reduced padding
+                                ),
+                                onPressed: () async {
+                                  try {
+                                    // Update the isHushed variable in Firestore
+                                    await FirebaseFirestore.instance
+                                        .collection('BooleanConditions')
+                                        .doc('Alarm')
+                                        .update({'isHushed': true}); // Update the isHushed field to true
 
-                                // Acknowledge alerts when HUSH is pressed
-                                _acknowledgedAlerts.addAll(exceededWarningsForDialog);
-                                _notificationService.stopAlarmSound();
-                                _isDialogOpen = false;
-                                Navigator.of(context).pop();
-                              } catch (e) {
-                                print('Error updating Firestore: $e');
-                              }
-                            },
-                            child: Text('HUSH', style: TextStyle(color: Colors.white)),
-                          ),
-                          TextButton(
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                            ),
-                            onPressed: () {
-                              // Acknowledge alerts when CALL FIRESTATION is pressed
-                              _acknowledgedAlerts.addAll(exceededWarningsForDialog);
-                              _notificationService.stopAlarmSound();
-                              _isDialogOpen = false;
-                              Navigator.of(context).pop();
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => CallHelpScreen()));
-                            },
-                            child: Text('CALL FIRESTATION', style: TextStyle(color: Colors.white)),
+                                    // Acknowledge alerts when HUSH is pressed
+                                    _acknowledgedAlerts.addAll(exceededWarningsForDialog);
+                                    _notificationService.stopAlarmSound();
+                                    _isDialogOpen = false;
+                                    Navigator.of(context).pop();
+                                  } catch (e) {
+                                    print('Error updating Firestore: $e');
+                                  }
+                                },
+                                child: Text('HUSH', style: TextStyle(color: Colors.white, fontSize: 16)), // Larger text
+                              ),
+                              SizedBox(width: 10), // Space between buttons
+                              TextButton(
+                                style: TextButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                  padding: EdgeInsets.symmetric(horizontal: 17, vertical: 12), // Reduced padding
+                                ),
+                                onPressed: () {
+                                  // Acknowledge alerts when CALL FIRESTATION is pressed
+                                  _acknowledgedAlerts.addAll(exceededWarningsForDialog);
+                                  _notificationService.stopAlarmSound();
+                                  _isDialogOpen = false;
+                                  Navigator.of(context).pop();
+                                  Navigator.push(context, MaterialPageRoute(builder: (context) => CallHelpScreen()));
+                                },
+                                child: Text('CALL FIRESTATION', style: TextStyle(color: Colors.white, fontSize: 16)), // Larger text
+                              ),
+                            ],
                           ),
                         ],
                       );
@@ -158,6 +203,8 @@ class MonitorScreen extends StatelessWidget {
               } else if (exceededWarningsForDialog.isEmpty) {
                 _lastDisplayedWarnings.clear();
               }
+
+
               return Column(
                 children: [
                   Expanded(
@@ -170,8 +217,8 @@ class MonitorScreen extends StatelessWidget {
                             child: Column(
                               children: [
                                 SizedBox(
-                                  width: 150,
-                                  height: 150,
+                                  width: 135,
+                                  height: 135,
                                   child: Image.asset('assets/flashlogo.png'),
                                 ),
                                 SizedBox(height: 20),
@@ -212,7 +259,7 @@ class MonitorScreen extends StatelessWidget {
                             crossAxisCount: 2,
                             crossAxisSpacing: 20,
                             mainAxisSpacing: 20,
-                            childAspectRatio: 0.8,
+                            childAspectRatio: 0.9,
                             physics: NeverScrollableScrollPhysics(),
                             children: [
                               SensorCard(
@@ -256,6 +303,12 @@ class MonitorScreen extends StatelessWidget {
                                 value: '${sensorData['indoor_air_quality']} AQI',
                                 statusColor: determineStatusColor(sensorData['indoor_air_quality'], thresholdData['iaq_threshold'], 'iaq'),
                                 valueColor: determineStatusColor(sensorData['indoor_air_quality'], thresholdData['iaq_threshold'], 'iaq'),
+                                titleStyle: TextStyle(
+                                  fontSize: 14, // Modified font size
+                                  fontWeight: FontWeight.w600, // Same font weight as before
+                                  color: Color(0xFF494949), // Same color as before
+                                  fontFamily: 'Jost', // Same font family as before
+                                ), // Modify the font size for this title
                               ),
                             ],
                           ),
@@ -263,9 +316,10 @@ class MonitorScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+
                   // Display the bottom text and icon
                   Padding(
-                    padding: EdgeInsets.all(16.0),
+                    padding: EdgeInsets.all(13.0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -424,6 +478,16 @@ class SensorCard extends StatelessWidget {
   final String value;
   final Color statusColor;
   final Color valueColor;
+  final TextStyle? titleStyle;
+
+  //default sensor title style
+  static const TextStyle defaultTitleStyle = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    color: Color(0xFF494949),
+    fontFamily: 'Jost',
+  );
+
 
   SensorCard({
     required this.title,
@@ -431,6 +495,7 @@ class SensorCard extends StatelessWidget {
     required this.value,
     required this.statusColor,
     required this.valueColor,
+    this.titleStyle = defaultTitleStyle,
   });
 
   @override
@@ -459,14 +524,9 @@ class SensorCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF494949),
-                  fontFamily: 'Jost',
-                ),
+                style: titleStyle, // Use titleStyle here instead of hardcoded TextStyle
               ),
-              SizedBox(height: 10),
+              SizedBox(height: 5),
               Text(
                 'Status Level:',
                 style: TextStyle(

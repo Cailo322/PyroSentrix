@@ -52,6 +52,7 @@ dependencies:
   audioplayers: ^6.1.0
   esp_smartconfig: ^2.0.4
   mobile_scanner: ^6.0.5
+  cached_network_image: ^3.2.3
 
 
 
@@ -98,6 +99,8 @@ flutter:
     - assets/caution.png
     - assets/warning.png
     - assets/reset.png
+    - assets/gallery.png
+    - assets/warning2.png
 
   fonts:
     - family: Jost
