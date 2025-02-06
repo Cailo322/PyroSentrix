@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
-import 'custom_app_bar.dart'; // Import the custom app bar and drawer
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'custom_app_bar.dart';
 import 'add_device.dart';
-import 'login.dart'; // Import the login screen to handle logout
+import 'login.dart';
 
 class DevicesScreen extends StatefulWidget {
   @override
@@ -12,13 +12,12 @@ class DevicesScreen extends StatefulWidget {
 
 class _DevicesScreenState extends State<DevicesScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance; // Firestore instance
-  final Map<String, String> _deviceNames = {}; // Local storage for device names
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final Map<String, String> _deviceNames = {};
 
   void _checkUser(BuildContext context) {
     User? user = _auth.currentUser;
     if (user == null) {
-      // If no user is logged in, redirect to the login screen
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => LoginScreen()),
@@ -28,15 +27,14 @@ class _DevicesScreenState extends State<DevicesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    _checkUser(context); // Check if the user is logged in
+    _checkUser(context);
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: CustomAppBar(), // Use the custom app bar
-      endDrawer: CustomDrawer(), // Use the custom drawer
+      appBar: CustomAppBar(),
+      endDrawer: CustomDrawer(),
       body: RefreshIndicator(
         onRefresh: () async {
-          // Force a refresh of the Firestore data
           await _firestore
               .collection('ProductActivation')
               .where('user_email', isEqualTo: _auth.currentUser?.email)
@@ -56,66 +54,16 @@ class _DevicesScreenState extends State<DevicesScreen> {
               return Center(child: Text('Error loading devices'));
             }
 
-            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Logo
-                    SizedBox(
-                      width: 150,
-                      height: 150,
-                      child: Image.asset('assets/flashlogo.png'),
-                    ),
-                    SizedBox(height: 20),
-                    // Title
-                    Text(
-                      'Devices',
-                      style: TextStyle(
-                        fontFamily: 'Jost',
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.black,
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    // Subtitle
-                    Text(
-                      'Your devices will be displayed here.\nAdd a new flame sensor by tapping the add icon.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Jost',
-                        fontSize: 16,
-                        fontWeight: FontWeight.normal,
-                        color: Colors.black,
-                      ),
-                    ),
-                    SizedBox(height: 20),
-                    // Placeholder for no devices
-                    Text(
-                      'No Devices Added Yet',
-                      style: TextStyle(
-                        fontFamily: 'Jost',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            // Group devices by product ID to ensure only one card per product ID
             Map<String, DocumentSnapshot> uniqueDevices = {};
-            for (var doc in snapshot.data!.docs) {
-              String productId = doc['product_code'];
-              if (!uniqueDevices.containsKey(productId)) {
-                uniqueDevices[productId] = doc;
+            if (snapshot.hasData) {
+              for (var doc in snapshot.data!.docs) {
+                String productId = doc['product_code'];
+                if (!uniqueDevices.containsKey(productId)) {
+                  uniqueDevices[productId] = doc;
+                }
               }
             }
 
-            // Assign default names to devices if not already assigned
             int deviceNumber = 1;
             for (var doc in uniqueDevices.values) {
               String productId = doc['product_code'];
@@ -125,12 +73,56 @@ class _DevicesScreenState extends State<DevicesScreen> {
               }
             }
 
-            // Display the list of unique devices
             return ListView(
               padding: EdgeInsets.all(16),
-              children: uniqueDevices.values.map((doc) {
-                return _buildDeviceCard(context, doc); // Pass context here
-              }).toList(),
+              children: [
+                Center(
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        width: 150,
+                        height: 150,
+                        child: Image.asset('assets/flashlogo.png'),
+                      ),
+                      SizedBox(height: 20),
+                      Text(
+                        'Devices',
+                        style: TextStyle(
+                          fontFamily: 'Jost',
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.black,
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      Text(
+                        'Your devices will be displayed here.\nAdd a new flame sensor by tapping the add icon.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Jost',
+                          fontSize: 16,
+                          fontWeight: FontWeight.normal,
+                          color: Colors.black,
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      if (uniqueDevices.isEmpty)
+                        Text(
+                          'No Devices Added Yet',
+                          style: TextStyle(
+                            fontFamily: 'Jost',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                ...uniqueDevices.values.map((doc) {
+                  return _buildDeviceCard(context, doc);
+                }).toList(),
+              ],
             );
           },
         ),
@@ -143,7 +135,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
           );
         },
         child: Icon(Icons.add),
-        backgroundColor: Colors.grey,
+        backgroundColor: Colors.grey[300], // Lighter grey
       ),
     );
   }
@@ -163,11 +155,9 @@ class _DevicesScreenState extends State<DevicesScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Device Name and Kebab Menu
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Editable Device Name
                 Expanded(
                   child: InkWell(
                     onTap: () {
@@ -184,7 +174,6 @@ class _DevicesScreenState extends State<DevicesScreen> {
                     ),
                   ),
                 ),
-                // Kebab Menu
                 PopupMenuButton<String>(
                   icon: Icon(Icons.more_vert),
                   onSelected: (value) {
