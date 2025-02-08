@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'custom_app_bar.dart';
 import 'add_device.dart';
 import 'login.dart';
+import 'monitor.dart';
 
 class DevicesScreen extends StatefulWidget {
   @override
@@ -144,59 +145,75 @@ class _DevicesScreenState extends State<DevicesScreen> {
     String productId = doc['product_code'];
     String deviceName = _deviceNames[productId] ?? 'Device';
 
-    return Card(
-      margin: EdgeInsets.only(bottom: 16),
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      _editDeviceName(context, productId);
-                    },
-                    child: Text(
-                      deviceName,
-                      style: TextStyle(
-                        fontFamily: 'Jost',
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
+
+    return GestureDetector(
+      onTap: () {
+        // Navigate to MonitorScreen when tapping anywhere in the card except the device name
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MonitorScreen(),
+          ),
+        );
+      },
+      child: Card(
+        margin: EdgeInsets.only(bottom: 16),
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: 250, // You can adjust this to fit your design
+                    ),
+                    child: InkWell(
+                      // Trigger edit device name only when the device name text is tapped
+                      onTap: () {
+                        _editDeviceName(context, doc['product_code']);
+                      },
+                      child: Text(
+                        deviceName,
+                        style: TextStyle(
+                          fontFamily: 'Jost',
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert),
-                  onSelected: (value) {
-                    if (value == 'details') {
-                      _showDeviceDetails(context, doc);
-                    } else if (value == 'delete') {
-                      _deleteDevice(context, doc);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'details',
-                      child: Text('Details'),
-                    ),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Text('Delete', style: TextStyle(color: Colors.red)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
+                  PopupMenuButton<String>(
+                    icon: Icon(Icons.more_vert),
+                    onSelected: (value) {
+                      if (value == 'details') {
+                        _showDeviceDetails(context, doc);
+                      } else if (value == 'delete') {
+                        _deleteDevice(context, doc);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'details',
+                        child: Text('Details'),
+                      ),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text('Delete', style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

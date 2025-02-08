@@ -34,7 +34,7 @@ class _QueriesScreenState extends State<QueriesScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Queries',
+                          'FAQ',
                           style: TextStyle(
                             fontFamily: 'Poppins', // Use Poppins font
                             fontSize: 28, // Title size from CallHelpScreen
