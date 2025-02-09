@@ -14,6 +14,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
   List<Map<String, dynamic>> alarmLogs = [];
   int alarmCount = 0;
   Set<String> processedAlarmIds = {}; // To track processed alarm IDs
+  Map<String, dynamic>? _lastLoggedAlarmValues; // Track the last logged alarm's values
 
   @override
   void initState() {
@@ -46,6 +47,9 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         String alarmId = latestDoc.id; // Use document ID to track the alarm
         if (processedAlarmIds.contains(alarmId)) return; // Prevent duplicates
 
+        // Check if the new alarm is identical to the last logged alarm
+        if (_isIdenticalToLastLoggedAlarm(data)) return;
+
         alarmCount++;
         var alarmData = {
           'id': 'Alarm $alarmCount',
@@ -53,8 +57,12 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
           'values': data,
         };
 
-        // Save alarm data to Firestore
-        await FirebaseFirestore.instance.collection('AlarmLogs').add(alarmData);
+        // Save alarm data to Firestore under SensorData > AlarmLogs > {productCode}
+        await FirebaseFirestore.instance
+            .collection('SensorData')
+            .doc('AlarmLogs')
+            .collection(widget.productCode) // Use productCode as the collection name
+            .add(alarmData);
 
         // Update the list of alarms in the UI
         setState(() {
@@ -63,6 +71,9 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
 
         // Track the alarm ID to avoid re-logging
         processedAlarmIds.add(alarmId);
+
+        // Update the last logged alarm values
+        _lastLoggedAlarmValues = data;
       }
     });
   }
@@ -77,11 +88,26 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         data['temperature_dht22'] > thresholds['temp_threshold']);
   }
 
+  // Check if the new alarm is identical to the last logged alarm
+  bool _isIdenticalToLastLoggedAlarm(Map<String, dynamic> newAlarmValues) {
+    if (_lastLoggedAlarmValues == null) return false;
+
+    // Compare each sensor value
+    for (var key in newAlarmValues.keys) {
+      if (newAlarmValues[key] != _lastLoggedAlarmValues![key]) {
+        return false; // Values are different
+      }
+    }
+
+    return true; // Values are identical
+  }
+
   // Fetch historical alarms from Firestore
   void _fetchAlarmHistory() async {
     var snapshot = await FirebaseFirestore.instance
-        .collection('AlarmLogs')
-        .where('product_code', isEqualTo: widget.productCode) // Filter by productCode
+        .collection('SensorData')
+        .doc('AlarmLogs')
+        .collection(widget.productCode) // Fetch logs for the specific productCode
         .orderBy('timestamp', descending: true)
         .get();
 
