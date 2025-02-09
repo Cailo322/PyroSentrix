@@ -13,8 +13,6 @@ class AlarmLogScreen extends StatefulWidget {
 class _AlarmLogScreenState extends State<AlarmLogScreen> {
   List<Map<String, dynamic>> alarmLogs = [];
   int alarmCount = 0;
-  Set<String> processedAlarmIds = {}; // To track processed alarm IDs
-  Map<String, dynamic>? _lastLoggedAlarmValues; // Track the last logged alarm's values
 
   @override
   void initState() {
@@ -44,17 +42,18 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
 
       // Check if any sensor exceeds the threshold
       if (_exceedsThreshold(data, thresholds)) {
-        String alarmId = latestDoc.id; // Use document ID to track the alarm
-        if (processedAlarmIds.contains(alarmId)) return; // Prevent duplicates
+        String sensorDataDocId = latestDoc.id; // Use the sensor data document ID as a unique key
 
-        // Check if the new alarm is identical to the last logged alarm
-        if (_isIdenticalToLastLoggedAlarm(data)) return;
+        // Check if an alarm log already exists for this sensor data document
+        bool alarmExists = await _checkIfAlarmExists(sensorDataDocId);
+        if (alarmExists) return; // Skip if an alarm log already exists
 
         alarmCount++;
         var alarmData = {
           'id': 'Alarm $alarmCount',
           'timestamp': data['timestamp'],
           'values': data,
+          'sensorDataDocId': sensorDataDocId, // Store the sensor data document ID
         };
 
         // Save alarm data to Firestore under SensorData > AlarmLogs > {productCode}
@@ -68,14 +67,21 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         setState(() {
           alarmLogs.insert(0, alarmData); // Add the new alarm to the top of the list
         });
-
-        // Track the alarm ID to avoid re-logging
-        processedAlarmIds.add(alarmId);
-
-        // Update the last logged alarm values
-        _lastLoggedAlarmValues = data;
       }
     });
+  }
+
+  // Check if an alarm log already exists for the given sensor data document ID
+  Future<bool> _checkIfAlarmExists(String sensorDataDocId) async {
+    var snapshot = await FirebaseFirestore.instance
+        .collection('SensorData')
+        .doc('AlarmLogs')
+        .collection(widget.productCode)
+        .where('sensorDataDocId', isEqualTo: sensorDataDocId)
+        .limit(1)
+        .get();
+
+    return snapshot.docs.isNotEmpty; // Return true if an alarm log exists
   }
 
   // Check if any sensor exceeds the threshold
@@ -86,20 +92,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         data['smoke_level'] > thresholds['smoke_threshold'] ||
         data['temperature_mlx90614'] > thresholds['temp_threshold'] ||
         data['temperature_dht22'] > thresholds['temp_threshold']);
-  }
-
-  // Check if the new alarm is identical to the last logged alarm
-  bool _isIdenticalToLastLoggedAlarm(Map<String, dynamic> newAlarmValues) {
-    if (_lastLoggedAlarmValues == null) return false;
-
-    // Compare each sensor value
-    for (var key in newAlarmValues.keys) {
-      if (newAlarmValues[key] != _lastLoggedAlarmValues![key]) {
-        return false; // Values are different
-      }
-    }
-
-    return true; // Values are identical
   }
 
   // Fetch historical alarms from Firestore
