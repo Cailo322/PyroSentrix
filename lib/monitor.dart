@@ -6,16 +6,16 @@ import 'notification_service.dart'; // Import the NotificationService
 import 'package:flutter/foundation.dart';
 
 class MonitorScreen extends StatelessWidget {
+  final String productCode; // Accept productCode
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final NotificationService _notificationService = NotificationService(); // Instance of NotificationService
+  final NotificationService _notificationService = NotificationService();
   bool _isDialogOpen = false;
   List<String> _lastDisplayedWarnings = [];
-  Set<String> _acknowledgedAlerts = {}; // Track acknowledged alerts
+  Set<String> _acknowledgedAlerts = {};
 
-  MonitorScreen() {
-    _notificationService.initialize(); // Initialize notification service
+  MonitorScreen({required this.productCode}) {
+    _notificationService.initialize();
   }
-
   Future<Map<String, dynamic>?> fetchLatestImage() async {
     try {
       QuerySnapshot querySnapshot = await _firestore
@@ -51,8 +51,14 @@ class MonitorScreen extends StatelessWidget {
           var thresholdData = thresholdSnapshot.data!.data() as Map<String, dynamic>;
 
           return StreamBuilder(
-            stream: _firestore.collection('SensorData').orderBy('timestamp', descending: true).limit(1).snapshots(),
-            builder: (context, AsyncSnapshot<QuerySnapshot> sensorSnapshot) {
+            stream: _firestore
+                .collection('SensorData')
+                .doc('FireAlarm')
+                .collection(productCode) // Dynamic productCode collection
+                .orderBy('timestamp', descending: true)
+                .limit(1)
+                .snapshots(),
+            builder: (context, sensorSnapshot) {
               if (sensorSnapshot.connectionState == ConnectionState.waiting) {
                 return Center(child: CircularProgressIndicator());
               }

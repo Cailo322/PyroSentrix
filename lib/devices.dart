@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart'; // Add this import for state management
 import 'custom_app_bar.dart';
 import 'add_device.dart';
 import 'login.dart';
 import 'monitor.dart';
+import 'device_provider.dart'; // Import the DeviceProvider from device_provider.dart
 
 class DevicesScreen extends StatefulWidget {
   @override
@@ -30,10 +32,17 @@ class _DevicesScreenState extends State<DevicesScreen> {
   Widget build(BuildContext context) {
     _checkUser(context);
 
+    // Access the DeviceProvider
+    final deviceProvider = Provider.of<DeviceProvider>(context);
+
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: CustomAppBar(),
-      endDrawer: CustomDrawer(),
+      appBar: CustomAppBar(
+        selectedProductCode: deviceProvider.selectedProductCode, // Pass the selected product code
+      ),
+      endDrawer: CustomDrawer(
+        selectedProductCode: deviceProvider.selectedProductCode, // Pass the selected product code
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           await _firestore
@@ -121,7 +130,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                   ),
                 ),
                 ...uniqueDevices.values.map((doc) {
-                  return _buildDeviceCard(context, doc);
+                  return _buildDeviceCard(context, doc, deviceProvider);
                 }).toList(),
               ],
             );
@@ -136,23 +145,23 @@ class _DevicesScreenState extends State<DevicesScreen> {
           );
         },
         child: Icon(Icons.add),
-        backgroundColor: Colors.grey[300], // Lighter grey
+        backgroundColor: Colors.grey[300],
       ),
     );
   }
 
-  Widget _buildDeviceCard(BuildContext context, DocumentSnapshot doc) {
+  Widget _buildDeviceCard(BuildContext context, DocumentSnapshot doc, DeviceProvider deviceProvider) {
     String productId = doc['product_code'];
     String deviceName = _deviceNames[productId] ?? 'Device';
 
-
     return GestureDetector(
       onTap: () {
-        // Navigate to MonitorScreen when tapping anywhere in the card except the device name
+        // Update the selected product code in the provider
+        deviceProvider.setSelectedProductCode(productId);
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => MonitorScreen(),
+            builder: (context) => MonitorScreen(productCode: productId),
           ),
         );
       },
@@ -172,10 +181,9 @@ class _DevicesScreenState extends State<DevicesScreen> {
                 children: [
                   ConstrainedBox(
                     constraints: BoxConstraints(
-                      maxWidth: 250, // You can adjust this to fit your design
+                      maxWidth: 250,
                     ),
                     child: InkWell(
-                      // Trigger edit device name only when the device name text is tapped
                       onTap: () {
                         _editDeviceName(context, doc['product_code']);
                       },

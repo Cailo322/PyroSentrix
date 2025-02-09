@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'monitor.dart';
 import 'notification_service.dart'; // Import the NotificationService
 
@@ -79,10 +81,9 @@ class ResetSystemScreen extends StatelessWidget {
                 ),
                 onPressed: () {
                   _resetNotifications();
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => MonitorScreen()),
-                  );
+
+                  // Restart the app on Android
+                  SystemNavigator.pop(); // Closes the app on Android
                 },
                 child: Text(
                   'RESET',

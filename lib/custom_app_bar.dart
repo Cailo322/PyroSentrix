@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+import 'alarmlogs.dart'; // Import the AlarmLogScreen widget
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'monitor.dart'; // Ensure this import is correct for your MonitorScreen
+import 'device_provider.dart'; // Import the DeviceProvider from device_provider.dart
+import 'package:provider/provider.dart'; // Add this import
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
-  @override
-  final Size preferredSize;
+  final String? selectedProductCode; // Add this parameter
 
-  CustomAppBar({Key? key})
+  CustomAppBar({Key? key, this.selectedProductCode})
       : preferredSize = Size.fromHeight(kToolbarHeight),
         super(key: key);
+
+  @override
+  final Size preferredSize;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +48,10 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 }
 
 class CustomDrawer extends StatefulWidget {
+  final String? selectedProductCode; // Add this parameter
+
+  CustomDrawer({Key? key, this.selectedProductCode}) : super(key: key);
+
   @override
   _CustomDrawerState createState() => _CustomDrawerState();
 }
@@ -186,7 +195,22 @@ class _CustomDrawerState extends State<CustomDrawer> {
               title: Text('Monitoring',
                   style: TextStyle(color: Color(0xFF494949), fontSize: 18)),
               onTap: () {
-                Navigator.pushNamed(context, '/MonitorScreen');
+                final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
+                if (deviceProvider.selectedProductCode != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          MonitorScreen(productCode: deviceProvider.selectedProductCode!),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Please select a device first.'),
+                    ),
+                  );
+                }
               },
             ),
             ListTile(
@@ -241,6 +265,33 @@ class _CustomDrawerState extends State<CustomDrawer> {
                   style: TextStyle(color: Color(0xFF494949), fontSize: 18)),
               onTap: () {
                 Navigator.pushNamed(context, '/ImageStreamScreen');
+              },
+            ),
+            ListTile(
+              leading: Image.asset(
+                'assets/gallery.png',
+                width: 28,
+                height: 28,
+                fit: BoxFit.contain,
+              ),
+              title: Text('Alarm logs',
+                  style: TextStyle(color: Color(0xFF494949), fontSize: 18)),
+              onTap: () {
+                final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
+                if (deviceProvider.selectedProductCode != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AlarmLogScreen(productCode: deviceProvider.selectedProductCode!),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Please select a device first.'),
+                    ),
+                  );
+                }
               },
             ),
             ListTile(

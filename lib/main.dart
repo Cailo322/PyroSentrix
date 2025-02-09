@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // Import the provider package
 import 'splash_screen.dart';
 import 'welcome_screen.dart';
 import 'register.dart';
@@ -14,6 +15,8 @@ import 'notification_service.dart'; // Add the notification service import
 import 'about.dart';
 import 'reset_system.dart';
 import 'imagestream.dart';
+import 'alarmlogs.dart';
+import 'device_provider.dart'; // Import your DeviceProvider
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,7 +28,13 @@ void main() async {
   notificationService.requestPermissions();
   notificationService.listenForSensorUpdates();
 
-  runApp(const MyApp());
+  runApp(
+    // Wrap your app with the DeviceProvider
+    ChangeNotifierProvider(
+      create: (context) => DeviceProvider(), // Create an instance of DeviceProvider
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -40,9 +49,25 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: SplashScreen(),
+      onGenerateRoute: (settings) {
+        // Handle arguments for MonitorScreen
+        if (settings.name == '/MonitorScreen') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (context) => MonitorScreen(productCode: args['productCode']),
+          );
+        }
+        // Handle arguments for AlarmLogScreen
+        if (settings.name == '/AlarmLogScreen') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (context) => AlarmLogScreen(productCode: args['productCode']),
+          );
+        }
+        return null;
+      },
       routes: {
         '/AddDeviceScreen': (context) => AddDeviceScreen(),
-        '/MonitorScreen': (context) => MonitorScreen(),
         '/CallHelpScreen': (context) => CallHelpScreen(),
         '/QueriesScreen': (context) => QueriesScreen(),
         '/DevicesScreen': (context) => DevicesScreen(),
