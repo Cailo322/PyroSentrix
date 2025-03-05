@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'monitor.dart'; // Ensure this import is correct for your MonitorScreen
 import 'device_provider.dart'; // Import the DeviceProvider from device_provider.dart
 import 'package:provider/provider.dart'; // Add this import
+import 'package:shared_preferences/shared_preferences.dart'; // Add this import
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? selectedProductCode;
@@ -193,7 +194,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
     return ListTile(
       leading: Image.asset(asset, width: 40, height: 27, fit: BoxFit.contain),
       title: Text(title, style: TextStyle(color: isRed ? Colors.red : Color(0xFF494949), fontSize: 17, fontWeight: isRed || isLogout ? FontWeight.bold : FontWeight.normal)),
-      onTap: () {
+      onTap: () async {
         if (isMonitor) {
           final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
           if (deviceProvider.selectedProductCode != null) {
@@ -209,7 +210,15 @@ class _CustomDrawerState extends State<CustomDrawer> {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select a device first.')));
           }
         } else if (isLogout) {
-          FirebaseAuth.instance.signOut().then((_) => Navigator.of(context).pushReplacementNamed('/LoginScreen'));
+          // Clear the login state from SharedPreferences
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isLoggedIn', false);
+
+          // Sign out from Firebase
+          await FirebaseAuth.instance.signOut();
+
+          // Navigate to the login screen
+          Navigator.of(context).pushReplacementNamed('/LoginScreen');
         } else if (route.isNotEmpty) {
           Navigator.pushNamed(context, route);
         }

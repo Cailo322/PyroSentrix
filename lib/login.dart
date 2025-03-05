@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Add this import
 import 'devices.dart';
 import 'register.dart'; // Import your Register screen
 
@@ -70,6 +71,10 @@ class _LoginScreenState extends State<LoginScreen> {
         if (fcmToken != null) {
           await _updateFcmToken(userCredential.user!.uid, fcmToken);
         }
+
+        // Save login state
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
 
         Navigator.pushReplacement(
           context,
