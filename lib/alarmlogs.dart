@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart'; // For date formatting
 
 class AlarmLogScreen extends StatefulWidget {
   final String productCode; // Accept productCode
@@ -140,6 +141,20 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
     );
   }
 
+  // Format timestamp to "March 7, 2025" format
+  String _formatTimestamp(String timestamp) {
+    if (timestamp.isEmpty) return "No timestamp";
+
+    try {
+      // Parse the string timestamp into a DateTime object
+      DateTime dateTime = DateTime.parse(timestamp);
+      final DateFormat formatter = DateFormat('MMMM d, yyyy'); // Format like "March 7, 2025"
+      return formatter.format(dateTime);
+    } catch (e) {
+      return "Invalid timestamp format";
+    }
+  }
+
   // Listen to the latest document in SensorData > FireAlarm > (productCode) collection
   void _listenToLatestSensorData() {
     FirebaseFirestore.instance
@@ -236,15 +251,56 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
 
   // Show detailed sensor values in a dialog when an alarm is tapped
   void _showSensorValues(BuildContext context, Map<String, dynamic> alarm) {
+    // Format the timestamp
+    String formattedTimestamp = _formatTimestamp(alarm['timestamp']);
+
+    // Map sensor keys to readable names and units
+    final Map<String, Map<String, String>> sensorDetails = {
+      'humidity_dht22': {'name': 'Humidity', 'unit': '%'},
+      'temperature_dht22': {'name': 'Temperature 1', 'unit': '°C'},
+      'temperature_mlx90614': {'name': 'Temperature 2', 'unit': '°C'},
+      'smoke_level': {'name': 'Smoke', 'unit': 'ppm'},
+      'indoor_air_quality': {'name': 'Indoor Air Quality', 'unit': 'ppm'},
+      'carbon_monoxide': {'name': 'Carbon Monoxide', 'unit': 'ppm'},
+    };
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(alarm['id']),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: alarm['values'].entries.map<Widget>((entry) {
-            return Text("${entry.key}: ${entry.value}");
-          }).toList(),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Timestamp: $formattedTimestamp", // Formatted timestamp
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16), // Larger font size
+            ),
+            SizedBox(height: 10),
+            ...alarm['values'].entries.map<Widget>((entry) {
+              // Skip the 'timestamp' field in sensor values
+              if (entry.key == 'timestamp') return SizedBox.shrink();
+
+              // Get readable name and unit for the sensor
+              var sensorInfo = sensorDetails[entry.key] ?? {'name': entry.key, 'unit': ''};
+              String sensorName = sensorInfo['name']!;
+              String sensorUnit = sensorInfo['unit']!;
+
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween, // Align sensor values to the right
+                children: [
+                  Text(
+                    "$sensorName:", // Sensor name
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16), // Larger font size
+                  ),
+                  Text(
+                    "${entry.value} $sensorUnit", // Sensor value with unit
+                    style: TextStyle(fontSize: 16), // Larger font size
+                  ),
+                ],
+              );
+            }).toList(),
+          ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: Text("Close"))
