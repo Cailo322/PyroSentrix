@@ -26,25 +26,25 @@ class _QueriesScreenState extends State<QueriesScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
-                  Image.asset('assets/flashlogo.png', height: 100), // Logo size from CallHelpScreen
-                  SizedBox(width: 16), // Space between logo and text
+                  Image.asset('assets/official-logo.png', height: 100), // Logo size from CallHelpScreen
+                  SizedBox(width: 20), // Space between logo and text
                   Padding(
                     padding: const EdgeInsets.only(top: 36), // Align text similar to CallHelpScreen
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'FAQ',
+                          'FAQs',
                           style: TextStyle(
                             fontFamily: 'Poppins', // Use Poppins font
-                            fontSize: 28, // Title size from CallHelpScreen
+                            fontSize: 30, // Title size from CallHelpScreen
                             fontWeight: FontWeight.w900,
                             color: Color(0xFF494949), // Text color
                           ),
                         ),
                         SizedBox(height: 2),
                         Container(
-                          width: 33, // Width of the underline
+                          width: 25, // Width of the underline
                           height: 4, // Height of the underline
                           decoration: BoxDecoration(
                             color: Color(0xFF494949), // Color of the underline
@@ -58,7 +58,7 @@ class _QueriesScreenState extends State<QueriesScreen> {
               ),
               SizedBox(height: 16), // Space between logo-title and the list
               _buildSectionTitle('About PyroSentrix'),
-              _buildListTile('assets/Qlogo.png', 'About PyroSentrix'), // Using the Qlogo for About PyroSentrix
+              _buildListTile('assets/OL_NB_Black.png', 'About PyroSentrix'), // Using the OL_NB_Black for About PyroSentrix
               _buildListTileWithIcon(Icons.phone_android, 'Application Features'), // Restoring the phone icon for Application Features
               SizedBox(height: 16),
               _buildSectionTitle('Often Asked Questions'),
@@ -160,7 +160,7 @@ class _QueriesScreenState extends State<QueriesScreen> {
         ),
         if (_isExpanded[index])
           Padding(
-            padding: const EdgeInsets.only(left: 32.0, right: 32.0, bottom: 16.0), // Reduced left padding and added right padding
+            padding: const EdgeInsets.only(left: 60.0, right: 60.0, bottom: 16.0), // Added both left and right right padding
             child: Text(
               question == 'How does the alarm system works?'
                   ? '''Our alarm system consists of an IoT-enabled fire alarm device that connects directly to your mobile application. The device continuously monitors sensor values, including temperature, carbon monoxide (CO), smoke, humidity, and indoor air quality. These sensor readings are displayed in real-time on the Monitoring tab in your app.

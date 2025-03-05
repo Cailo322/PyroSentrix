@@ -92,7 +92,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                       SizedBox(
                         width: 150,
                         height: 150,
-                        child: Image.asset('assets/flashlogo.png'),
+                        child: Image.asset('assets/official-logo.png'),
                       ),
                       SizedBox(height: 20),
                       Text(

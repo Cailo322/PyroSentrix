@@ -18,7 +18,7 @@ class AboutScreen extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
-                  Image.asset('assets/flashlogo.png', height: 100), // Logo
+                  Image.asset('assets/official-logo.png', height: 100), // Logo
                   SizedBox(width: 16), // Space between logo and text
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -35,7 +35,7 @@ class AboutScreen extends StatelessWidget {
                       ),
                       SizedBox(height: 2), // Minimal spacing between text and underline
                       Container(
-                        width: 33, // Fixed width for underline
+                        width: 25, // Fixed width for underline
                         height: 4, // Height of underline
                         decoration: BoxDecoration(
                           color: Color(0xFF494949), // Solid color for underline
@@ -49,36 +49,28 @@ class AboutScreen extends StatelessWidget {
               SizedBox(height: 24),
               // Section Title
               Center(
-                child: Text(
-                  'Introduction to Pyrosentrix',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF494949),
-                  ),
-                ),
               ),
-              SizedBox(height: 16),
+              SizedBox(height: 3),
               // First Image (Centered and Rounded)
               Center(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20), // Rounded corners
                   child: Image.asset(
-                    'assets/aboutpic1.png',
+                    'assets/Header1.png',
                     fit: BoxFit.cover,
-                    width: MediaQuery.of(context).size.width * 0.9, // Responsive width
+                    width: MediaQuery.of(context).size.width * 10, // Responsive width
+                    height: MediaQuery.of(context).size.height * 0.2, // Responsive height
                   ),
                 ),
               ),
-              SizedBox(height: 16),
+              SizedBox(height: 30),
               // Descriptive Text with Enlarged Second Image
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Text Column
                   Expanded(
-                    flex: 2,
+                    flex: 1,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -102,10 +94,10 @@ class AboutScreen extends StatelessWidget {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(20), // Rounded corners
                       child: Image.asset(
-                        'assets/aboutpic2.png',
+                        'assets/About-pic1.jpg',
                         fit: BoxFit.cover,
                         width: MediaQuery.of(context).size.width * 0.70, // Increased width (greater percentage)
-                        height: MediaQuery.of(context).size.width * 0.67, // Maintain aspect ratio
+                        height: MediaQuery.of(context).size.width * 0.70, // Maintain aspect ratio
                       ),
                     ),
                   ),

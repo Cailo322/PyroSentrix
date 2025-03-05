@@ -117,32 +117,23 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               // Logo
               SizedBox(
-                width: 150,
-                height: 150,
-                child: Image.asset('assets/flashlogo.png'),
+                width: 180,
+                height: 180,
+                child: Image.asset('assets/official-logo.png'),
               ),
-              SizedBox(height: 20),
+              SizedBox(height: 30),
               // Login Title with Underline
               Text(
                 'Login',
                 style: TextStyle(
                   fontFamily: 'Jost',
-                  fontSize: 30,
+                  fontSize: 35,
                   fontWeight: FontWeight.w900,
                   color: Color(0xFF494949),
                 ),
               ),
-              SizedBox(height: 5),
-              // Underline with Rounded Edges
-              Container(
-                height: 3,
-                width: 20,
-                decoration: BoxDecoration(
-                  color: Color(0xFF494949), // Same color as the text
-                  borderRadius: BorderRadius.circular(5),
-                ),
-              ),
-              SizedBox(height: 20),
+
+              SizedBox(height: 50),
               // Email Input
               _buildTextInput('Enter Email', _emailController, errorMessage: _emailErrorMessage),
               if (_emailErrorMessage != null)
@@ -192,7 +183,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(fontFamily: 'Jost', fontWeight: FontWeight.w900),
                 ),
               ),
-              SizedBox(height: 20),
+              SizedBox(height: 25),
               // Register Section
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -214,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       );
                     },
                     child: Text(
-                      'Register',
+                      'Register Here',
                       style: TextStyle(
                         color: Colors.blue,
                         fontSize: 16,

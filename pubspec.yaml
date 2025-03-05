@@ -55,6 +55,7 @@ dependencies:
   cached_network_image: ^3.2.3
   shared_preferences: ^2.2.2
   provider: ^6.0.0
+  flutter_native_splash: ^2.4.4
 
 
 
@@ -67,7 +68,7 @@ dev_dependencies:
 
 flutter_icons:
   android: true
-  image_path: "assets/flashlogo.png"
+  image_path: "assets/OL_NB_Colored-NB.png"
 
   flutter_lints: ^3.0.0
 
@@ -75,13 +76,18 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/info-icon.png
+    - assets/dashboard.png
+    - assets/FAQs.png
+    - assets/System-Reset.png
+    - assets/Alarm-Logs.png
+    - assets/Header1.png
+    - assets/OL_NB_Black.png
+    - assets/OL_NB_Colored-NB.png
+    - assets/official-logo.png
     - assets/flashlogo.png
     - assets/qrlogo.png
-    - assets/add.png
-    - assets/setthreshold.png
     - assets/analytics.png
-    - assets/monitoring.png
-    - assets/queries.png
     - assets/call.png
     - assets/phone-call.png
     - assets/man.png
@@ -94,8 +100,8 @@ flutter:
     - assets/chcall.png
     - assets/chlocation.png
     - assets/alarm.mp3
-    - assets/aboutpic1.png
-    - assets/aboutpic2.png
+    - assets/About-pic1.jpg
+    - assets/About-pic2.jpg
     - assets/Qlogo.png
     - assets/normal.png
     - assets/caution.png
@@ -117,3 +123,11 @@ flutter:
           weight: 300
         - asset: fonts/Poppins-SemiBold.ttf
           weight: 600
+
+flutter_native_splash:
+  color: "#ffffff"  # Background color (set to match your splash screen)
+  image: assets/official-logo.png  # Your logo path
+  fullscreen: true
+  android_12:
+    image: assets/official-logo.png  # Android 12+ compatibility
+    color: "#ffffff"

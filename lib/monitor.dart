@@ -158,7 +158,7 @@ class MonitorScreen extends StatelessWidget {
                               TextButton(
                                 style: TextButton.styleFrom(
                                   backgroundColor: Colors.red,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                   padding: EdgeInsets.symmetric(horizontal: 17, vertical: 12), // Reduced padding
                                 ),
                                 onPressed: () async {
@@ -223,11 +223,11 @@ class MonitorScreen extends StatelessWidget {
                             child: Column(
                               children: [
                                 SizedBox(
-                                  width: 135,
-                                  height: 135,
-                                  child: Image.asset('assets/flashlogo.png'),
+                                  width: 160,
+                                  height: 160,
+                                  child: Image.asset('assets/official-logo.png'),
                                 ),
-                                SizedBox(height: 20),
+                                SizedBox(height: 35),
                                 Text(
                                   'Sensor Display',
                                   style: TextStyle(
@@ -237,7 +237,7 @@ class MonitorScreen extends StatelessWidget {
                                     fontFamily: 'Poppins',
                                   ),
                                 ),
-                                SizedBox(height: 1),
+                                SizedBox(height: 3),
                                 Container(
                                   height: 4,  // Height of the underline
                                   width: 33,  // Width of the underline
@@ -246,12 +246,12 @@ class MonitorScreen extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(5), // Rounded corners for the underline
                                   ),
                                 ),
-                                SizedBox(height: 10),
+                                SizedBox(height: 20),
                                 Text(
                                   'Monitor your sensors here',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 18,
                                     color: Colors.black,
                                     fontFamily: 'Jost',
                                   ),
@@ -259,13 +259,13 @@ class MonitorScreen extends StatelessWidget {
                               ],
                             ),
                           ),
-                          SizedBox(height: 20),
+                          SizedBox(height: 30),
                           GridView.count(
                             shrinkWrap: true,
                             crossAxisCount: 2,
                             crossAxisSpacing: 20,
                             mainAxisSpacing: 20,
-                            childAspectRatio: 0.9,
+                            childAspectRatio: 1,
                             physics: NeverScrollableScrollPhysics(),
                             children: [
                               SensorCard(
@@ -323,14 +323,15 @@ class MonitorScreen extends StatelessWidget {
                     ),
                   ),
 
+
                   // Display the bottom text and icon
                   Padding(
-                    padding: EdgeInsets.all(13.0),
+                    padding: EdgeInsets.all(9.0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Image.asset(bottomIcon, width: 60, height: 60),
-                        SizedBox(width: 10),
+                        Image.asset(bottomIcon, width: 50, height: 50),
+                        SizedBox(width: 5),
                         Flexible(
                           child: Text.rich(
                             TextSpan(
@@ -407,7 +408,6 @@ class MonitorScreen extends StatelessWidget {
     } else if (sensorData['carbon_monoxide'] > thresholdData['co_threshold'] * 0.75) {
       warnings.add('Carbon monoxide levels are nearing the safe threshold.');
     }
-
     if (sensorData['smoke_level'] > thresholdData['smoke_threshold']) {
       warnings.add('Smoke levels are high. Possible fire risk.');
     } else if (sensorData['smoke_level'] > thresholdData['smoke_threshold'] * 0.75) {
@@ -575,12 +575,12 @@ class SensorCard extends StatelessWidget {
           // Add the warning icon outside the top-right corner of the card
           if (status == 'Abnormal')
             Positioned(
-              top: -15, // Adjusted position to be outside the card but visible
-              right: -15, // Adjusted position to be outside the card but visible
+              top: -5, // Adjusted position to be outside the card but visible
+              right: -5, // Adjusted position to be outside the card but visible
               child: Icon(
                 Icons.warning_rounded,
                 color: Colors.red,
-                size: 35, // Icon size adjusted for better visibility
+                size: 30, // Icon size adjusted for better visibility
               ),
             ),
         ],
