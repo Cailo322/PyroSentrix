@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'login.dart'; // Import the login Screen
+import 'login.dart'; // Import the LoginScreen
 
 class WelcomeScreen extends StatefulWidget {
   @override
@@ -36,7 +36,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => LoginScreen ()),
+      MaterialPageRoute(builder: (context) => LoginScreen()),
     );
   }
 
