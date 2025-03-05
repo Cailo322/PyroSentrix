@@ -5,8 +5,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'monitor.dart'; // Ensure this import is correct for your MonitorScreen
 import 'device_provider.dart'; // Import the DeviceProvider from device_provider.dart
 import 'package:provider/provider.dart'; // Add this import
+
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
-  final String? selectedProductCode; // Add this parameter
+  final String? selectedProductCode;
 
   CustomAppBar({Key? key, this.selectedProductCode})
       : preferredSize = Size.fromHeight(kToolbarHeight),
@@ -48,7 +49,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 }
 
 class CustomDrawer extends StatefulWidget {
-  final String? selectedProductCode; // Add this parameter
+  final String? selectedProductCode;
 
   CustomDrawer({Key? key, this.selectedProductCode}) : super(key: key);
 
@@ -92,10 +93,11 @@ class _CustomDrawerState extends State<CustomDrawer> {
           padding: EdgeInsets.zero,
           children: <Widget>[
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 30),
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 30),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  SizedBox(height: 15),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
@@ -103,18 +105,18 @@ class _CustomDrawerState extends State<CustomDrawer> {
                       Text(
                         'Menu',
                         style: TextStyle(
-                          fontSize: 28,
+                          fontSize: 35,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 5),
+                  SizedBox(height: 15),
                   Row(
                     children: [
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                         decoration: BoxDecoration(
                           color: Colors.grey[300],
                           borderRadius: BorderRadius.circular(20),
@@ -126,11 +128,11 @@ class _CustomDrawerState extends State<CustomDrawer> {
                               backgroundColor: Colors.grey,
                               child: Icon(
                                 Icons.person,
-                                size: 20,
+                                size: 27,
                                 color: Colors.white,
                               ),
                             ),
-                            SizedBox(width: 10),
+                            SizedBox(width: 15),
                             Text(
                               userName ?? 'Loading...',
                               style: TextStyle(
@@ -146,184 +148,72 @@ class _CustomDrawerState extends State<CustomDrawer> {
                 ],
               ),
             ),
-            ListTile(
-              leading: Image.asset(
-                'assets/add1.png',
-                width: 28,
-                height: 28,
-                fit: BoxFit.contain,
-              ),
-              title: Text('Add Device',
-                  style: TextStyle(color: Color(0xFF494949), fontSize: 18)),
-              onTap: () {
-                Navigator.pushNamed(context, '/AddDeviceScreen');
-              },
-            ),
-            ListTile(
-              leading: Image.asset(
-                'assets/setthreshold.png',
-                width: 28,
-                height: 28,
-                fit: BoxFit.contain,
-              ),
-              title: Text('System Reset',
-                  style: TextStyle(color: Color(0xFF494949), fontSize: 18)),
-              onTap: () {
-                Navigator.pushNamed(context, '/ResetSystemScreen');
-              },
-            ),
-            ListTile(
-              leading: Image.asset(
-                'assets/analytics.png',
-                width: 28,
-                height: 28,
-                fit: BoxFit.contain,
-              ),
-              title: Text('Analytics',
-                  style: TextStyle(color: Color(0xFF494949), fontSize: 18)),
-              onTap: () {
-                // Handle navigation
-              },
-            ),
-            ListTile(
-              leading: Image.asset(
-                'assets/monitoring.png',
-                width: 28,
-                height: 28,
-                fit: BoxFit.contain,
-              ),
-              title: Text('Monitoring',
-                  style: TextStyle(color: Color(0xFF494949), fontSize: 18)),
-              onTap: () {
-                final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
-                if (deviceProvider.selectedProductCode != null) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          MonitorScreen(productCode: deviceProvider.selectedProductCode!),
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Please select a device first.'),
-                    ),
-                  );
-                }
-              },
-            ),
-            ListTile(
-              leading: Image.asset(
-                'assets/queries.png',
-                width: 28,
-                height: 28,
-                fit: BoxFit.contain,
-              ),
-              title: Text('Queries',
-                  style: TextStyle(color: Color(0xFF494949), fontSize: 18)),
-              onTap: () {
-                Navigator.pushNamed(context, '/QueriesScreen');
-              },
-            ),
-            ListTile(
-              leading: Image.asset(
-                'assets/call.png',
-                width: 28,
-                height: 28,
-                fit: BoxFit.contain,
-              ),
-              title: Text(
-                'Call Help',
-                style: TextStyle(color: Colors.red, fontSize: 18),
-              ),
-              onTap: () {
-                Navigator.pushNamed(context, '/CallHelpScreen');
-              },
-            ),
-            ListTile(
-              leading: Image.asset(
-                'assets/devices.png',
-                width: 28,
-                height: 28,
-                fit: BoxFit.contain,
-              ),
-              title: Text('Devices',
-                  style: TextStyle(color: Color(0xFF494949), fontSize: 18)),
-              onTap: () {
-                Navigator.pushNamed(context, '/DevicesScreen');
-              },
-            ),
-            ListTile(
-              leading: Image.asset(
-                'assets/gallery.png',
-                width: 28,
-                height: 28,
-                fit: BoxFit.contain,
-              ),
-              title: Text('Images',
-                  style: TextStyle(color: Color(0xFF494949), fontSize: 18)),
-              onTap: () {
-                Navigator.pushNamed(context, '/ImageStreamScreen');
-              },
-            ),
-            ListTile(
-              leading: Image.asset(
-                'assets/gallery.png',
-                width: 28,
-                height: 28,
-                fit: BoxFit.contain,
-              ),
-              title: Text('Alarm logs',
-                  style: TextStyle(color: Color(0xFF494949), fontSize: 18)),
-              onTap: () {
-                final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
-                if (deviceProvider.selectedProductCode != null) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AlarmLogScreen(productCode: deviceProvider.selectedProductCode!),
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Please select a device first.'),
-                    ),
-                  );
-                }
-              },
-            ),
-            ListTile(
-              leading: Image.asset(
-                'assets/logout.png',
-                width: 28,
-                height: 28,
-                fit: BoxFit.contain,
-              ),
-              title: Text(
-                'Logout',
-                style: TextStyle(color: Colors.red, fontSize: 18),
-              ),
-              onTap: () async {
-                try {
-                  await FirebaseAuth.instance.signOut();
-                  Navigator.of(context).pop();
-                  Navigator.of(context)
-                      .pushReplacementNamed('/LoginScreen');
-                } catch (e) {
-                  print('Logout error: $e');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Logout failed. Please try again.'),
-                    ),
-                  );
-                }
-              },
-            ),
+            _buildSection('Monitoring', [
+              _buildDrawerItem(context, 'Add Device', 'assets/add1.png', '/AddDeviceScreen'),
+              _buildDrawerItem(context, 'Analytics', 'assets/analytics.png', ''),
+              _buildDrawerItem(context, 'Dashboard', 'assets/dashboard.png', '', isMonitor: true),
+              _buildDrawerItem(context, 'Devices', 'assets/devices.png', '/DevicesScreen'),
+              _buildDrawerItem(context, 'Alarm logs', 'assets/Alarm-Logs.png', '', isAlarmLog: true),
+            ]),
+            _buildSection('Others', [
+              _buildDrawerItem(context, 'System Reset', 'assets/System-Reset.png', '/ResetSystemScreen'),
+              _buildDrawerItem(context, 'FAQs', 'assets/FAQs.png', '/QueriesScreen'),
+              _buildDrawerItem(context, 'Images', 'assets/gallery.png', '/ImageStreamScreen'),
+              _buildDrawerItem(context, 'Call Help', 'assets/call.png', '/CallHelpScreen', isRed: true),
+              _buildDrawerItem(context, 'Logout', 'assets/logout.png', '', isLogout: true),
+            ]),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSection(String title, List<Widget> items) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Divider(color: Colors.grey[200], thickness: 2, height: 1),
+              SizedBox(height: 20),
+              Text(title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.grey[400])),
+            ],
+          ),
+        ),
+        SizedBox(height: 5),
+        ...items,
+      ],
+    );
+  }
+
+  Widget _buildDrawerItem(BuildContext context, String title, String asset, String route, {bool isMonitor = false, bool isAlarmLog = false, bool isRed = false, bool isLogout = false}) {
+    return ListTile(
+      leading: Image.asset(asset, width: 40, height: 27, fit: BoxFit.contain),
+      title: Text(title, style: TextStyle(color: isRed ? Colors.red : Color(0xFF494949), fontSize: 17, fontWeight: isRed || isLogout ? FontWeight.bold : FontWeight.normal)),
+      onTap: () {
+        if (isMonitor) {
+          final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
+          if (deviceProvider.selectedProductCode != null) {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => MonitorScreen(productCode: deviceProvider.selectedProductCode!)));
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select a device first.')));
+          }
+        } else if (isAlarmLog) {
+          final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
+          if (deviceProvider.selectedProductCode != null) {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => AlarmLogScreen(productCode: deviceProvider.selectedProductCode!)));
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select a device first.')));
+          }
+        } else if (isLogout) {
+          FirebaseAuth.instance.signOut().then((_) => Navigator.of(context).pushReplacementNamed('/LoginScreen'));
+        } else if (route.isNotEmpty) {
+          Navigator.pushNamed(context, route);
+        }
+      },
     );
   }
 }

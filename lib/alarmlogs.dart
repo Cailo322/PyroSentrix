@@ -21,6 +21,125 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
     _fetchAlarmHistory(); // Fetch historical alarms when the screen loads
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white, // Ensure the entire screen background is white
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: IconThemeData(color: Colors.black),
+      ),
+      body: Container(
+        color: Colors.white, // Explicitly setting the background color
+        child: Column(
+          children: [
+            SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start, // Align logo to the top
+                    children: <Widget>[
+                      Image.asset('assets/official-logo.png', height: 100),
+                      SizedBox(width: 15),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 40), // Adjust text lower
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Alarm Logs',
+                              style: TextStyle(
+                                color: Color(0xFF494949),
+                                fontSize: 30,
+                                fontWeight: FontWeight.w900,
+                                fontFamily: 'Poppins',
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Container(
+                              width: 25,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Color(0xFF494949),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 15),
+                  Divider(color: Colors.grey[200], thickness: 5), // Full-width line
+                  SizedBox(height: 15),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Alarm Logs History',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      SizedBox(width: 5),
+                      GestureDetector(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              content: Text("This is where you can monitor the alarms"),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: Text("Close"),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        child: Opacity(
+                          opacity: 0.5, // Adjust the opacity (0.0 = fully transparent, 1.0 = fully opaque)
+                          child: Image.asset(
+                            'assets/info-icon.png',
+                            width: 20,
+                            height: 20,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 10),
+            Expanded(
+              child: ListView.builder(
+                itemCount: alarmLogs.length,
+                itemBuilder: (context, index) {
+                  var alarm = alarmLogs[index];
+                  return Card(
+                    color: Colors.grey[200], // Changed to light grey
+                    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: ListTile(
+                      title: Text(alarm['id']),
+                      subtitle: Text("Timestamp: ${alarm['timestamp']}"),
+                      onTap: () => _showSensorValues(context, alarm),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // Listen to the latest document in SensorData > FireAlarm > (productCode) collection
   void _listenToLatestSensorData() {
     FirebaseFirestore.instance
@@ -113,26 +232,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         };
       }).toList();
     });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Alarm Log')),
-      body: ListView.builder(
-        itemCount: alarmLogs.length,
-        itemBuilder: (context, index) {
-          var alarm = alarmLogs[index];
-          return Card(
-            child: ListTile(
-              title: Text(alarm['id']),
-              subtitle: Text("Timestamp: ${alarm['timestamp']}"),
-              onTap: () => _showSensorValues(context, alarm),
-            ),
-          );
-        },
-      ),
-    );
   }
 
   // Show detailed sensor values in a dialog when an alarm is tapped

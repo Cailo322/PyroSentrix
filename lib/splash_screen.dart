@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'welcome_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -6,19 +7,34 @@ class SplashScreen extends StatefulWidget {
   _SplashScreenState createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  double _opacity = 0.0; // Initial opacity
+
   @override
   void initState() {
     super.initState();
-    _navigateToHome();
-  }
 
-  _navigateToHome() async {
-    await Future.delayed(Duration(milliseconds: 3000), () {}); // Display splash screen for 3 seconds
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => WelcomeScreen()),
-    );
+    // Start fade-in animation
+    Future.delayed(Duration(milliseconds: 500), () {
+      setState(() {
+        _opacity = 1.0;
+      });
+    });
+
+    // Start fade-out animation before navigation
+    Future.delayed(Duration(seconds: 2), () {
+      setState(() {
+        _opacity = 0.0;
+      });
+    });
+
+    // Navigate to home after fade-out completes
+    Timer(Duration(seconds: 3), () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => WelcomeScreen()),
+      );
+    });
   }
 
   @override
@@ -26,7 +42,16 @@ class _SplashScreenState extends State<SplashScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
-        child: Image.asset('assets/flashlogo.png'), // Ensure your logo is in the assets folder
+        child: AnimatedOpacity(
+          duration: Duration(seconds: 1), // Adjust timing for smooth effect
+          opacity: _opacity,
+          child: Image.asset(
+            'assets/official-logo.png',
+            width: 200,
+            height: 200,
+            fit: BoxFit.contain,
+          ),
+        ),
       ),
     );
   }

@@ -13,7 +13,7 @@ class CallHelpScreen extends StatelessWidget {
       body: Container(
         color: Colors.white,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 15.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -21,8 +21,8 @@ class CallHelpScreen extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
-                  Image.asset('assets/flashlogo.png', height: 100),
-                  SizedBox(width: 16),
+                  Image.asset('assets/official-logo.png', height: 100),
+                  SizedBox(width: 15),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -40,7 +40,7 @@ class CallHelpScreen extends StatelessWidget {
                       ),
                       SizedBox(height: 2),
                       Container(
-                        width: 33, // Width of the underline
+                        width: 30, // Width of the underline
                         height: 4, // Height of the underline
                         decoration: BoxDecoration(
                           color: Color(0xFF494949), // Color of the underline
@@ -53,7 +53,7 @@ class CallHelpScreen extends StatelessWidget {
               ),
               SizedBox(height: 20),
               Container(
-                padding: EdgeInsets.all(16),
+                padding: EdgeInsets.all(25),
                 margin: EdgeInsets.symmetric(horizontal: 20),
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
@@ -91,7 +91,7 @@ class CallHelpScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(height: 16),
+                    SizedBox(height: 30),
                     FutureBuilder<DocumentSnapshot>(
                       future: _getUserData(),
                       builder: (context, snapshot) {

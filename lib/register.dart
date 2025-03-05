@@ -9,7 +9,6 @@ import 'verification.dart'; // Import the VerificationScreen
 import 'login.dart';
 import 'api_service.dart'; // Import the ApiService
 
-//HAHAHAHA
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -171,7 +170,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           padding: EdgeInsets.only(
             left: 16.0,
             right: 16.0,
-            top: 16.0,
+            top: 60.0,
             bottom: MediaQuery.of(context).viewInsets.bottom + 16.0,
           ),
           child: Column(
@@ -179,30 +178,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               SizedBox(
-                width: 150,
-                height: 150,
-                child: Image.asset('assets/flashlogo.png'),
+                width: 170,
+                height: 170,
+                child: Image.asset('assets/official-logo.png'),
               ),
-              SizedBox(height: 20),
+              SizedBox(height: 35),
               Text(
                 'Register',
                 style: TextStyle(
                   fontFamily: 'Jost',
-                  fontSize: 30,
+                  fontSize: 35,
                   fontWeight: FontWeight.w900,
                   color: Color(0xFF494949),
                 ),
               ),
-              SizedBox(height: 5),
-              Container(
-                height: 3,
-                width: 20,
-                decoration: BoxDecoration(
-                  color: Color(0xFF494949),
-                  borderRadius: BorderRadius.circular(5),
-                ),
-              ),
-              SizedBox(height: 20),
+              SizedBox(height: 35),
               _buildTextInput('Enter Name', _nameController),
               SizedBox(height: 20),
               _buildEmailInput(),
