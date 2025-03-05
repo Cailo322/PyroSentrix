@@ -2,8 +2,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; // Import the provider package
 import 'splash_screen.dart';
-import 'welcome_screen.dart';
-import 'register.dart';
 import 'devices.dart';
 import 'add_device.dart';
 import 'monitor.dart';

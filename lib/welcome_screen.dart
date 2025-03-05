@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'register.dart'; // Import the RegisterScreen
+import 'login.dart'; // Import the RegisterScreen
 
 class WelcomeScreen extends StatelessWidget {
   @override
@@ -23,7 +23,7 @@ class WelcomeScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => RegisterScreen()), // Navigate to RegisterScreen
+                  MaterialPageRoute(builder: (context) => LoginScreen()), // Navigate to RegisterScreen
                 );
               },
               child: Text('Get Started', style: TextStyle(fontFamily: 'Jost')), // Set the font family for button text
