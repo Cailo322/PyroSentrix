@@ -86,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
         await _auth.signOut();
       }
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException {
       String message = 'Invalid Credentials'; // Unified error message
       setState(() {
         _emailErrorMessage = message; // Display the message

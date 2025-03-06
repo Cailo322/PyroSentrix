@@ -67,7 +67,7 @@ class MonitorScreen extends StatelessWidget {
                 return Center(child: Text('No sensor data available.'));
               }
 
-              var sensorData = sensorSnapshot.data!.docs.first.data() as Map<String, dynamic>;
+              var sensorData = sensorSnapshot.data!.docs.first.data();
 
               // Check each sensor and build a list of warning messages if any threshold is exceeded
               List<String> allExceededWarnings = checkThresholds(sensorData, thresholdData);
