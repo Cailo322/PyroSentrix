@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:provider/provider.dart'; // Add this import for state management
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'custom_app_bar.dart';
 import 'add_device.dart';
 import 'login.dart';
 import 'monitor.dart';
-import 'device_provider.dart'; // Import the DeviceProvider from device_provider.dart
+import 'device_provider.dart';
 
 class DevicesScreen extends StatefulWidget {
   @override
@@ -17,6 +18,34 @@ class _DevicesScreenState extends State<DevicesScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final Map<String, String> _deviceNames = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDeviceNames(); // Load device names when the screen initializes
+  }
+
+  // Load device names from SharedPreferences
+  Future<void> _loadDeviceNames() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      prefs.getKeys().forEach((key) {
+        if (key.startsWith('device_name_')) {
+          String productCode = key.replaceFirst('device_name_', '');
+          _deviceNames[productCode] = prefs.getString(key) ?? 'Device';
+        }
+      });
+    });
+  }
+
+  // Save device name to SharedPreferences
+  Future<void> _saveDeviceName(String productCode, String deviceName) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('device_name_$productCode', deviceName);
+    setState(() {
+      _deviceNames[productCode] = deviceName;
+    });
+  }
 
   void _checkUser(BuildContext context) {
     User? user = _auth.currentUser;
@@ -38,10 +67,10 @@ class _DevicesScreenState extends State<DevicesScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: CustomAppBar(
-        selectedProductCode: deviceProvider.selectedProductCode, // Pass the selected product code
+        selectedProductCode: deviceProvider.selectedProductCode,
       ),
       endDrawer: CustomDrawer(
-        selectedProductCode: deviceProvider.selectedProductCode, // Pass the selected product code
+        selectedProductCode: deviceProvider.selectedProductCode,
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -53,86 +82,102 @@ class _DevicesScreenState extends State<DevicesScreen> {
         child: StreamBuilder<QuerySnapshot>(
           stream: _firestore
               .collection('ProductActivation')
-              .where('user_email', isEqualTo: _auth.currentUser?.email)
+              .where('shared_users', arrayContains: _auth.currentUser?.email)
               .snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+          builder: (context, sharedSnapshot) {
+            if (sharedSnapshot.connectionState == ConnectionState.waiting) {
               return Center(child: CircularProgressIndicator());
             }
 
-            if (snapshot.hasError) {
-              return Center(child: Text('Error loading devices'));
+            if (sharedSnapshot.hasError) {
+              return Center(child: Text('Error loading shared devices'));
             }
 
-            Map<String, DocumentSnapshot> uniqueDevices = {};
-            if (snapshot.hasData) {
-              for (var doc in snapshot.data!.docs) {
-                String productId = doc['product_code'];
-                if (!uniqueDevices.containsKey(productId)) {
-                  uniqueDevices[productId] = doc;
+            return StreamBuilder<QuerySnapshot>(
+              stream: _firestore
+                  .collection('ProductActivation')
+                  .where('user_email', isEqualTo: _auth.currentUser?.email)
+                  .snapshots(),
+              builder: (context, userSnapshot) {
+                if (userSnapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
                 }
-              }
-            }
 
-            int deviceNumber = 1;
-            for (var doc in uniqueDevices.values) {
-              String productId = doc['product_code'];
-              if (!_deviceNames.containsKey(productId)) {
-                _deviceNames[productId] = 'Device $deviceNumber';
-                deviceNumber++;
-              }
-            }
+                if (userSnapshot.hasError) {
+                  return Center(child: Text('Error loading user devices'));
+                }
 
-            return ListView(
-              padding: EdgeInsets.all(16),
-              children: [
-                Center(
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        width: 150,
-                        height: 150,
-                        child: Image.asset('assets/official-logo.png'),
-                      ),
-                      SizedBox(height: 20),
-                      Text(
-                        'Devices',
-                        style: TextStyle(
-                          fontFamily: 'Jost',
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.black,
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                      Text(
-                        'Your devices will be displayed here.\nAdd a new flame sensor by tapping the add icon.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'Jost',
-                          fontSize: 16,
-                          fontWeight: FontWeight.normal,
-                          color: Colors.black,
-                        ),
-                      ),
-                      SizedBox(height: 20),
-                      if (uniqueDevices.isEmpty)
-                        Text(
-                          'No Devices Added Yet',
-                          style: TextStyle(
-                            fontFamily: 'Jost',
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey,
+                // Merge the results of both queries
+                Map<String, DocumentSnapshot> uniqueDevices = {};
+                if (userSnapshot.hasData) {
+                  for (var doc in userSnapshot.data!.docs) {
+                    String productId = doc['product_code'];
+                    if (!uniqueDevices.containsKey(productId)) {
+                      uniqueDevices[productId] = doc;
+                    }
+                  }
+                }
+                if (sharedSnapshot.hasData) {
+                  for (var doc in sharedSnapshot.data!.docs) {
+                    String productId = doc['product_code'];
+                    if (!uniqueDevices.containsKey(productId)) {
+                      uniqueDevices[productId] = doc;
+                    }
+                  }
+                }
+
+                return ListView(
+                  padding: EdgeInsets.all(16),
+                  children: [
+                    Center(
+                      child: Column(
+                        children: [
+                          SizedBox(
+                            width: 150,
+                            height: 150,
+                            child: Image.asset('assets/official-logo.png'),
                           ),
-                        ),
-                    ],
-                  ),
-                ),
-                ...uniqueDevices.values.map((doc) {
-                  return _buildDeviceCard(context, doc, deviceProvider);
-                }).toList(),
-              ],
+                          SizedBox(height: 20),
+                          Text(
+                            'Devices',
+                            style: TextStyle(
+                              fontFamily: 'Jost',
+                              fontSize: 26,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.black,
+                            ),
+                          ),
+                          SizedBox(height: 10),
+                          Text(
+                            'Your devices will be displayed here.\nAdd a new flame sensor by tapping the add icon.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'Jost',
+                              fontSize: 16,
+                              fontWeight: FontWeight.normal,
+                              color: Colors.black,
+                            ),
+                          ),
+                          SizedBox(height: 20),
+                          if (uniqueDevices.isEmpty)
+                            Text(
+                              'No Devices Added Yet',
+                              style: TextStyle(
+                                fontFamily: 'Jost',
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    ...uniqueDevices.values.map((doc) {
+                      return _buildDeviceCard(context, doc, deviceProvider);
+                    }).toList(),
+                  ],
+                );
+              },
             );
           },
         ),
@@ -153,10 +198,10 @@ class _DevicesScreenState extends State<DevicesScreen> {
   Widget _buildDeviceCard(BuildContext context, DocumentSnapshot doc, DeviceProvider deviceProvider) {
     String productId = doc['product_code'];
     String deviceName = _deviceNames[productId] ?? 'Device';
+    bool isAdmin = doc['user_email'] == _auth.currentUser?.email;
 
     return GestureDetector(
       onTap: () {
-        // Update the selected product code in the provider
         deviceProvider.setSelectedProductCode(productId);
         Navigator.push(
           context,
@@ -205,6 +250,8 @@ class _DevicesScreenState extends State<DevicesScreen> {
                         _showDeviceDetails(context, doc);
                       } else if (value == 'delete') {
                         _deleteDevice(context, doc);
+                      } else if (value == 'add_people') {
+                        _addPeople(context, doc);
                       }
                     },
                     itemBuilder: (context) => [
@@ -212,6 +259,11 @@ class _DevicesScreenState extends State<DevicesScreen> {
                         value: 'details',
                         child: Text('Details'),
                       ),
+                      if (isAdmin) // Only show 'Add People' for admin
+                        PopupMenuItem(
+                          value: 'add_people',
+                          child: Text('Add People'),
+                        ),
                       PopupMenuItem(
                         value: 'delete',
                         child: Text('Delete', style: TextStyle(color: Colors.red)),
@@ -228,7 +280,9 @@ class _DevicesScreenState extends State<DevicesScreen> {
   }
 
   void _editDeviceName(BuildContext context, String productId) async {
-    TextEditingController controller = TextEditingController(text: _deviceNames[productId]);
+    TextEditingController controller = TextEditingController(
+      text: _deviceNames[productId] ?? 'Device',
+    );
 
     await showDialog(
       context: context,
@@ -247,10 +301,10 @@ class _DevicesScreenState extends State<DevicesScreen> {
               child: Text('Cancel'),
             ),
             TextButton(
-              onPressed: () {
-                setState(() {
-                  _deviceNames[productId] = controller.text;
-                });
+              onPressed: () async {
+                if (controller.text.isNotEmpty) {
+                  await _saveDeviceName(productId, controller.text);
+                }
                 Navigator.of(context).pop();
               },
               child: Text('Save'),
@@ -274,6 +328,8 @@ class _DevicesScreenState extends State<DevicesScreen> {
               Text('Product Code: ${doc['product_code']}'),
               SizedBox(height: 10),
               Text('MAC Address: ${doc['mac_address']}'),
+              SizedBox(height: 10),
+              Text('Added By: ${doc['user_email']}'),
               SizedBox(height: 10),
               Text('Activated on: ${doc['timestamp']}'),
             ],
@@ -316,5 +372,41 @@ class _DevicesScreenState extends State<DevicesScreen> {
         _deviceNames.remove(doc['product_code']);
       });
     }
+  }
+
+  void _addPeople(BuildContext context, DocumentSnapshot doc) async {
+    TextEditingController controller = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Add People'),
+          content: TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              hintText: 'Enter user email',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (controller.text.isNotEmpty) {
+                  await _firestore.collection('ProductActivation').doc(doc.id).update({
+                    'shared_users': FieldValue.arrayUnion([controller.text])
+                  });
+                }
+                Navigator.of(context).pop();
+              },
+              child: Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
