@@ -1,9 +1,12 @@
+import 'dart:async'; // Import Timer
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import 'notification_service.dart'; // Import the NotificationService
 
 class ResetSystemScreen extends StatelessWidget {
   final NotificationService _notificationService = NotificationService(); // Instance of NotificationService
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance; // Firestore instance
 
   @override
   Widget build(BuildContext context) {
@@ -78,10 +81,7 @@ class ResetSystemScreen extends StatelessWidget {
                   ),
                 ),
                 onPressed: () {
-                  _resetNotifications();
-
-                  // Restart the app on Android
-                  SystemNavigator.pop(); // Closes the app on Android
+                  _showCountdownDialog(context); // Show the countdown dialog
                 },
                 child: Text(
                   'RESET',
@@ -95,8 +95,93 @@ class ResetSystemScreen extends StatelessWidget {
     );
   }
 
+  // Show a countdown dialog
+  void _showCountdownDialog(BuildContext context) {
+    int countdown = 5; // Start countdown from 5 seconds
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Prevent dismissing the dialog by tapping outside
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Resetting System"),
+          content: Text("The application and fire alarm will reset in $countdown seconds."),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: Text("CANCEL"),
+            ),
+          ],
+        );
+      },
+    );
+
+    // Start the countdown timer
+    Timer.periodic(Duration(seconds: 1), (Timer timer) async {
+      if (countdown > 0) {
+        // Update the dialog content
+        Navigator.of(context).pop(); // Close the current dialog
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text("Resetting System"),
+              content: Text("The application and fire alarm will reset in $countdown seconds."),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    timer.cancel(); // Stop the timer
+                    Navigator.of(context).pop(); // Close the dialog
+                  },
+                  child: Text("CANCEL"),
+                ),
+              ],
+            );
+          },
+        );
+        countdown--;
+      } else {
+        timer.cancel(); // Stop the timer
+        Navigator.of(context).pop(); // Close the dialog
+
+        // Perform reset actions
+        _resetNotifications();
+        _resetHushedStatus();
+
+        // Restart the app on Android
+        SystemNavigator.pop(); // Closes the app on Android
+      }
+    });
+  }
+
   // Reset the acknowledged alerts in NotificationService
   void _resetNotifications() {
     _notificationService.acknowledgeAlerts(); // Reset acknowledged alerts
+  }
+
+  // Update isHushed in Firestore
+  void _resetHushedStatus() async {
+    DocumentReference alarmRef = _firestore.collection('BooleanConditions').doc('Alarm');
+
+    try {
+      // Fetch the current value of isHushed
+      DocumentSnapshot docSnapshot = await alarmRef.get();
+      if (docSnapshot.exists) {
+        bool isHushed = docSnapshot.get('isHushed');
+
+        // Only update if isHushed is true
+        if (isHushed) {
+          await alarmRef.update({'isHushed': false});
+          print("isHushed reset to false");
+        } else {
+          print("isHushed is already false, no update needed.");
+        }
+      }
+    } catch (e) {
+      print("Error updating isHushed: $e");
+    }
   }
 }
