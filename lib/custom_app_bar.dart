@@ -117,27 +117,35 @@ class _CustomDrawerState extends State<CustomDrawer> {
                   Row(
                     children: [
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         decoration: BoxDecoration(
                           color: Colors.grey[300],
                           borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.5), // Shadow color
+                              spreadRadius: 1, // Spread radius
+                              blurRadius: 4, // Blur radius
+                              offset: Offset(0, 3), // Shadow offset
+                            ),
+                          ],
                         ),
                         child: Row(
                           children: [
                             CircleAvatar(
                               radius: 20,
-                              backgroundColor: Colors.grey,
+                              backgroundColor: Colors.white,
                               child: Icon(
                                 Icons.person,
                                 size: 27,
-                                color: Colors.white,
+                                color: Colors.amber[600],
                               ),
                             ),
-                            SizedBox(width: 15),
+                            SizedBox(width: 10),
                             Text(
                               userName ?? 'Loading...',
                               style: TextStyle(
-                                fontSize: 20,
+                                fontSize: 18,
                                 color: Colors.black,
                               ),
                             ),

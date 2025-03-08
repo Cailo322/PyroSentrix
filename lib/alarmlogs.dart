@@ -124,7 +124,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                 itemBuilder: (context, index) {
                   var alarm = alarmLogs[index];
                   return Card(
-                    color: Colors.grey[200], // Changed to light grey
+                    color: Colors.grey[300], // Changed to light grey
                     margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: ListTile(
                       title: Text(alarm['id']),
@@ -267,16 +267,29 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(alarm['id']),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              alarm['id'],
+              style: TextStyle(
+                fontSize: 25, // Set the font size
+                fontWeight: FontWeight.bold, // Set the font weight
+                color: Colors.black87, // Set the text color
+              ),
+            ),
+            SizedBox(height: 5), // Add a small gap between the title and timestamp
+            Text(
+              "Timestamp: $formattedTimestamp", // Formatted timestamp
+              style: TextStyle(fontSize: 17), // Larger font size
+            ),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              "Timestamp: $formattedTimestamp", // Formatted timestamp
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16), // Larger font size
-            ),
-            SizedBox(height: 10),
+            SizedBox(height: 10), // Add some space below the timestamp
             ...alarm['values'].entries.map<Widget>((entry) {
               // Skip the 'timestamp' field in sensor values
               if (entry.key == 'timestamp') return SizedBox.shrink();
@@ -291,7 +304,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                 children: [
                   Text(
                     "$sensorName:", // Sensor name
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16), // Larger font size
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15), // Larger font size
                   ),
                   Text(
                     "${entry.value} $sensorUnit", // Sensor value with unit
@@ -300,6 +313,15 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                 ],
               );
             }).toList(),
+            SizedBox(height: 15),
+            Divider(color: Colors.grey, thickness: 1), // Add a divider below the last sensor
+            SizedBox(height: 5),
+            Center(
+              child: Text(
+                "Image Captured:",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16), // Larger font size
+              ),
+            ),
           ],
         ),
         actions: [
