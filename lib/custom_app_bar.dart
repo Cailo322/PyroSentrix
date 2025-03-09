@@ -6,6 +6,7 @@ import 'monitor.dart'; // Ensure this import is correct for your MonitorScreen
 import 'device_provider.dart'; // Import the DeviceProvider from device_provider.dart
 import 'package:provider/provider.dart'; // Add this import
 import 'package:shared_preferences/shared_preferences.dart'; // Add this import
+import 'analytics.dart'; // Import the AnalyticsScreen
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? selectedProductCode;
@@ -60,6 +61,7 @@ class CustomDrawer extends StatefulWidget {
 
 class _CustomDrawerState extends State<CustomDrawer> {
   String? userName;
+  bool isNavigating = false; // Flag to prevent multiple navigation attempts
 
   @override
   void initState() {
@@ -159,7 +161,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
             ),
             _buildSection('Monitoring', [
               _buildDrawerItem(context, 'Add Device', 'assets/add1.png', '/AddDeviceScreen'),
-              _buildDrawerItem(context, 'Analytics', 'assets/analytics.png', ''),
+              _buildDrawerItem(context, 'Analytics', 'assets/analytics.png', '', isAnalytics: true),
               _buildDrawerItem(context, 'Dashboard', 'assets/dashboard.png', '', isMonitor: true),
               _buildDrawerItem(context, 'Devices', 'assets/devices.png', '/DevicesScreen'),
               _buildDrawerItem(context, 'Alarm logs', 'assets/Alarm-Logs.png', '', isAlarmLog: true),
@@ -198,38 +200,40 @@ class _CustomDrawerState extends State<CustomDrawer> {
     );
   }
 
-  Widget _buildDrawerItem(BuildContext context, String title, String asset, String route, {bool isMonitor = false, bool isAlarmLog = false, bool isRed = false, bool isLogout = false}) {
+  Widget _buildDrawerItem(BuildContext context, String title, String asset, String route, {bool isMonitor = false, bool isAlarmLog = false, bool isAnalytics = false, bool isRed = false, bool isLogout = false}) {
     return ListTile(
       leading: Image.asset(asset, width: 40, height: 27, fit: BoxFit.contain),
       title: Text(title, style: TextStyle(color: isRed ? Colors.red : Color(0xFF494949), fontSize: 17, fontWeight: isRed || isLogout ? FontWeight.bold : FontWeight.normal)),
       onTap: () async {
+        if (isNavigating) return; // Prevent multiple navigation attempts
+        isNavigating = true;
+
         if (isMonitor) {
           final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
           if (deviceProvider.selectedProductCode != null) {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => MonitorScreen(productCode: deviceProvider.selectedProductCode!)));
+            await Navigator.pushNamed(context, '/MonitorScreen', arguments: deviceProvider.selectedProductCode!);
           } else {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select a device first.')));
           }
         } else if (isAlarmLog) {
           final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
           if (deviceProvider.selectedProductCode != null) {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => AlarmLogScreen(productCode: deviceProvider.selectedProductCode!)));
+            await Navigator.pushNamed(context, '/AlarmLogScreen', arguments: deviceProvider.selectedProductCode!);
           } else {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select a device first.')));
           }
+        } else if (isAnalytics) {
+          await Navigator.pushNamed(context, '/AnalyticsScreen');
         } else if (isLogout) {
-          // Clear the login state from SharedPreferences
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('isLoggedIn', false);
-
-          // Sign out from Firebase
           await FirebaseAuth.instance.signOut();
-
-          // Navigate to the login screen
           Navigator.of(context).pushReplacementNamed('/LoginScreen');
         } else if (route.isNotEmpty) {
-          Navigator.pushNamed(context, route);
+          await Navigator.pushNamed(context, route);
         }
+
+        isNavigating = false; // Reset the flag after navigation
       },
     );
   }
