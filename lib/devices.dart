@@ -18,13 +18,11 @@ class _DevicesScreenState extends State<DevicesScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final Map<String, String> _deviceNames = {};
-  bool isNavigating = false; // Flag to prevent multiple navigation attempts
 
   @override
   void initState() {
     super.initState();
     _loadDeviceNames(); // Load device names when the screen initializes
-    _checkUser(); // Check user authentication status
   }
 
   // Load device names from SharedPreferences
@@ -49,21 +47,20 @@ class _DevicesScreenState extends State<DevicesScreen> {
     });
   }
 
-  // Check user authentication status
-  void _checkUser() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      User? user = _auth.currentUser;
-      if (user == null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => LoginScreen()),
-        );
-      }
-    });
+  void _checkUser(BuildContext context) {
+    User? user = _auth.currentUser;
+    if (user == null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    _checkUser(context);
+
     // Access the DeviceProvider
     final deviceProvider = Provider.of<DeviceProvider>(context);
 
@@ -205,18 +202,13 @@ class _DevicesScreenState extends State<DevicesScreen> {
 
     return GestureDetector(
       onTap: () {
-        if (isNavigating) return; // Prevent multiple navigation attempts
-        isNavigating = true;
-
         deviceProvider.setSelectedProductCode(productId);
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => MonitorScreen(productCode: productId),
           ),
-        ).then((_) {
-          isNavigating = false; // Reset the flag after navigation
-        });
+        );
       },
       child: Card(
         margin: EdgeInsets.only(bottom: 16),
@@ -376,11 +368,9 @@ class _DevicesScreenState extends State<DevicesScreen> {
 
     if (confirmDelete == true) {
       await _firestore.collection('ProductActivation').doc(doc.id).delete();
-      if (mounted) {
-        setState(() {
-          _deviceNames.remove(doc['product_code']);
-        });
-      }
+      setState(() {
+        _deviceNames.remove(doc['product_code']);
+      });
     }
   }
 

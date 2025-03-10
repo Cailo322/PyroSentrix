@@ -45,7 +45,7 @@ dependencies:
   google_places_flutter: ^2.0.9  # For Google Places autocomplete (optional)
   geolocator: ^13.0.1  # For user location (optional)
   http: ^1.2.2  # To make HTTP requests to Google APIs
-  flutter_background_service: ^5.1.0
+  flutter_background_service: ^5.0.10
   permission_handler: ^11.3.1
   geocoding: ^3.0.0
   url_launcher: ^6.1.7
@@ -62,7 +62,6 @@ dependencies:
 
 
   intl: any
-  fl_chart: ^0.70.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
