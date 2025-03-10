@@ -1,50 +1,31 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Import the provider package
-import 'package:shared_preferences/shared_preferences.dart'; // Add this import
-import 'splash_screen.dart';
-import 'devices.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
+import 'device_provider.dart'; // Import DeviceProvider
+import 'analytics.dart'; // Import AnalyticsScreen
+import 'devices.dart'; // Import DevicesScreen
 import 'add_device.dart';
-import 'monitor.dart';
-import 'call.dart';
-import 'custom_app_bar.dart';
-import 'queries.dart';
-import 'login.dart';
-import 'notification_service.dart'; // Add the notification service import
-import 'about.dart';
-import 'reset_system.dart';
-import 'imagestream.dart';
 import 'alarmlogs.dart';
-import 'device_provider.dart'; // Import your DeviceProvider
+import 'reset_system.dart';
+import 'queries.dart';
+import 'imagestream.dart';
+import 'call.dart';
+import 'login.dart';
+import 'monitor.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
-  // Initialize NotificationService
-  NotificationService notificationService = NotificationService();
-  notificationService.initialize();
-  notificationService.requestPermissions();
-  notificationService.listenForSensorUpdates();
-
-  // Check login state
-  final prefs = await SharedPreferences.getInstance();
-  final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-
   runApp(
-    // Wrap your app with the DeviceProvider
     ChangeNotifierProvider(
-      create: (context) => DeviceProvider(), // Create an instance of DeviceProvider
-      child: MyApp(isLoggedIn: isLoggedIn),
+      create: (context) => DeviceProvider(),
+      child: MyApp(),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
-  final bool isLoggedIn;
-
-  const MyApp({super.key, required this.isLoggedIn});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -53,55 +34,34 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: isLoggedIn ? DevicesScreen() : SplashScreen(),
+      home: DevicesScreen(),
+      routes: {
+        '/AddDeviceScreen': (context) => AddDeviceScreen(),
+        '/DevicesScreen': (context) => DevicesScreen(),
+        '/ResetSystemScreen': (context) => ResetSystemScreen(),
+        '/QueriesScreen': (context) => QueriesScreen(),
+        '/ImageStreamScreen': (context) => ImageStreamScreen(),
+        '/CallHelpScreen': (context) => CallHelpScreen(),
+        '/AnalyticsScreen': (context) => AnalyticsScreen(),
+        '/LoginScreen': (context) => LoginScreen(),
+      },
       onGenerateRoute: (settings) {
-        // Handle arguments for MonitorScreen
-        if (settings.name == '/MonitorScreen') {
-          final args = settings.arguments as Map<String, dynamic>;
+        // Handle AlarmLogScreen with productCode argument
+        if (settings.name == '/AlarmLogScreen') {
+          final String productCode = settings.arguments as String;
           return MaterialPageRoute(
-            builder: (context) => MonitorScreen(productCode: args['productCode']),
+            builder: (context) => AlarmLogScreen(productCode: productCode),
           );
         }
-        // Handle arguments for AlarmLogScreen
-        if (settings.name == '/AlarmLogScreen') {
-          final args = settings.arguments as Map<String, dynamic>;
+        // Handle MonitorScreen with productCode argument
+        if (settings.name == '/MonitorScreen') {
+          final String productCode = settings.arguments as String;
           return MaterialPageRoute(
-            builder: (context) => AlarmLogScreen(productCode: args['productCode']),
+            builder: (context) => MonitorScreen(productCode: productCode),
           );
         }
         return null;
       },
-      routes: {
-        '/AddDeviceScreen': (context) => AddDeviceScreen(),
-        '/CallHelpScreen': (context) => CallHelpScreen(),
-        '/QueriesScreen': (context) => QueriesScreen(),
-        '/DevicesScreen': (context) => DevicesScreen(),
-        '/LoginScreen': (context) => LoginScreen(),
-        '/AboutScreen': (context) => AboutScreen(),
-        '/ResetSystemScreen': (context) => ResetSystemScreen(),
-        '/devices': (context) => DevicesScreen(),
-        '/ImageStreamScreen': (context) => ImageStreamScreen(),
-      },
-    );
-  }
-}
-
-class MyHomePage extends StatelessWidget {
-  const MyHomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: CustomAppBar(),
-      endDrawer: CustomDrawer(),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const <Widget>[
-            Text('Welcome to Pyrosentrix!'),
-          ],
-        ),
-      ),
     );
   }
 }
