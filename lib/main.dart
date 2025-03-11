@@ -16,6 +16,7 @@ import 'reset_system.dart';
 import 'imagestream.dart';
 import 'alarmlogs.dart';
 import 'device_provider.dart'; // Import your DeviceProvider
+import 'analytics.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -69,6 +70,7 @@ class MyApp extends StatelessWidget {
             builder: (context) => AlarmLogScreen(productCode: args['productCode']),
           );
         }
+
         return null;
       },
       routes: {
@@ -77,6 +79,7 @@ class MyApp extends StatelessWidget {
         '/QueriesScreen': (context) => QueriesScreen(),
         '/DevicesScreen': (context) => DevicesScreen(),
         '/LoginScreen': (context) => LoginScreen(),
+        '/AnalyticsScreen': (context) => AnalyticsScreen(),
         '/AboutScreen': (context) => AboutScreen(),
         '/ResetSystemScreen': (context) => ResetSystemScreen(),
         '/devices': (context) => DevicesScreen(),
