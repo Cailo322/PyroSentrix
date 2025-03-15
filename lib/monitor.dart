@@ -18,8 +18,9 @@ class MonitorScreen extends StatelessWidget {
   }
   Future<Map<String, dynamic>?> fetchLatestImage() async {
     try {
+      // Use the productCode to query the corresponding collection
       QuerySnapshot querySnapshot = await _firestore
-          .collection('camera')
+          .collection(productCode) // Dynamic collection based on productCode
           .orderBy('timestamp', descending: true)
           .limit(1)
           .get();
@@ -486,14 +487,13 @@ class SensorCard extends StatelessWidget {
   final Color valueColor;
   final TextStyle? titleStyle;
 
-  //default sensor title style
+  // Default sensor title style
   static const TextStyle defaultTitleStyle = TextStyle(
     fontSize: 18,
     fontWeight: FontWeight.w600,
     color: Color(0xFF494949),
     fontFamily: 'Jost',
   );
-
 
   SensorCard({
     required this.title,
@@ -504,86 +504,182 @@ class SensorCard extends StatelessWidget {
     this.titleStyle = defaultTitleStyle,
   });
 
+  void _showSensorInfoDialog(BuildContext context) {
+    String sensorInfo = '';
+    switch (title) {
+      case 'HUMIDITY':
+        sensorInfo = 'Humidity Sensor: Measures the amount of water vapor in the air. High humidity can indicate potential mold growth, while low humidity can cause discomfort and respiratory issues.';
+        break;
+      case 'TEMP.1':
+      case 'TEMP.2':
+        sensorInfo = 'Temperature Sensor: Measures the ambient temperature. High temperatures can indicate a fire risk, while low temperatures can indicate a cooling system failure.';
+        break;
+      case 'CO':
+        sensorInfo = 'Carbon Monoxide Sensor: Detects the presence of carbon monoxide gas, which is toxic and can be lethal in high concentrations.';
+        break;
+      case 'SMOKE':
+        sensorInfo = 'Smoke Sensor: Detects the presence of smoke, which can indicate a fire. High smoke levels are a direct indicator of a fire risk.';
+        break;
+      case 'INDOOR AIR QUALITY':
+        sensorInfo = 'Indoor Air Quality Sensor: Measures the overall air quality inside a building. Poor air quality can indicate the presence of pollutants or inadequate ventilation.';
+        break;
+      default:
+        sensorInfo = 'Sensor Information: No specific information available for this sensor.';
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(sensorInfo),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Colors.grey[300],
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2), // Shadow color
-            spreadRadius: 2, // How much the shadow spreads
-            blurRadius: 5, // How blurred the shadow is
-            offset: Offset(0, 4), // Shadow position (x, y)
-          ),
-        ],
-      ),
-      child: Stack(
-        clipBehavior: Clip.none, // Important to allow the icon to overflow
-        children: [
-          // Card Content
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: titleStyle, // Use titleStyle here instead of hardcoded TextStyle
-              ),
-              SizedBox(height: 5),
-              Text(
-                'Status Level:',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Color(0xFF494949),
-                  fontFamily: 'Jost',
-                ),
-              ),
-              SizedBox(height: 5),
-              Text(
-                status,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: statusColor,
-                  fontFamily: 'Jost',
-                ),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'Value:',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Color(0xFF494949),
-                  fontFamily: 'Jost',
-                ),
-              ),
-              SizedBox(height: 5),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: valueColor,
-                  fontFamily: 'Jost',
-                ),
-              ),
-            ],
-          ),
-          // Add the warning icon outside the top-right corner of the card
-          if (status == 'Abnormal')
-            Positioned(
-              top: -5, // Adjusted position to be outside the card but visible
-              right: -5, // Adjusted position to be outside the card but visible
-              child: Icon(
-                Icons.warning_rounded,
-                color: Colors.red,
-                size: 30, // Icon size adjusted for better visibility
-              ),
+    return GestureDetector(
+      onTap: () => _showSensorInfoDialog(context),
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              spreadRadius: 2,
+              blurRadius: 5,
+              offset: Offset(0, 4),
             ),
-        ],
+          ],
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Card Content
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: titleStyle,
+                ),
+                SizedBox(height: 5),
+                Text(
+                  'Status Level:',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Color(0xFF494949),
+                    fontFamily: 'Jost',
+                  ),
+                ),
+                SizedBox(height: 5),
+                Text(
+                  status,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: statusColor,
+                    fontFamily: 'Jost',
+                  ),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Value:',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Color(0xFF494949),
+                    fontFamily: 'Jost',
+                  ),
+                ),
+                SizedBox(height: 5),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: valueColor,
+                    fontFamily: 'Jost',
+                  ),
+                ),
+              ],
+            ),
+            // Add the warning icon outside the top-right corner of the card
+            if (status == 'Abnormal')
+              Positioned(
+                top: -5,
+                right: -5,
+                child: Icon(
+                  Icons.warning_rounded,
+                  color: Colors.red,
+                  size: 30,
+                ),
+              ),
+            // Add the humidity icon in the lower right corner for the humidity sensor
+            if (title == 'HUMIDITY')
+              Positioned(
+                bottom: -5,
+                right: -5,
+                child: Image.asset(
+                  'assets/humidity.png',
+                  width: 30,
+                  height: 30,
+                ),
+              ),
+            if (title == 'TEMP.1' || title == 'TEMP.2')
+              Positioned(
+                bottom: -5,
+                right: -5,
+                child: Image.asset(
+                  'assets/temperature.png',
+                  width: 30,
+                  height: 30,
+                ),
+              ),
+            if (title == 'SMOKE')
+              Positioned(
+                bottom: -5,
+                right: -5,
+                child: Image.asset(
+                  'assets/smoke.png',
+                  width: 30,
+                  height: 30,
+                ),
+              ),
+            if (title == 'CO')
+              Positioned(
+                bottom: -5,
+                right: -5,
+                child: Image.asset(
+                  'assets/CO.png',
+                  width: 30,
+                  height: 30,
+                ),
+              ),
+            if (title == 'INDOOR AIR QUALITY')
+              Positioned(
+                bottom: -5,
+                right: -5,
+                child: Image.asset(
+                  'assets/IAQ.png',
+                  width: 30,
+                  height: 30,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

@@ -13,7 +13,17 @@ class AlarmLogScreen extends StatefulWidget {
 
 class _AlarmLogScreenState extends State<AlarmLogScreen> {
   List<Map<String, dynamic>> alarmLogs = [];
+  List<Map<String, dynamic>> filteredAlarmLogs = [];
   int alarmCount = 0;
+  String? selectedMonth;
+  String? selectedYear;
+
+  final List<String> months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  final List<String> years = ['2023', '2024', '2025']; // Add more years as needed
 
   @override
   void initState() {
@@ -114,15 +124,56 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                       ),
                     ],
                   ),
+                  SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      DropdownButton<String>(
+                        value: selectedMonth,
+                        hint: Text('Select Month'),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            selectedMonth = newValue;
+                            _filterAlarms();
+                          });
+                        },
+                        items: months.map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                      ),
+                      DropdownButton<String>(
+                        value: selectedYear,
+                        hint: Text('Select Year'),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            selectedYear = newValue;
+                            _filterAlarms();
+                          });
+                        },
+                        items: years.map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 10),
+                  if (selectedMonth != null && selectedYear != null)
+                    _buildMonthYearLabel(selectedMonth!, selectedYear!),
                 ],
               ),
             ),
             SizedBox(height: 10),
             Expanded(
               child: ListView.builder(
-                itemCount: alarmLogs.length,
+                itemCount: filteredAlarmLogs.isEmpty ? alarmLogs.length : filteredAlarmLogs.length,
                 itemBuilder: (context, index) {
-                  var alarm = alarmLogs[index];
+                  var alarm = filteredAlarmLogs.isEmpty ? alarmLogs[index] : filteredAlarmLogs[index];
                   return Card(
                     color: Colors.grey[300], // Changed to light grey
                     margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -139,6 +190,54 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildMonthYearLabel(String month, String year) {
+    return Row(
+      children: [
+        Expanded(
+          child: Divider(color: Colors.grey[400], thickness: 1),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Text(
+            '$month $year',
+            style: TextStyle(
+              fontFamily: 'jura',
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+        ),
+        Expanded(
+          child: Divider(color: Colors.grey[400], thickness: 1),
+        ),
+      ],
+    );
+  }
+
+  // Filter alarms based on selected month and year
+  void _filterAlarms() {
+    if (selectedMonth == null && selectedYear == null) {
+      setState(() {
+        filteredAlarmLogs = [];
+      });
+      return;
+    }
+
+    setState(() {
+      filteredAlarmLogs = alarmLogs.where((alarm) {
+        DateTime dateTime = DateTime.parse(alarm['timestamp']);
+        String month = DateFormat('MMMM').format(dateTime);
+        String year = DateFormat('yyyy').format(dateTime);
+
+        bool matchesMonth = selectedMonth == null || month == selectedMonth;
+        bool matchesYear = selectedYear == null || year == selectedYear;
+
+        return matchesMonth && matchesYear;
+      }).toList();
+    });
   }
 
   // Format timestamp to "March 7, 2025" format
@@ -208,6 +307,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         // Update the list of alarms in the UI
         setState(() {
           alarmLogs.insert(0, alarmData); // Add the new alarm to the top of the list
+          _filterAlarms();
         });
       }
     });

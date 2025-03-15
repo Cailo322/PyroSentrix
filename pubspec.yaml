@@ -112,6 +112,11 @@ flutter:
     - assets/reset.png
     - assets/gallery.png
     - assets/warning2.png
+    - assets/temperature.png
+    - assets/IAQ.png
+    - assets/humidity.png
+    - assets/CO.png
+    - assets/smoke.png
 
   fonts:
     - family: Jost
@@ -126,6 +131,13 @@ flutter:
           weight: 300
         - asset: fonts/Poppins-SemiBold.ttf
           weight: 600
+    - family: Jura
+      fonts:
+        - asset: fonts/Jura-Light.ttf
+        - asset: fonts/Jura-Bold.ttf
+        - asset: fonts/Jura-Medium.ttf
+        - asset: fonts/Jura-Regular.ttf
+        - asset: fonts/Jura-SemiBold.ttf
 
 flutter_native_splash:
   color: "#ffffff"  # Background color (set to match your splash screen)
