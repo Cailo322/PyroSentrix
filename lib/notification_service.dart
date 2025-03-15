@@ -6,9 +6,8 @@ import 'package:audioplayers/audioplayers.dart';
 class NotificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
   final AudioPlayer _audioPlayer = AudioPlayer(); // Audio player instance
-
   NotificationService._privateConstructor();
   static final NotificationService _instance = NotificationService._privateConstructor();
   factory NotificationService() => _instance;
@@ -28,28 +27,55 @@ class NotificationService {
 
   // Start listening for sensor data updates and compare with thresholds
   void listenForSensorUpdates() {
+    // Monitor the first collection: HpLk33atBI
+    _monitorProductCode('HpLk33atBI');
+
+    // Monitor the second collection: oURnq0vZrP
+    _monitorProductCode('oURnq0vZrP');
+  }
+
+  // Monitor a specific product code's sensor data
+  void _monitorProductCode(String productCode) {
+    print("Setting up listener for product code: $productCode");
+
     _firestore
         .collection('SensorData')
+        .doc('FireAlarm')
+        .collection(productCode)
         .orderBy('timestamp', descending: true)
         .limit(1)
         .snapshots()
         .listen((snapshot) {
       if (snapshot.docs.isNotEmpty) {
         var latestData = snapshot.docs.first.data();
+        print("New sensor data received for $productCode: $latestData");
 
         _firestore.collection('Threshold').doc('Proxy').get().then((thresholdDoc) {
           var thresholds = thresholdDoc.data();
 
           if (thresholds != null) {
+            print("Thresholds found: $thresholds");
             _compareSensorValues(latestData, thresholds);
+          } else {
+            print("No thresholds found for $productCode");
           }
+        }).catchError((error) {
+          print("Error fetching thresholds: $error");
         });
+      } else {
+        print("No documents found in the $productCode subcollection");
       }
+    }, onError: (error) {
+      print("Error listening to $productCode: $error");
     });
   }
 
   // Compare sensor values with the threshold values
   void _compareSensorValues(Map<String, dynamic> latestData, Map<String, dynamic> thresholds) {
+    print("Comparing sensor values with thresholds...");
+    print("Latest Data: $latestData");
+    print("Thresholds: $thresholds");
+
     List<String> alerts = [];
 
     if (latestData['carbon_monoxide'] > thresholds['co_threshold']) {
@@ -72,18 +98,23 @@ class NotificationService {
     }
 
     if (alerts.isNotEmpty) {
+      print("Alerts triggered: $alerts");
       Set<String> currentAlerts = alerts.toSet();
 
-      // Only send notification if the current alerts are different from acknowledged ones
-      if (!_acknowledgedAlerts.containsAll(currentAlerts) || !_acknowledgedAlerts.containsAll(currentAlerts)) {
+      if (!_acknowledgedAlerts.containsAll(currentAlerts)) {
         String title = "Alert: Sensor Levels Exceeded";
         String body = alerts.length <= 3
             ? alerts.join('\n')
             : "${alerts.take(3).join('\n')}\n\nAnd ${alerts.length - 3} more alerts...";
 
+        print("Sending notification: $title - $body");
         sendNotification(title, body);
-        _acknowledgedAlerts = currentAlerts; // Update acknowledged alerts
+        _acknowledgedAlerts = currentAlerts;
+      } else {
+        print("Alerts already acknowledged: $alerts");
       }
+    } else {
+      print("No alerts triggered.");
     }
   }
 

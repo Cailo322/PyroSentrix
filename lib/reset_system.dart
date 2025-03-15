@@ -150,6 +150,7 @@ class ResetSystemScreen extends StatelessWidget {
         // Perform reset actions
         _resetNotifications();
         _resetHushedStatus();
+        _resetAlarmLoggingStatus(); // Reset the alarm logging status in Firestore
 
         // Restart the app on Android
         SystemNavigator.pop(); // Closes the app on Android
@@ -182,6 +183,26 @@ class ResetSystemScreen extends StatelessWidget {
       }
     } catch (e) {
       print("Error updating isHushed: $e");
+    }
+  }
+
+  // Reset the alarm logging status in Firestore
+  void _resetAlarmLoggingStatus() async {
+    try {
+      // Fetch all alarm logs for the product code
+      var snapshot = await _firestore
+          .collection('SensorData')
+          .doc('AlarmLogs')
+          .collection('your_product_code') // Replace with the actual product code
+          .get();
+
+      // Update the 'logged' field to false for all alarms
+      for (var doc in snapshot.docs) {
+        await doc.reference.update({'logged': false});
+      }
+      print("Alarm logging status reset.");
+    } catch (e) {
+      print("Error resetting alarm logging status: $e");
     }
   }
 }

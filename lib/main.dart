@@ -1,7 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Import the provider package
-import 'package:shared_preferences/shared_preferences.dart'; // Add this import
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'splash_screen.dart';
 import 'devices.dart';
 import 'add_device.dart';
@@ -10,7 +10,7 @@ import 'call.dart';
 import 'custom_app_bar.dart';
 import 'queries.dart';
 import 'login.dart';
-import 'notification_service.dart'; // Add the notification service import
+import 'notification_service.dart'; // Import the notification service
 import 'about.dart';
 import 'reset_system.dart';
 import 'imagestream.dart';
@@ -24,9 +24,9 @@ void main() async {
 
   // Initialize NotificationService
   NotificationService notificationService = NotificationService();
-  notificationService.initialize();
-  notificationService.requestPermissions();
-  notificationService.listenForSensorUpdates();
+  notificationService.initialize(); // Initialize the notification plugin
+  notificationService.requestPermissions(); // Request notification permissions
+  notificationService.listenForSensorUpdates(); // Start listening for sensor updates
 
   // Check login state
   final prefs = await SharedPreferences.getInstance();

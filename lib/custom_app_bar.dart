@@ -210,16 +210,16 @@ class _CustomDrawerState extends State<CustomDrawer> {
         if (isMonitor) {
           final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
           if (deviceProvider.selectedProductCode != null) {
-            // Navigator.push(context, MaterialPageRoute(builder: (context) => MonitorScreen(productCode: deviceProvider.selectedProductCode!)));
+            // Navigator.push(context, MaterialPageRou te(builder: (context) => MonitorScreen(productCode: deviceProvider.selectedProductCode!)));
             await Navigator.pushNamed(context, '/MonitorScreen', arguments: deviceProvider.selectedProductCode!);
           } else {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select a device first.')));
           }
         } else if (isAlarmLog) {
           final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
+          print('Selected Product Code: ${deviceProvider.selectedProductCode}');
           if (deviceProvider.selectedProductCode != null) {
-            // Navigator.push(context, MaterialPageRoute(builder: (context) => AlarmLogScreen(productCode: deviceProvider.selectedProductCode!)));
-            await Navigator.pushNamed(context, '/AlarmLogScreen', arguments: deviceProvider.selectedProductCode!);
+            await Navigator.pushNamed(context, '/AlarmLogScreen', arguments: {'productCode': deviceProvider.selectedProductCode!});
           } else {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select a device first.')));
           }

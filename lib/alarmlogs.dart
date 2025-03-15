@@ -182,12 +182,20 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         bool alarmExists = await _checkIfAlarmExists(sensorDataDocId);
         if (alarmExists) return; // Skip if an alarm log already exists
 
+        // Add a 1-second delay to ensure we get the latest image
+        await Future.delayed(Duration(seconds: 1));
+
+        // Fetch the latest image URL from the Firestore collection
+        String? imageUrl = await _fetchLatestImageUrl();
+
         alarmCount++;
         var alarmData = {
           'id': 'Alarm $alarmCount',
           'timestamp': data['timestamp'],
           'values': data,
           'sensorDataDocId': sensorDataDocId, // Store the sensor data document ID
+          'imageUrl': imageUrl, // Store the image URL
+          'logged': true, // Mark this alarm as logged
         };
 
         // Save alarm data to Firestore under SensorData > AlarmLogs > {productCode}
@@ -205,6 +213,25 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
     });
   }
 
+  // Fetch the latest image URL from Firestore
+  Future<String?> _fetchLatestImageUrl() async {
+    try {
+      var snapshot = await FirebaseFirestore.instance
+          .collection(widget.productCode) // Use the productCode as the collection name
+          .orderBy('timestamp', descending: true) // Order by timestamp (latest first)
+          .limit(1) // Get only the latest document
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        var latestDoc = snapshot.docs.first;
+        return latestDoc['imageUrl']; // Return the image URL
+      }
+    } catch (e) {
+      print('Error fetching image URL: $e');
+    }
+    return null; // Return null if no image URL is found
+  }
+
   // Check if an alarm log already exists for the given sensor data document ID
   Future<bool> _checkIfAlarmExists(String sensorDataDocId) async {
     var snapshot = await FirebaseFirestore.instance
@@ -212,6 +239,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         .doc('AlarmLogs')
         .collection(widget.productCode)
         .where('sensorDataDocId', isEqualTo: sensorDataDocId)
+        .where('logged', isEqualTo: true) // Check if the alarm has been logged
         .limit(1)
         .get();
 
@@ -244,6 +272,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
           'id': data['id'],
           'timestamp': data['timestamp'],
           'values': data['values'],
+          'imageUrl': data['imageUrl'], // Include the image URL
         };
       }).toList();
     });
@@ -322,6 +351,9 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16), // Larger font size
               ),
             ),
+            SizedBox(height: 10),
+            if (alarm['imageUrl'] != null)
+              Image.network(alarm['imageUrl']), // Display the image if available
           ],
         ),
         actions: [
