@@ -144,6 +144,16 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                           );
                         }).toList(),
                       ),
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            selectedMonth = null;
+                            selectedYear = null;
+                            filteredAlarmLogs = alarmLogs; // Show all alarms
+                          });
+                        },
+                        child: Text('Show All'),
+                      ),
                       DropdownButton<String>(
                         value: selectedYear,
                         hint: Text('Select Year'),
@@ -171,15 +181,19 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
             SizedBox(height: 10),
             Expanded(
               child: ListView.builder(
-                itemCount: filteredAlarmLogs.isEmpty ? alarmLogs.length : filteredAlarmLogs.length,
+                itemCount: filteredAlarmLogs.isEmpty && selectedMonth == null && selectedYear == null
+                    ? alarmLogs.length
+                    : filteredAlarmLogs.length,
                 itemBuilder: (context, index) {
-                  var alarm = filteredAlarmLogs.isEmpty ? alarmLogs[index] : filteredAlarmLogs[index];
+                  var alarm = filteredAlarmLogs.isEmpty && selectedMonth == null && selectedYear == null
+                      ? alarmLogs[index]
+                      : filteredAlarmLogs[index];
                   return Card(
                     color: Colors.grey[300], // Changed to light grey
                     margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: ListTile(
                       title: Text(alarm['id']),
-                      subtitle: Text("Timestamp: ${alarm['timestamp']}"),
+                      subtitle: Text("Timestamp: ${_formatTimestamp(alarm['timestamp'])}"),
                       onTap: () => _showSensorValues(context, alarm),
                     ),
                   );
@@ -219,24 +233,43 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
 
   // Filter alarms based on selected month and year
   void _filterAlarms() {
-    if (selectedMonth == null && selectedYear == null) {
-      setState(() {
-        filteredAlarmLogs = [];
-      });
-      return;
-    }
-
     setState(() {
-      filteredAlarmLogs = alarmLogs.where((alarm) {
-        DateTime dateTime = DateTime.parse(alarm['timestamp']);
-        String month = DateFormat('MMMM').format(dateTime);
-        String year = DateFormat('yyyy').format(dateTime);
+      if (selectedMonth == null && selectedYear == null) {
+        // If no filters are selected, show all alarms
+        filteredAlarmLogs = alarmLogs;
+      } else {
+        // Filter alarms based on selected month and year
+        filteredAlarmLogs = alarmLogs.where((alarm) {
+          DateTime dateTime;
+          try {
+            dateTime = DateTime.parse(alarm['timestamp']).toLocal(); // Convert to local time
+          } catch (e) {
+            print("Error parsing timestamp: ${alarm['timestamp']}");
+            return false; // Skip this alarm if the timestamp is invalid
+          }
 
-        bool matchesMonth = selectedMonth == null || month == selectedMonth;
-        bool matchesYear = selectedYear == null || year == selectedYear;
+          int month = dateTime.month; // Month as an integer (1-12)
+          int year = dateTime.year; // Year as an integer (e.g., 2025)
 
-        return matchesMonth && matchesYear;
-      }).toList();
+          // Convert the selected month to its corresponding integer value
+          int selectedMonthInt = selectedMonth != null ? months.indexOf(selectedMonth!) + 1 : -1;
+          int selectedYearInt = selectedYear != null ? int.parse(selectedYear!) : -1;
+
+          // Debugging logs
+          print("Alarm Timestamp: ${dateTime.toString()}");
+          print("Alarm Month: $month, Alarm Year: $year");
+          print("Selected Month: $selectedMonthInt, Selected Year: $selectedYearInt");
+
+          // Compare with selected month and year
+          bool matchesMonth = selectedMonth == null || month == selectedMonthInt;
+          bool matchesYear = selectedYear == null || year == selectedYearInt;
+
+          return matchesMonth && matchesYear;
+        }).toList();
+      }
+
+      // Debugging log to check the filtered alarms
+      print("Filtered Alarms: ${filteredAlarmLogs.length}");
     });
   }
 
@@ -246,7 +279,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
 
     try {
       // Parse the string timestamp into a DateTime object
-      DateTime dateTime = DateTime.parse(timestamp);
+      DateTime dateTime = DateTime.parse(timestamp).toLocal(); // Convert to local time
       final DateFormat formatter = DateFormat('MMMM d, yyyy'); // Format like "March 7, 2025"
       return formatter.format(dateTime);
     } catch (e) {
@@ -375,6 +408,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
           'imageUrl': data['imageUrl'], // Include the image URL
         };
       }).toList();
+      filteredAlarmLogs = alarmLogs; // Initialize filteredAlarmLogs with all alarms
     });
   }
 
