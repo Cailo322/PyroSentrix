@@ -58,9 +58,9 @@ class MyApp extends StatelessWidget {
       onGenerateRoute: (settings) {
         // Handle arguments for MonitorScreen
         if (settings.name == '/MonitorScreen') {
-          final args = settings.arguments as Map<String, dynamic>;
+          final args = settings.arguments as String; // productCode is passed as a String
           return MaterialPageRoute(
-            builder: (context) => MonitorScreen(productCode: args['productCode']),
+            builder: (context) => MonitorScreen(productCode: args),
           );
         }
         // Handle arguments for AlarmLogScreen
@@ -68,6 +68,13 @@ class MyApp extends StatelessWidget {
           final args = settings.arguments as Map<String, dynamic>;
           return MaterialPageRoute(
             builder: (context) => AlarmLogScreen(productCode: args['productCode']),
+          );
+        }
+        // Handle arguments for ResetSystemScreen
+        if (settings.name == '/ResetSystemScreen') {
+          final args = settings.arguments as String; // productCode is passed as a String
+          return MaterialPageRoute(
+            builder: (context) => ResetSystemScreen(productCode: args),
           );
         }
 
@@ -81,7 +88,6 @@ class MyApp extends StatelessWidget {
         '/LoginScreen': (context) => LoginScreen(),
         '/AnalyticsScreen': (context) => AnalyticsScreen(),
         '/AboutScreen': (context) => AboutScreen(),
-        '/ResetSystemScreen': (context) => ResetSystemScreen(),
         '/devices': (context) => DevicesScreen(),
         '/ImageStreamScreen': (context) => ImageStreamScreen(),
       },

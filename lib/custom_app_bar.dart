@@ -199,7 +199,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
     );
   }
 
-  Widget _buildDrawerItem(BuildContext context, String title, String asset, String route, {bool isMonitor = false, bool isAlarmLog = false, bool isAnalytics = false, isRed = false, bool isLogout = false}) {
+  Widget _buildDrawerItem(BuildContext context, String title, String asset, String route, {bool isMonitor = false, bool isAlarmLog = false, bool isAnalytics = false, bool isRed = false, bool isLogout = false}) {
     return ListTile(
       leading: Image.asset(asset, width: 40, height: 27, fit: BoxFit.contain),
       title: Text(title, style: TextStyle(color: isRed ? Colors.red : Color(0xFF494949), fontSize: 17, fontWeight: isRed || isLogout ? FontWeight.bold : FontWeight.normal)),
@@ -210,7 +210,6 @@ class _CustomDrawerState extends State<CustomDrawer> {
         if (isMonitor) {
           final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
           if (deviceProvider.selectedProductCode != null) {
-            // Navigator.push(context, MaterialPageRou te(builder: (context) => MonitorScreen(productCode: deviceProvider.selectedProductCode!)));
             await Navigator.pushNamed(context, '/MonitorScreen', arguments: deviceProvider.selectedProductCode!);
           } else {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select a device first.')));
@@ -235,6 +234,13 @@ class _CustomDrawerState extends State<CustomDrawer> {
 
           // Navigate to the login screen
           Navigator.of(context).pushReplacementNamed('/LoginScreen');
+        } else if (route == '/ResetSystemScreen') {
+          final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
+          if (deviceProvider.selectedProductCode != null) {
+            await Navigator.pushNamed(context, route, arguments: deviceProvider.selectedProductCode!);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select a device first.')));
+          }
         } else if (route.isNotEmpty) {
           await Navigator.pushNamed(context, route);
         }

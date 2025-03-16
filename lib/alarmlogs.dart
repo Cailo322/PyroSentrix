@@ -4,7 +4,6 @@ import 'package:intl/intl.dart'; // For date formatting
 
 class AlarmLogScreen extends StatefulWidget {
   final String productCode; // Accept productCode
-
   const AlarmLogScreen({Key? key, required this.productCode}) : super(key: key);
 
   @override

@@ -5,8 +5,10 @@ import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import 'notification_service.dart'; // Import the NotificationService
 
 class ResetSystemScreen extends StatelessWidget {
+  final String productCode; // Add productCode parameter
   final NotificationService _notificationService = NotificationService(); // Instance of NotificationService
   final FirebaseFirestore _firestore = FirebaseFirestore.instance; // Firestore instance
+  ResetSystemScreen({required this.productCode}); // Update constructor
 
   @override
   Widget build(BuildContext context) {
@@ -193,7 +195,7 @@ class ResetSystemScreen extends StatelessWidget {
       var snapshot = await _firestore
           .collection('SensorData')
           .doc('AlarmLogs')
-          .collection('your_product_code') // Replace with the actual product code
+          .collection(productCode) // Use the passed productCode
           .get();
 
       // Update the 'logged' field to false for all alarms
