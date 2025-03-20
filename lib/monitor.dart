@@ -219,15 +219,16 @@ class MonitorScreen extends StatelessWidget {
                                         width: 120, height: 120), //filler picture only, this will be changed!!
                                   SizedBox(height: 10),
                                   // Buttons row
+                                  // Inside the showDialog widget (HUSH and CALL FIRESTATION buttons)
                                   Row(
                                     children: [
-                                      Expanded( // Stretch the first button
+                                      Expanded(
                                         child: TextButton(
                                           style: TextButton.styleFrom(
                                             backgroundColor: Colors.red[900],
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero), // No rounded corners
-                                            minimumSize: Size(double.infinity, 48), // Full width
-                                            padding: EdgeInsets.zero, // Remove button padding
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                            minimumSize: Size(double.infinity, 48),
+                                            padding: EdgeInsets.zero,
                                           ),
                                           onPressed: () async {
                                             try {
@@ -241,37 +242,41 @@ class MonitorScreen extends StatelessWidget {
                                               _acknowledgedAlerts.addAll(exceededWarningsForDialog);
                                               _notificationService.stopAlarmSound();
                                               _isDialogOpen = false;
-                                              Navigator.of(context).pop();
+                                              Navigator.of(context).pop(); // Close the dialog
                                             } catch (e) {
                                               print('Error updating Firestore: $e');
                                             }
                                           },
-                                          child: Text('HUSH',
-                                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)), // Larger text
+                                          child: Text(
+                                            'HUSH',
+                                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
+                                          ),
                                         ),
                                       ),
                                       Container(
-                                        width: 2, // Divider between buttons
+                                        width: 2,
                                         color: Colors.white,
                                       ),
-                                      Expanded( // Stretch the second button
+                                      Expanded(
                                         child: TextButton(
                                           style: TextButton.styleFrom(
                                             backgroundColor: Colors.red[900],
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero), // No rounded corners
-                                            minimumSize: Size(double.infinity, 48), // Full width
-                                            padding: EdgeInsets.zero, // Remove button padding
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                            minimumSize: Size(double.infinity, 48),
+                                            padding: EdgeInsets.zero,
                                           ),
                                           onPressed: () async {
                                             // Acknowledge alerts when CALL FIRESTATION is pressed
                                             _acknowledgedAlerts.addAll(exceededWarningsForDialog);
                                             _notificationService.stopAlarmSound();
                                             _isDialogOpen = false;
-                                            Navigator.of(context).pop();
+                                            Navigator.of(context).pop(); // Close the dialog
                                             Navigator.push(context, MaterialPageRoute(builder: (context) => CallHelpScreen()));
                                           },
-                                          child: Text('CALL FIRESTATION',
-                                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)), // Larger text
+                                          child: Text(
+                                            'CALL FIRESTATION',
+                                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -283,8 +288,7 @@ class MonitorScreen extends StatelessWidget {
                         );
                       },
                     ).then((_) {
-                      _isDialogOpen = false; // Ensure the flag is reset when the dialog is closed
-                      _updateDialogStatus(false); // Reset Dialogpop to false when the dialog is dismissed
+                      _isDialogOpen = false; // Ensure the flag is reset when the dialog is close
                     });
                   }
                 });
