@@ -118,12 +118,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               final adjustedTimestamp = utcTimestamp.subtract(Duration(hours: 8));
               return SensorData(
                 timestamp: adjustedTimestamp,
-                carbonMonoxide: (data['carbon_monoxide'] as num).toDouble(),
-                humidity: (data['humidity_dht22'] as num).toDouble(),
-                indoorAirQuality: (data['indoor_air_quality'] as num).toDouble(),
-                smokeLevel: (data['smoke_level'] as num).toDouble(),
-                temperatureDHT22: (data['temperature_dht22'] as num).toDouble(),
-                temperatureMLX90614: (data['temperature_mlx90614'] as num).toDouble(),
+                carbonMonoxide: data['carbon_monoxide'],
+                humidity: data['humidity_dht22'],
+                indoorAirQuality: data['indoor_air_quality'],
+                smokeLevel: data['smoke_level'],
+                temperatureDHT22: data['temperature_dht22'],
+                temperatureMLX90614: data['temperature_mlx90614'],
               );
             }).toList();
           });
@@ -178,12 +178,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               final adjustedTimestamp = utcTimestamp.subtract(Duration(hours: 8));
               return SensorData(
                 timestamp: adjustedTimestamp,
-                carbonMonoxide: (data['carbon_monoxide'] as num).toDouble(),
-                humidity: (data['humidity_dht22'] as num).toDouble(),
-                indoorAirQuality: (data['indoor_air_quality'] as num).toDouble(),
-                smokeLevel: (data['smoke_level'] as num).toDouble(),
-                temperatureDHT22: (data['temperature_dht22'] as num).toDouble(),
-                temperatureMLX90614: (data['temperature_mlx90614'] as num).toDouble(),
+                carbonMonoxide: data['carbon_monoxide'],
+                humidity: data['humidity_dht22'],
+                indoorAirQuality: data['indoor_air_quality'],
+                smokeLevel: data['smoke_level'],
+                temperatureDHT22: data['temperature_dht22'],
+                temperatureMLX90614: data['temperature_mlx90614'],
               );
             }).toList());
           });
@@ -230,24 +230,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     }
 
     groupedData.forEach((key, value) {
-      final avgCarbonMonoxide = _roundToTwoDecimalPlaces(
-        value.map((e) => e.carbonMonoxide).reduce((a, b) => a + b) / value.length,
-      );
-      final avgHumidity = _roundToTwoDecimalPlaces(
-        value.map((e) => e.humidity).reduce((a, b) => a + b) / value.length,
-      );
-      final avgIndoorAirQuality = _roundToTwoDecimalPlaces(
-        value.map((e) => e.indoorAirQuality).reduce((a, b) => a + b) / value.length,
-      );
-      final avgSmokeLevel = _roundToTwoDecimalPlaces(
-        value.map((e) => e.smokeLevel).reduce((a, b) => a + b) / value.length,
-      );
-      final avgTemperatureDHT22 = _roundToTwoDecimalPlaces(
-        value.map((e) => e.temperatureDHT22).reduce((a, b) => a + b) / value.length,
-      );
-      final avgTemperatureMLX90614 = _roundToTwoDecimalPlaces(
-        value.map((e) => e.temperatureMLX90614).reduce((a, b) => a + b) / value.length,
-      );
+      final avgCarbonMonoxide = _roundToTwoDecimalPlaces(value.map((e) => e.carbonMonoxide).reduce((a, b) => a + b) / value.length);
+      final avgHumidity = _roundToTwoDecimalPlaces(value.map((e) => e.humidity).reduce((a, b) => a + b) / value.length);
+      final avgIndoorAirQuality = _roundToTwoDecimalPlaces(value.map((e) => e.indoorAirQuality).reduce((a, b) => a + b) / value.length);
+      final avgSmokeLevel = _roundToTwoDecimalPlaces(value.map((e) => e.smokeLevel).reduce((a, b) => a + b) / value.length);
+      final avgTemperatureDHT22 = _roundToTwoDecimalPlaces(value.map((e) => e.temperatureDHT22).reduce((a, b) => a + b) / value.length);
+      final avgTemperatureMLX90614 = _roundToTwoDecimalPlaces(value.map((e) => e.temperatureMLX90614).reduce((a, b) => a + b) / value.length);
 
       aggregatedData.add(SensorData(
         timestamp: value.first.timestamp,
@@ -392,10 +380,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 titlesData: FlTitlesData(
                   show: true,
                   topTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false), // No titles at the top
-                  ),
-                  rightTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false), // Disable right-side titles
+                    sideTitles: SideTitles(showTitles: false),
                   ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
@@ -441,17 +426,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         }
                         return const Text('');
                       },
-                      reservedSize: 30, // Space for bottom titles
+                      reservedSize: 30,
                     ),
                   ),
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        // Display numbers on the left side (0 - 100)
-                        return Text(value.toStringAsFixed(0));
-                      },
-                      reservedSize: 40, // Space for left titles
+                      reservedSize: 40,
                     ),
                   ),
                 ),
