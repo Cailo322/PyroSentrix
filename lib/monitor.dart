@@ -153,6 +153,9 @@ class MonitorScreen extends StatelessWidget {
                   if (shouldShowDialog) {
                     _isDialogOpen = true;
 
+                    // Update Dialogpop to true when the dialog is shown
+                    await _updateDialogStatus(true);
+
                     // Fetch the latest image
                     var latestImage = await fetchLatestImage();
 
@@ -281,6 +284,7 @@ class MonitorScreen extends StatelessWidget {
                       },
                     ).then((_) {
                       _isDialogOpen = false; // Ensure the flag is reset when the dialog is closed
+                      _updateDialogStatus(false); // Reset Dialogpop to false when the dialog is dismissed
                     });
                   }
                 });
