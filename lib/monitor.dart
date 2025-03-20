@@ -16,6 +16,7 @@ class MonitorScreen extends StatelessWidget {
   MonitorScreen({required this.productCode}) {
     _notificationService.initialize();
   }
+
   Future<Map<String, dynamic>?> fetchLatestImage() async {
     try {
       // Use the productCode to query the corresponding collection
@@ -34,6 +35,41 @@ class MonitorScreen extends StatelessWidget {
       }
     }
     return null;
+  }
+
+  Future<bool> _shouldShowDialog() async {
+    try {
+      DocumentSnapshot dialogStatusDoc = await _firestore
+          .collection('DialogStatus')
+          .doc(productCode)
+          .get();
+
+      if (dialogStatusDoc.exists) {
+        return !(dialogStatusDoc.data() as Map<String, dynamic>)['Dialogpop'];
+      } else {
+        // If the document doesn't exist, create it with Dialogpop: false
+        await _firestore.collection('DialogStatus').doc(productCode).set({'Dialogpop': false});
+        return true;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error checking DialogStatus: $e');
+      }
+      return true; // Default to showing the dialog if there's an error
+    }
+  }
+
+  Future<void> _updateDialogStatus(bool status) async {
+    try {
+      await _firestore
+          .collection('DialogStatus')
+          .doc(productCode)
+          .update({'Dialogpop': status});
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error updating DialogStatus: $e');
+      }
+    }
   }
 
   @override
@@ -110,146 +146,147 @@ class MonitorScreen extends StatelessWidget {
                 }
               }
 
-              //Alert pop up
-
+              // Alert pop up
               if (exceededWarningsForDialog.isNotEmpty && !_isDialogOpen) {
                 WidgetsBinding.instance.addPostFrameCallback((_) async {
-                  _isDialogOpen = true;
+                  bool shouldShowDialog = await _shouldShowDialog();
+                  if (shouldShowDialog) {
+                    _isDialogOpen = true;
 
-                  // Fetch the latest image
-                  var latestImage = await fetchLatestImage();
+                    // Fetch the latest image
+                    var latestImage = await fetchLatestImage();
 
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return Dialog(
-                        backgroundColor: Colors.white,
-                        insetPadding: EdgeInsets.zero, // Remove default padding
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8), // Sharp corners
-                        ),
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: 100), // Set a maximum width for the card
-                          child: Container(
-                            padding: EdgeInsets.zero, // Remove padding from the container
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min, // Make the column as small as possible
-                              children: [
-
-                                SizedBox(height: 20),
-                                Image.asset(
-                                  'assets/warningpop_with-shadow.png', // Path to your image
-                                  width:60, // Make the image bigger
-                                  height:60, // Make the image bigger
-                                ),
-                                SizedBox(height: 8),
-                                Text(
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return Dialog(
+                          backgroundColor: Colors.white,
+                          insetPadding: EdgeInsets.zero, // Remove default padding
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8), // Sharp corners
+                          ),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(maxWidth: 100), // Set a maximum width for the card
+                            child: Container(
+                              padding: EdgeInsets.zero, // Remove padding from the container
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min, // Make the column as small as possible
+                                children: [
+                                  SizedBox(height: 20),
+                                  Image.asset(
+                                    'assets/warningpop_with-shadow.png', // Path to your image
+                                    width: 60, // Make the image bigger
+                                    height: 60, // Make the image bigger
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
                                     'WARNING',
                                     style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w900,
-                                    fontFamily: 'Jura',
-                                    color: Colors.red[900]
-                                ),
-                                ),
-                                // Text appears first
-                                SizedBox(height: 5),
-                                Padding(
-                                  padding: EdgeInsets.all(5), // Add padding only to the content
-
-                                  child: Text(
-                                    exceededWarningsForDialog.join("\n"),
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF414141),
-                                      fontSize: 14,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w900,
+                                        fontFamily: 'Jura',
+                                        color: Colors.red[900]),
+                                  ),
+                                  // Text appears first
+                                  SizedBox(height: 5),
+                                  Padding(
+                                    padding: EdgeInsets.all(5), // Add padding only to the content
+                                    child: Text(
+                                      exceededWarningsForDialog.join("\n"),
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF414141),
+                                        fontSize: 14,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                SizedBox(height: 1), // Space between text and image
-                                // Show the latest image below the text
-                                if (latestImage != null)
-                                  Image.network(
-                                    latestImage['imageUrl'],
-                                    width: 200,
-                                    height: 150,
-                                    fit: BoxFit.cover,
-                                  ),
-                                if (latestImage == null)
-                                  Image.asset('assets/About-pic1.jpg', width: 120, height: 120), //filler picture only, this will be changed!!
-                                SizedBox(height: 10),
-                                // Buttons row
-                                Row(
-                                  children: [
-                                    Expanded( // Stretch the first button
-                                      child: TextButton(
-                                        style: TextButton.styleFrom(
-                                          backgroundColor: Colors.red[900],
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero), // No rounded corners
-                                          minimumSize: Size(double.infinity, 48), // Full width
-                                          padding: EdgeInsets.zero, // Remove button padding
-                                        ),
-                                        onPressed: () async {
-                                          try {
-                                            // Update the isHushed variable in Firestore
-                                            await FirebaseFirestore.instance
-                                                .collection('BooleanConditions')
-                                                .doc('Alarm')
-                                                .update({'isHushed': true}); // Update the isHushed field to true
+                                  SizedBox(height: 1), // Space between text and image
+                                  // Show the latest image below the text
+                                  if (latestImage != null)
+                                    Image.network(
+                                      latestImage['imageUrl'],
+                                      width: 200,
+                                      height: 150,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  if (latestImage == null)
+                                    Image.asset('assets/About-pic1.jpg',
+                                        width: 120, height: 120), //filler picture only, this will be changed!!
+                                  SizedBox(height: 10),
+                                  // Buttons row
+                                  Row(
+                                    children: [
+                                      Expanded( // Stretch the first button
+                                        child: TextButton(
+                                          style: TextButton.styleFrom(
+                                            backgroundColor: Colors.red[900],
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero), // No rounded corners
+                                            minimumSize: Size(double.infinity, 48), // Full width
+                                            padding: EdgeInsets.zero, // Remove button padding
+                                          ),
+                                          onPressed: () async {
+                                            try {
+                                              // Update the isHushed variable in Firestore
+                                              await FirebaseFirestore.instance
+                                                  .collection('BooleanConditions')
+                                                  .doc('Alarm')
+                                                  .update({'isHushed': true}); // Update the isHushed field to true
 
-                                            // Acknowledge alerts when HUSH is pressed
+                                              // Acknowledge alerts when HUSH is pressed
+                                              _acknowledgedAlerts.addAll(exceededWarningsForDialog);
+                                              _notificationService.stopAlarmSound();
+                                              _isDialogOpen = false;
+                                              Navigator.of(context).pop();
+                                            } catch (e) {
+                                              print('Error updating Firestore: $e');
+                                            }
+                                          },
+                                          child: Text('HUSH',
+                                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)), // Larger text
+                                        ),
+                                      ),
+                                      Container(
+                                        width: 2, // Divider between buttons
+                                        color: Colors.white,
+                                      ),
+                                      Expanded( // Stretch the second button
+                                        child: TextButton(
+                                          style: TextButton.styleFrom(
+                                            backgroundColor: Colors.red[900],
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero), // No rounded corners
+                                            minimumSize: Size(double.infinity, 48), // Full width
+                                            padding: EdgeInsets.zero, // Remove button padding
+                                          ),
+                                          onPressed: () async {
+                                            // Acknowledge alerts when CALL FIRESTATION is pressed
                                             _acknowledgedAlerts.addAll(exceededWarningsForDialog);
                                             _notificationService.stopAlarmSound();
                                             _isDialogOpen = false;
                                             Navigator.of(context).pop();
-                                          } catch (e) {
-                                            print('Error updating Firestore: $e');
-                                          }
-                                        },
-                                        child: Text('HUSH', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)), // Larger text
-                                      ),
-                                    ),
-                                    Container(
-                                      width: 2, // Divider between buttons
-                                      color: Colors.white,
-                                    ),
-                                    Expanded( // Stretch the second button
-                                      child: TextButton(
-                                        style: TextButton.styleFrom(
-                                          backgroundColor: Colors.red[900],
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero), // No rounded corners
-                                          minimumSize: Size(double.infinity, 48), // Full width
-                                          padding: EdgeInsets.zero, // Remove button padding
+                                            Navigator.push(context, MaterialPageRoute(builder: (context) => CallHelpScreen()));
+                                          },
+                                          child: Text('CALL FIRESTATION',
+                                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)), // Larger text
                                         ),
-                                        onPressed: () {
-                                          // Acknowledge alerts when CALL FIRESTATION is pressed
-                                          _acknowledgedAlerts.addAll(exceededWarningsForDialog);
-                                          _notificationService.stopAlarmSound();
-                                          _isDialogOpen = false;
-                                          Navigator.of(context).pop();
-                                          Navigator.push(context, MaterialPageRoute(builder: (context) => CallHelpScreen()));
-                                        },
-                                        child: Text('CALL FIRESTATION', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)), // Larger text
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ).then((_) {
-                    _isDialogOpen = false; // Ensure the flag is reset when the dialog is closed
-                  });
+                        );
+                      },
+                    ).then((_) {
+                      _isDialogOpen = false; // Ensure the flag is reset when the dialog is closed
+                    });
+                  }
                 });
               } else if (exceededWarningsForDialog.isEmpty) {
                 _lastDisplayedWarnings.clear();
               }
-
 
               return Column(
                 children: [

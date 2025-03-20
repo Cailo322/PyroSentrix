@@ -153,6 +153,7 @@ class ResetSystemScreen extends StatelessWidget {
         _resetNotifications();
         _resetHushedStatus();
         _resetAlarmLoggingStatus(); // Reset the alarm logging status in Firestore
+        _resetDialogStatus(); // Reset the Dialogpop field in DialogStatus collection
 
         // Restart the app on Android
         SystemNavigator.pop(); // Closes the app on Android
@@ -218,6 +219,27 @@ class ResetSystemScreen extends StatelessWidget {
       print("AlarmLogged reset to false for HpLk33atBI and oURnq0vZrP.");
     } catch (e) {
       print("Error resetting alarm logging status: $e");
+    }
+  }
+
+  // Reset the Dialogpop field in DialogStatus collection
+  void _resetDialogStatus() async {
+    try {
+      // Reset Dialogpop for HpLk33atBI
+      await _firestore
+          .collection('DialogStatus')
+          .doc('HpLk33atBI')
+          .update({'Dialogpop': false});
+
+      // Reset Dialogpop for oURnq0vZrP
+      await _firestore
+          .collection('DialogStatus')
+          .doc('oURnq0vZrP')
+          .update({'Dialogpop': false});
+
+      print("Dialogpop reset to false for HpLk33atBI and oURnq0vZrP.");
+    } catch (e) {
+      print("Error resetting Dialogpop: $e");
     }
   }
 }
