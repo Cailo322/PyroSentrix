@@ -168,7 +168,6 @@ class _CustomDrawerState extends State<CustomDrawer> {
             _buildSection('Others', [
               _buildDrawerItem(context, 'System Reset', 'assets/System-Reset.png', '/ResetSystemScreen'),
               _buildDrawerItem(context, 'FAQs', 'assets/FAQs.png', '/QueriesScreen'),
-              _buildDrawerItem(context, 'Images', 'assets/gallery.png', '/ImageStreamScreen'),
               _buildDrawerItem(context, 'Call Help', 'assets/call.png', '/CallHelpScreen', isRed: true),
               _buildDrawerItem(context, 'Logout', 'assets/logout.png', '', isLogout: true),
             ]),

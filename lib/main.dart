@@ -14,7 +14,6 @@ import 'notification_service.dart'; // Import the notification service
 import 'trends.dart'; // Import the trend analysis service
 import 'about.dart';
 import 'reset_system.dart';
-import 'imagestream.dart';
 import 'alarmlogs.dart';
 import 'device_provider.dart'; // Import your DeviceProvider
 import 'analytics.dart';
@@ -95,7 +94,6 @@ class MyApp extends StatelessWidget {
         '/AnalyticsScreen': (context) => AnalyticsScreen(),
         '/AboutScreen': (context) => AboutScreen(),
         '/devices': (context) => DevicesScreen(),
-        '/ImageStreamScreen': (context) => ImageStreamScreen(),
       },
     );
   }
