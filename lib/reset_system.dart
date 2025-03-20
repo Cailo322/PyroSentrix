@@ -191,18 +191,31 @@ class ResetSystemScreen extends StatelessWidget {
   // Reset the alarm logging status in Firestore
   void _resetAlarmLoggingStatus() async {
     try {
-      // Fetch all alarm logs for the product code
+      // Reset the 'logged' field to false for all alarms in SensorData > AlarmLogs > {productCode}
       var snapshot = await _firestore
           .collection('SensorData')
           .doc('AlarmLogs')
           .collection(productCode) // Use the passed productCode
           .get();
 
-      // Update the 'logged' field to false for all alarms
       for (var doc in snapshot.docs) {
         await doc.reference.update({'logged': false});
       }
-      print("Alarm logging status reset.");
+      print("All 'logged' fields reset to false in SensorData > AlarmLogs > $productCode.");
+
+      // Reset AlarmLogged for HpLk33atBI
+      await _firestore
+          .collection('AlarmStatus')
+          .doc('HpLk33atBI')
+          .update({'AlarmLogged': false});
+
+      // Reset AlarmLogged for oURnq0vZrP
+      await _firestore
+          .collection('AlarmStatus')
+          .doc('oURnq0vZrP')
+          .update({'AlarmLogged': false});
+
+      print("AlarmLogged reset to false for HpLk33atBI and oURnq0vZrP.");
     } catch (e) {
       print("Error resetting alarm logging status: $e");
     }

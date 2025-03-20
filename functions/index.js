@@ -1,12 +1,13 @@
+const functions = require("firebase-functions");
 const { onObjectFinalized } = require("firebase-functions/v2/storage");
-const { getFirestore } = require("firebase-admin/firestore");
-const { initializeApp } = require("firebase-admin/app");
-const { getStorage } = require("firebase-admin/storage");
 
-initializeApp(); // Initialize Firebase Admin SDK
-const db = getFirestore(); // Get Firestore instance
-const storage = getStorage(); // Get Firebase Storage instance
+// Import the shared Firebase initialization
+const { db, storage } = require("./firebaseInit");
 
+// Import the predictEvery1Minute function from lstm.js
+const { predictEvery1Minute } = require("./lstm");
+
+// Image Upload Function
 exports.onImageUpload = onObjectFinalized(
   {
     region: "asia-southeast1",
@@ -49,3 +50,6 @@ exports.onImageUpload = onObjectFinalized(
     }
   }
 );
+
+// Export the predictEvery1Minute function
+exports.predictEvery1Minutes = predictEvery1Minute;

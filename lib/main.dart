@@ -11,6 +11,7 @@ import 'custom_app_bar.dart';
 import 'queries.dart';
 import 'login.dart';
 import 'notification_service.dart'; // Import the notification service
+import 'trends.dart'; // Import the trend analysis service
 import 'about.dart';
 import 'reset_system.dart';
 import 'imagestream.dart';
@@ -27,6 +28,11 @@ void main() async {
   notificationService.initialize(); // Initialize the notification plugin
   notificationService.requestPermissions(); // Request notification permissions
   notificationService.listenForSensorUpdates(); // Start listening for sensor updates
+
+  // Initialize TrendAnalysisService
+  TrendAnalysisService trendAnalysisService = TrendAnalysisService();
+  trendAnalysisService.initialize(); // Initialize the trend analysis service
+  trendAnalysisService.startTrendAnalysis(); // Start analyzing trends every 1 minute
 
   // Check login state
   final prefs = await SharedPreferences.getInstance();
