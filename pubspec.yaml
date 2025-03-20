@@ -79,6 +79,12 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/bg-2.png
+    - assets/Logo_NN.png
+    - assets/bg.png
+    - assets/warningpop_with-shadow.png
+    - assets/question-mark.png
+    - assets/person.png
     - assets/info-icon.png
     - assets/dashboard.png
     - assets/FAQs.png
@@ -122,9 +128,13 @@ flutter:
     - family: Jost
       fonts:
         - asset: fonts/Jost-VariableFont_wght.ttf
+        - asset: fonts/Jost-Black.ttf
+        - asset: fonts/Jost-Medium.ttf
     - family: Inter
       fonts:
         - asset: fonts/Inter-VariableFont_opsz,wght.ttf
+        - asset: fonts/Inter_24pt-Light.ttf
+        - asset: fonts/Inter_18pt-Bold.ttf
     - family: Poppins
       fonts:
         - asset: fonts/Poppins-Light.ttf
@@ -138,6 +148,14 @@ flutter:
         - asset: fonts/Jura-Medium.ttf
         - asset: fonts/Jura-Regular.ttf
         - asset: fonts/Jura-SemiBold.ttf
+    - family: Arimo
+      fonts:
+        - asset: fonts/Arimo-Italic.ttf
+        - asset: fonts/Arimo-Regular.ttf
+        - asset: fonts/Arimo-Medium.ttf
+        - asset: fonts/Arimo-SemiBold.ttf
+        - asset: fonts/Arimo-Bold.ttf
+
 
 flutter_native_splash:
   color: "#ffffff"  # Background color (set to match your splash screen)

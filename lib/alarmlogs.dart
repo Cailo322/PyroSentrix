@@ -102,18 +102,53 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                           showDialog(
                             context: context,
                             builder: (context) => AlertDialog(
-                              content: Text("This is where you can monitor the alarms"),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: Text("Close"),
+                              // Adjust the width of the dialog
+                              backgroundColor: Colors.white,
+                              insetPadding: EdgeInsets.symmetric(horizontal: 20.0), // Horizontal padding for the dialog
+                              contentPadding: EdgeInsets.all(16.0), // Padding inside the dialog
+                              content: Container(
+                                width: 120, // Set a fixed width for the content
+                                height: 180, // Set a fixed height for the content
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min, // Make the column take up only as much space as needed
+                                  children: [
+                                    Image.asset(
+                                      'assets/question-mark.png', // Path to your image
+                                      width: 40, // Set the width of the image
+                                      height: 40, // Set the height of the image
+                                    ),
+                                    SizedBox(height: 16), // Add some space between the image and the text
+                                    Text(
+                                      "Alarm Logs History",
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w800,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                    SizedBox(height: 8),
+                                    Container(
+                                      width: 20,
+                                      height: 3,
+                                      decoration: BoxDecoration(
+                                        color: Color(0xFF494949),
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    SizedBox(height: 13),
+                                    Text(
+                                      "This section allows you to review all previously triggered alarms, helping you stay informed about past incidents and potential issues",
+                                      style: TextStyle(fontSize: 16),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           );
                         },
                         child: Opacity(
-                          opacity: 0.5, // Adjust the opacity (0.0 = fully transparent, 1.0 = fully opaque)
+                          opacity: 0.6, // Adjust the opacity (0.0 = fully transparent, 1.0 = fully opaque)
                           child: Image.asset(
                             'assets/info-icon.png',
                             width: 20,
@@ -412,7 +447,13 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
   }
 
   // Show detailed sensor values in a dialog when an alarm is tapped
-  void _showSensorValues(BuildContext context, Map<String, dynamic> alarm) {
+  void _showSensorValues(BuildContext context, Map<String, dynamic> alarm) async {
+    // Fetch the thresholds
+    var thresholdDoc = await FirebaseFirestore.instance.collection('Threshold').doc('Proxy').get();
+    if (!thresholdDoc.exists) return;
+
+    var thresholds = thresholdDoc.data()!;
+
     // Format the timestamp
     String formattedTimestamp = _formatTimestamp(alarm['timestamp']);
 
@@ -429,6 +470,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white, // Set the background color to white
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -461,22 +503,33 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
               String sensorName = sensorInfo['name']!;
               String sensorUnit = sensorInfo['unit']!;
 
+              // Check if the sensor value exceeds the threshold
+              bool exceedsThreshold = _exceedsThresholdForSensor(entry.key, entry.value, thresholds);
+
               return Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween, // Align sensor values to the right
                 children: [
                   Text(
                     "$sensorName:", // Sensor name
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15), // Larger font size
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: exceedsThreshold ? FontWeight.bold : FontWeight.bold, // Bold if exceeds threshold
+                      color: exceedsThreshold ? Colors.red[700] : Colors.black, // Keep the color black
+                    ),
                   ),
                   Text(
                     "${entry.value} $sensorUnit", // Sensor value with unit
-                    style: TextStyle(fontSize: 16), // Larger font size
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: exceedsThreshold ? FontWeight.bold : FontWeight.normal, // Bold if exceeds threshold
+                      color: exceedsThreshold ? Colors.red[700] : Colors.black, // Highlight in red if exceeds threshold
+                    ),
                   ),
                 ],
               );
             }).toList(),
             SizedBox(height: 15),
-            Divider(color: Colors.grey, thickness: 1), // Add a divider below the last sensor
+            Divider(color: Colors.grey[300], thickness: 1), // Add a divider below the last sensor
             SizedBox(height: 5),
             Center(
               child: Text(
@@ -494,5 +547,25 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         ],
       ),
     );
+  }
+
+  // Helper method to check if a specific sensor value exceeds its threshold
+  bool _exceedsThresholdForSensor(String sensorKey, dynamic sensorValue, Map<String, dynamic> thresholds) {
+    switch (sensorKey) {
+      case 'carbon_monoxide':
+        return sensorValue > thresholds['co_threshold'];
+      case 'humidity_dht22':
+        return sensorValue < thresholds['humidity_threshold'];
+      case 'indoor_air_quality':
+        return sensorValue > thresholds['iaq_threshold'];
+      case 'smoke_level':
+        return sensorValue > thresholds['smoke_threshold'];
+      case 'temperature_mlx90614':
+        return sensorValue > thresholds['temp_threshold'];
+      case 'temperature_dht22':
+        return sensorValue > thresholds['temp_threshold'];
+      default:
+        return false;
+    }
   }
 }

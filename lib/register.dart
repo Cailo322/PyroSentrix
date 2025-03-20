@@ -9,7 +9,6 @@ import 'verification.dart'; // Import the VerificationScreen
 import 'login.dart';
 import 'api_service.dart'; // Import the ApiService
 
-
 class RegisterScreen extends StatefulWidget {
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
@@ -164,164 +163,244 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.only(
-            left: 16.0,
-            right: 16.0,
-            top: 60.0,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 16.0,
+      body: Stack(
+        children: [
+          // Background Image
+          Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/bg-2.png'), // Path to your background image
+                fit: BoxFit.cover, // Ensures the image covers the entire screen
+              ),
+            ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 170,
-                height: 170,
-                child: Image.asset('assets/official-logo.png'),
-              ),
-              SizedBox(height: 35),
-              Text(
-                'Register',
-                style: TextStyle(
-                  fontFamily: 'Jost',
-                  fontSize: 35,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF494949),
-                ),
-              ),
-              SizedBox(height: 35),
-              _buildTextInput('Enter Name', _nameController),
-              SizedBox(height: 20),
-              _buildEmailInput(),
-              SizedBox(height: 20),
-              _buildPasswordInput('Enter Password', _passwordController, showRequirements: true),
-              SizedBox(height: 20),
-              _buildPasswordInput('Confirm Password', _confirmPasswordController, error: _passwordError, showRequirements: false),
-              SizedBox(height: 20),
-              _buildTextInput('Enter Address', _addressController),
-              SizedBox(height: 10),
-              GestureDetector(
-                onTap: _getCurrentLocation,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset(
-                      'assets/location.png',
-                      height: 20,
-                      width: 20,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      "Use my current location as my address",
-                      style: TextStyle(
-                        color: Color(0xFF8B8B8B),
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: _registerUser,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFFFDE59),
-                ),
-                child: Text(
-                  'DONE',
-                  style: TextStyle(fontFamily: 'Jost', fontWeight: FontWeight.w900),
-                ),
-              ),
-              SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+          // PYROSENTRIX Text and Additional Text
+          Positioned(
+            top: 100, // Adjust this value to position the text vertically
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Column(
                 children: [
                   Text(
-                    'Already have an account? ',
+                    'PYROSENTRIX',
                     style: TextStyle(
+                      fontSize: 45, // Adjust the font size as needed
+                      fontWeight: FontWeight.bold,
                       fontFamily: 'Jost',
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF494949),
+                      color: Colors.white, // Adjust the color as needed
                     ),
                   ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => LoginScreen()),
-                      );
-                    },
-                    child: Text(
-                      'Log in',
-                      style: TextStyle(
-                        fontFamily: 'Jost',
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                        decoration: TextDecoration.underline,
-                      ),
+                  SizedBox(height: 3), // Space between the two texts
+                  Text(
+                    'Stay Alert', // Add your new text
+                    style: TextStyle(
+                      fontSize: 35, // Adjust the font size as needed
+                      fontWeight: FontWeight.w200,
+                      fontFamily: 'Inter',
+                      color: Colors.white.withOpacity(0.8), // Adjust the color as needed
                     ),
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
+          // Register Form
+          SafeArea(
+            child: Stack(
+              children: [
+                // Position the Card at the bottom of the screen
+                Positioned(
+                  top: 200, // Start the Card 200 pixels from the top
+                  bottom: 0, // Extend the Card to the bottom of the screen
+                  left: 0,
+                  right: 0,
+                  child: Card(
+                    elevation: 5, // Adds a shadow to the card
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(65),
+                        topRight: Radius.circular(65),
+                      ), // Rounded corners only at the top
+                    ),
+                    margin: EdgeInsets.zero, // Remove default margin
+                    color: Colors.white, // White background for the card
+                    child: SingleChildScrollView(
+                      // Wrap the content in a SingleChildScrollView
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          left: 24.0,
+                          right: 24.0,
+                          top: 24.0,
+                          bottom: 10.0, // Added bottom padding to create space
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Register',
+                              style: TextStyle(
+                                fontFamily: 'Jost',
+                                fontSize: 35,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF494949),
+                              ),
+                            ),
+                            SizedBox(height: 10),
+                            // Subtitle
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 50), // Add horizontal margin
+                              child: Text(
+                                'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: 'Jost',
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 30),
+                            _buildTextInput('Enter Name', _nameController),
+                            SizedBox(height: 10),
+                            _buildEmailInput(),
+                            SizedBox(height: 10),
+                            _buildPasswordInput('Enter Password', _passwordController, showRequirements: true),
+                            SizedBox(height: 20),
+                            _buildPasswordInput('Confirm Password', _confirmPasswordController, error: _passwordError, showRequirements: false),
+                            SizedBox(height: 10),
+                            _buildTextInput('Enter Address', _addressController),
+                            SizedBox(height: 10),
+                            GestureDetector(
+                              onTap: _getCurrentLocation,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Image.asset(
+                                    'assets/location.png',
+                                    height: 20,
+                                    width: 20,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    "Use my current location as my address",
+                                    style: TextStyle(
+                                      color: Color(0xFF8B8B8B),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(height: 25),
+                            ElevatedButton(
+                              onPressed: _registerUser,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.deepOrange,
+                                padding: EdgeInsets.symmetric(horizontal: 70, vertical: 10),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: Text(
+                                'DONE',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center, // Center the children horizontally
+                              crossAxisAlignment: CrossAxisAlignment.center, // Align children vertically
+                              children: [
+                                Text(
+                                  'Already have an existing account?',
+                                  style: TextStyle(
+                                    fontFamily: 'Jost',
+                                    fontSize: 16,
+                                    color: Colors.deepOrange,
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => LoginScreen()),
+                                    );
+                                  },
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.only(left: 5), // Remove default padding
+                                    minimumSize: Size.zero, // Remove minimum size constraints
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap, // Reduce tap target size
+                                  ),
+                                  child: Text(
+                                    'Sign In Here',
+                                    style: TextStyle(
+                                      fontFamily: 'Jost',
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.deepOrange,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildTextInput(String labelText, TextEditingController controller) {
+  Widget _buildTextInput(String hintText, TextEditingController controller) {
     return Container(
       width: 300,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            labelText,
-            style: TextStyle(
-              fontFamily: 'Jost',
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF494949),
-              shadows: [
-                Shadow(
-                  blurRadius: 3,
-                  color: Colors.black.withOpacity(0.2),
-                  offset: Offset(1, 1),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: Color(0xFFDDDDDD),
-              borderRadius: BorderRadius.circular(5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 5,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: TextField(
-              controller: controller,
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 10),
-              ),
-            ),
-          ),
-        ],
+        Container(
+        height: 50, // Set the height of the input box
+        decoration: BoxDecoration(
+            color: Color(0xFFDDDDDD),
+            borderRadius: BorderRadius.circular(5),
+            boxShadow: [
+        BoxShadow(
+        color: Colors.black.withOpacity(0.1),
+        blurRadius: 5,
+        offset: Offset(0, 2),
+        ),
+            ],
       ),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          hintText: hintText, // Placeholder text inside the input box
+          hintStyle: TextStyle(
+            fontFamily: 'Jost',
+            fontSize: 14,
+            color: Colors.grey[600],
+          ),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10), // Adjust padding
+        ),
+      ),
+    ),
+    ],
+    ),
     );
   }
 
@@ -331,24 +410,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Enter Email',
-            style: TextStyle(
-              fontFamily: 'Jost',
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF494949),
-              shadows: [
-                Shadow(
-                  blurRadius: 3,
-                  color: Colors.black.withOpacity(0.2),
-                  offset: Offset(1, 1),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 8),
           Container(
+            height: 50, // Set the height of the input box
             decoration: BoxDecoration(
               color: _emailError != null ? Colors.orange[50] : Color(0xFFDDDDDD),
               borderRadius: BorderRadius.circular(5),
@@ -367,8 +430,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: TextField(
               controller: _emailController,
               decoration: InputDecoration(
+                hintText: 'Enter Email', // Placeholder text inside the input box
+                hintStyle: TextStyle(
+                  fontFamily: 'Jost',
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10), // Adjust padding
               ),
             ),
           ),
@@ -399,30 +468,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildPasswordInput(String labelText, TextEditingController controller, {String? error, bool showRequirements = false}) {
+  Widget _buildPasswordInput(String hintText, TextEditingController controller, {String? error, bool showRequirements = false}) {
     return Container(
       width: 300,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            labelText,
-            style: TextStyle(
-              fontFamily: 'Jost',
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF494949),
-              shadows: [
-                Shadow(
-                  blurRadius: 3,
-                  color: Colors.black.withOpacity(0.2),
-                  offset: Offset(1, 1),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 8),
           Container(
+            height: 50, // Set the height of the input box
             decoration: BoxDecoration(
               color: error != null ? Colors.orange[50] : Color(0xFFDDDDDD),
               borderRadius: BorderRadius.circular(5),
@@ -442,8 +495,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
               controller: controller,
               obscureText: true,
               decoration: InputDecoration(
+                hintText: hintText, // Placeholder text inside the input box
+                hintStyle: TextStyle(
+                  fontFamily: 'Jost',
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10), // Adjust padding
               ),
               onChanged: (value) {
                 if (showRequirements) {
@@ -506,5 +565,4 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
-
 }

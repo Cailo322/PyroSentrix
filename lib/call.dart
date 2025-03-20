@@ -77,7 +77,7 @@ class CallHelpScreen extends StatelessWidget {
                             'Fire Stations Near You',
                             style: TextStyle(
                               fontSize: 20,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w500,
                               color: Color(0xFF494949),
                               fontFamily: 'Jost',
                             ),
@@ -148,7 +148,7 @@ class CallHelpScreen extends StatelessWidget {
           name,
           style: TextStyle(
             fontSize: 17, // Increased the font size for the fire station name
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w500,
             color: Color(0xFF494949),
             fontFamily: 'Jost',
           ),
@@ -170,7 +170,7 @@ class CallHelpScreen extends StatelessWidget {
                     fontFamily: 'Jost',
                     color: Colors.red, // Make the number red to indicate it's clickable
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
