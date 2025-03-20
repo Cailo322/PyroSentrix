@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'login.dart'; // Import the LoginScreen
+import 'package:pyrosentrixapp/register.dart';
+import 'register.dart'; // Import the RegisterScreen
+import 'login.dart';
 
 class WelcomeScreen extends StatefulWidget {
   @override
@@ -27,7 +29,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     super.dispose();
   }
 
-  void _navigateToLogin() async {
+  void _navigateToRegister() async {
     setState(() {
       _isLoading = true;
     });
@@ -36,90 +38,198 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => LoginScreen()),
+      MaterialPageRoute(builder: (context) => RegisterScreen()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Welcome to Pyrosentrix!',
-              style: TextStyle(
-                fontFamily: 'Jost',
-                fontSize: 30,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
+      body: Stack(
+        children: [
+          // Background image
+          Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/bg.png'),
+                fit: BoxFit.cover,
               ),
             ),
-            SizedBox(height: 20),
-            Image.asset(
-              'assets/official-logo.png',
-              width: 180,
-              height: 180,
-              fit: BoxFit.contain,
-            ),
-            SizedBox(height: 40),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _navigateToLogin,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFFFDE59),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
+          ),
+          // Content
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset(
+                  'assets/Logo_NN.png',
+                  width: 150,
+                  height: 150,
+                  fit: BoxFit.contain,
                 ),
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              child: Text(
-                'GET STARTED',
-                style: TextStyle(
-                  fontFamily: 'Jost',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.7,
-                  color: Colors.grey[800],
-                ),
-              ),
-            ),
-            if (_isLoading) ...[
-              SizedBox(height: 20),
-              SizedBox(
-                width: 50,
-                height: 50,
-                child: AnimatedBuilder(
-                  animation: _controller,
-                  builder: (context, child) {
-                    return Transform.rotate(
-                      angle: _controller.value * 6.3,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: List.generate(12, (index) {
-                          final angle = index * (6.3 / 12);
-                          return Transform(
-                            transform: Matrix4.identity()
-                              ..translate(20.0 * math.cos(angle), 20.0 * math.sin(angle)),
-                            child: Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.orange.withOpacity((index + 1) / 12),
-                              ),
-                            ),
-                          );
-                        }),
+                Text(
+                  'PYROSENTRIX!',
+                  style: TextStyle(
+                    fontFamily: 'Jost',
+                    fontSize: 45,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                    color: Colors.white, // Adjust text color if needed
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.2), // Shadow color
+                        offset: Offset(1, 1), // Shadow offset (x, y)
+                        blurRadius: 30, // Blur radius
                       ),
-                    );
-                  },
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ],
-        ),
+                Text(
+                  'Stay Alert',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 35,
+                    fontWeight: FontWeight.w100,
+                    letterSpacing: 0.5,
+                    color: Colors.white.withOpacity(0.6), // Adjust text color if needed
+                      shadows: [
+                        Shadow(
+                        color: Colors.black.withOpacity(0.2), // Shadow color
+                        offset: Offset(1, 1), // Shadow offset (x, y)
+                        blurRadius: 30, // Blur radius
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 200),
+                Text(
+                  'Stay Alert, Stay Safe.',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 30,
+                    fontWeight: FontWeight.w100,
+                    letterSpacing: 0.5,
+                    color: Colors.white, // Adjust text color if needed
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.2), // Shadow color
+                        offset: Offset(1, 1), // Shadow offset (x, y)
+                        blurRadius: 30, // Blur radius
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height:10),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 40), // Add horizontal margin
+                  alignment: Alignment.center, // Center the text
+                  child: Text(
+                    'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+                    textAlign: TextAlign.center, // Center-align the text content
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w100,
+                      letterSpacing: 0.5,
+                      color: Colors.white.withOpacity(0.7),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 35),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _navigateToRegister,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFFFF6200),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 90, vertical: 15),
+                  ),
+                  child: Text(
+                    'Get Started',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.7,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center, // Center the children horizontally
+                  crossAxisAlignment: CrossAxisAlignment.center, // Align children vertically
+                  children: [
+                    Text(
+                      'Already have an account?',
+                      style: TextStyle(
+                        fontFamily: 'Jost',
+                        fontSize: 16,
+                        color: Colors.white,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => LoginScreen()),
+                        );
+                      },
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.only(left: 5), // Remove default padding
+                        minimumSize: Size.zero, // Remove minimum size constraints
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap, // Reduce tap target size
+                      ),
+                      child: Text(
+                        'Sign In',
+                        style: TextStyle(
+                          fontFamily: 'Jost',
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_isLoading) ...[
+                  SizedBox(height: 20),
+                  SizedBox(
+                    width: 50,
+                    height: 50,
+                    child: AnimatedBuilder(
+                      animation: _controller,
+                      builder: (context, child) {
+                        return Transform.rotate(
+                          angle: _controller.value * 6.3,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: List.generate(12, (index) {
+                              final angle = index * (6.3 / 12);
+                              return Transform(
+                                transform: Matrix4.identity()
+                                  ..translate(20.0 * math.cos(angle), 20.0 * math.sin(angle)),
+                                child: Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.orange.withOpacity((index + 1) / 12),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

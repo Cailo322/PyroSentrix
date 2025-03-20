@@ -63,8 +63,6 @@ class _DevicesScreenState extends State<DevicesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // _checkUser();
-
     // Access the DeviceProvider
     final deviceProvider = Provider.of<DeviceProvider>(context);
 
@@ -146,12 +144,21 @@ class _DevicesScreenState extends State<DevicesScreen> {
                             'Devices',
                             style: TextStyle(
                               fontFamily: 'Jost',
-                              fontSize: 26,
-                              fontWeight: FontWeight.w900,
+                              fontSize: 30,
+                              fontWeight: FontWeight.bold,
                               color: Colors.black,
                             ),
                           ),
-                          SizedBox(height: 10),
+                          SizedBox(height: 4),
+                          Container(
+                            width: 20,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: Color(0xFF494949),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          SizedBox(height: 20),
                           Text(
                             'Your devices will be displayed here.\nAdd a new flame sensor by tapping the add icon.',
                             textAlign: TextAlign.center,
@@ -221,7 +228,8 @@ class _DevicesScreenState extends State<DevicesScreen> {
       },
       child: Card(
         margin: EdgeInsets.only(bottom: 16),
-        elevation: 4,
+        elevation: 2,
+        color: Colors.grey[300],
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
@@ -245,8 +253,8 @@ class _DevicesScreenState extends State<DevicesScreen> {
                         deviceName,
                         style: TextStyle(
                           fontFamily: 'Jost',
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500,
                           color: Colors.black,
                         ),
                       ),
@@ -254,6 +262,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                   ),
                   PopupMenuButton<String>(
                     icon: Icon(Icons.more_vert),
+                    color: Colors.white, // Set the background color of the popup menu to white
                     onSelected: (value) {
                       if (value == 'details') {
                         _showDeviceDetails(context, doc);
@@ -266,16 +275,16 @@ class _DevicesScreenState extends State<DevicesScreen> {
                     itemBuilder: (context) => [
                       PopupMenuItem(
                         value: 'details',
-                        child: Text('Details'),
+                        child: Text('Details', style: TextStyle(color: Colors.black)), // Set text color to black
                       ),
                       if (isAdmin) // Only show 'Add People' for admin
                         PopupMenuItem(
                           value: 'add_people',
-                          child: Text('Add People'),
+                          child: Text('Add People', style: TextStyle(color: Colors.black)), // Set text color to black
                         ),
                       PopupMenuItem(
                         value: 'delete',
-                        child: Text('Delete', style: TextStyle(color: Colors.red)),
+                        child: Text('Delete', style: TextStyle(color: Colors.red)), // Keep red text for delete
                       ),
                     ],
                   ),
@@ -297,6 +306,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
+          backgroundColor: Colors.white,
           title: Text('Edit Device Name'),
           content: TextField(
             controller: controller,
@@ -329,6 +339,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
+          backgroundColor: Colors.white,
           title: Text('Device Details'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -359,6 +370,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
+          backgroundColor: Colors.white,
           title: Text('Delete Device'),
           content: Text('Are you sure you want to delete this device?'),
           actions: [
@@ -392,6 +404,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
+          backgroundColor: Colors.white,
           title: Text('Add People'),
           content: TextField(
             controller: controller,

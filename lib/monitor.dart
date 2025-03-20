@@ -122,85 +122,124 @@ class MonitorScreen extends StatelessWidget {
                   showDialog(
                     context: context,
                     builder: (BuildContext context) {
-                      return AlertDialog(
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Text appears first
-                            Text(
-                              exceededWarningsForDialog.join("\n"),
-                              textAlign: TextAlign.justify,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF414141),
-                              ),
-                            ),
-                            SizedBox(height: 10), // Space between text and image
-                            // Show the latest image below the text
-                            if (latestImage != null)
-                              Image.network(
-                                latestImage['imageUrl'],
-                                width: 200,
-                                height: 200,
-                                fit: BoxFit.cover,
-                              ),
-                            if (latestImage == null)
-                              Image.asset('assets/warningpop.png', width: 48, height: 48),
-                            SizedBox(height: 20), // Space before the dividing line
-                            Divider(color: Colors.grey, thickness: 2), // Thicker dividing line
-                          ],
+                      return Dialog(
+                        backgroundColor: Colors.white,
+                        insetPadding: EdgeInsets.zero, // Remove default padding
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8), // Sharp corners
                         ),
-                        actionsAlignment: MainAxisAlignment.center, // Center the buttons
-                        actions: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              TextButton(
-                                style: TextButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  padding: EdgeInsets.symmetric(horizontal: 17, vertical: 12), // Reduced padding
-                                ),
-                                onPressed: () async {
-                                  try {
-                                    // Update the isHushed variable in Firestore
-                                    await FirebaseFirestore.instance
-                                        .collection('BooleanConditions')
-                                        .doc('Alarm')
-                                        .update({'isHushed': true}); // Update the isHushed field to true
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: 100), // Set a maximum width for the card
+                          child: Container(
+                            padding: EdgeInsets.zero, // Remove padding from the container
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min, // Make the column as small as possible
+                              children: [
 
-                                    // Acknowledge alerts when HUSH is pressed
-                                    _acknowledgedAlerts.addAll(exceededWarningsForDialog);
-                                    _notificationService.stopAlarmSound();
-                                    _isDialogOpen = false;
-                                    Navigator.of(context).pop();
-                                  } catch (e) {
-                                    print('Error updating Firestore: $e');
-                                  }
-                                },
-                                child: Text('HUSH', style: TextStyle(color: Colors.white, fontSize: 16)), // Larger text
-                              ),
-                              SizedBox(width: 10), // Space between buttons
-                              TextButton(
-                                style: TextButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                                  padding: EdgeInsets.symmetric(horizontal: 17, vertical: 12), // Reduced padding
+                                SizedBox(height: 20),
+                                Image.asset(
+                                  'assets/warningpop_with-shadow.png', // Path to your image
+                                  width:60, // Make the image bigger
+                                  height:60, // Make the image bigger
                                 ),
-                                onPressed: () {
-                                  // Acknowledge alerts when CALL FIRESTATION is pressed
-                                  _acknowledgedAlerts.addAll(exceededWarningsForDialog);
-                                  _notificationService.stopAlarmSound();
-                                  _isDialogOpen = false;
-                                  Navigator.of(context).pop();
-                                  Navigator.push(context, MaterialPageRoute(builder: (context) => CallHelpScreen()));
-                                },
-                                child: Text('CALL FIRESTATION', style: TextStyle(color: Colors.white, fontSize: 16)), // Larger text
-                              ),
-                            ],
+                                SizedBox(height: 8),
+                                Text(
+                                    'WARNING',
+                                    style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w900,
+                                    fontFamily: 'Jura',
+                                    color: Colors.red[900]
+                                ),
+                                ),
+                                // Text appears first
+                                SizedBox(height: 5),
+                                Padding(
+                                  padding: EdgeInsets.all(5), // Add padding only to the content
+
+                                  child: Text(
+                                    exceededWarningsForDialog.join("\n"),
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF414141),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: 1), // Space between text and image
+                                // Show the latest image below the text
+                                if (latestImage != null)
+                                  Image.network(
+                                    latestImage['imageUrl'],
+                                    width: 200,
+                                    height: 150,
+                                    fit: BoxFit.cover,
+                                  ),
+                                if (latestImage == null)
+                                  Image.asset('assets/About-pic1.jpg', width: 120, height: 120), //filler picture only, this will be changed!!
+                                SizedBox(height: 10),
+                                // Buttons row
+                                Row(
+                                  children: [
+                                    Expanded( // Stretch the first button
+                                      child: TextButton(
+                                        style: TextButton.styleFrom(
+                                          backgroundColor: Colors.red[900],
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero), // No rounded corners
+                                          minimumSize: Size(double.infinity, 48), // Full width
+                                          padding: EdgeInsets.zero, // Remove button padding
+                                        ),
+                                        onPressed: () async {
+                                          try {
+                                            // Update the isHushed variable in Firestore
+                                            await FirebaseFirestore.instance
+                                                .collection('BooleanConditions')
+                                                .doc('Alarm')
+                                                .update({'isHushed': true}); // Update the isHushed field to true
+
+                                            // Acknowledge alerts when HUSH is pressed
+                                            _acknowledgedAlerts.addAll(exceededWarningsForDialog);
+                                            _notificationService.stopAlarmSound();
+                                            _isDialogOpen = false;
+                                            Navigator.of(context).pop();
+                                          } catch (e) {
+                                            print('Error updating Firestore: $e');
+                                          }
+                                        },
+                                        child: Text('HUSH', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)), // Larger text
+                                      ),
+                                    ),
+                                    Container(
+                                      width: 2, // Divider between buttons
+                                      color: Colors.white,
+                                    ),
+                                    Expanded( // Stretch the second button
+                                      child: TextButton(
+                                        style: TextButton.styleFrom(
+                                          backgroundColor: Colors.red[900],
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero), // No rounded corners
+                                          minimumSize: Size(double.infinity, 48), // Full width
+                                          padding: EdgeInsets.zero, // Remove button padding
+                                        ),
+                                        onPressed: () {
+                                          // Acknowledge alerts when CALL FIRESTATION is pressed
+                                          _acknowledgedAlerts.addAll(exceededWarningsForDialog);
+                                          _notificationService.stopAlarmSound();
+                                          _isDialogOpen = false;
+                                          Navigator.of(context).pop();
+                                          Navigator.push(context, MaterialPageRoute(builder: (context) => CallHelpScreen()));
+                                        },
+                                        child: Text('CALL FIRESTATION', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)), // Larger text
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ],
+                        ),
                       );
                     },
                   ).then((_) {
@@ -252,7 +291,7 @@ class MonitorScreen extends StatelessWidget {
                                   'Monitor your sensors here',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    fontSize: 18,
+                                    fontSize: 20,
                                     color: Colors.black,
                                     fontFamily: 'Jost',
                                   ),
@@ -261,69 +300,71 @@ class MonitorScreen extends StatelessWidget {
                             ),
                           ),
                           SizedBox(height: 30),
-                          GridView.count(
-                            shrinkWrap: true,
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 20,
-                            mainAxisSpacing: 20,
-                            childAspectRatio: 1,
-                            physics: NeverScrollableScrollPhysics(),
-                            children: [
-                              SensorCard(
-                                title: 'HUMIDITY',
-                                status: determineStatus(sensorData['humidity_dht22'], thresholdData['humidity_threshold'], 'humidity'),
-                                value: '${sensorData['humidity_dht22']}%',
-                                statusColor: determineStatusColor(sensorData['humidity_dht22'], thresholdData['humidity_threshold'], 'humidity'),
-                                valueColor: determineStatusColor(sensorData['humidity_dht22'], thresholdData['humidity_threshold'], 'humidity'),
-                              ),
-                              SensorCard(
-                                title: 'TEMP.1',
-                                status: determineStatus(sensorData['temperature_dht22'], thresholdData['temp_threshold'], 'temperature'),
-                                value: '${sensorData['temperature_dht22']}°C',
-                                statusColor: determineStatusColor(sensorData['temperature_dht22'], thresholdData['temp_threshold'], 'temperature'),
-                                valueColor: determineStatusColor(sensorData['temperature_dht22'], thresholdData['temp_threshold'], 'temperature'),
-                              ),
-                              SensorCard(
-                                title: 'CO',
-                                status: determineStatus(sensorData['carbon_monoxide'], thresholdData['co_threshold'], 'co'),
-                                value: '${sensorData['carbon_monoxide']} ppm',
-                                statusColor: determineStatusColor(sensorData['carbon_monoxide'], thresholdData['co_threshold'], 'co'),
-                                valueColor: determineStatusColor(sensorData['carbon_monoxide'], thresholdData['co_threshold'], 'co'),
-                              ),
-                              SensorCard(
-                                title: 'SMOKE',
-                                status: determineStatus(sensorData['smoke_level'], thresholdData['smoke_threshold'], 'smoke'),
-                                value: '${sensorData['smoke_level']}%',
-                                statusColor: determineStatusColor(sensorData['smoke_level'], thresholdData['smoke_threshold'], 'smoke'),
-                                valueColor: determineStatusColor(sensorData['smoke_level'], thresholdData['smoke_threshold'], 'smoke'),
-                              ),
-                              SensorCard(
-                                title: 'TEMP.2',
-                                status: determineStatus(sensorData['temperature_mlx90614'], thresholdData['temp_threshold'], 'temperature'),
-                                value: '${sensorData['temperature_mlx90614']}°C',
-                                statusColor: determineStatusColor(sensorData['temperature_mlx90614'], thresholdData['temp_threshold'], 'temperature'),
-                                valueColor: determineStatusColor(sensorData['temperature_mlx90614'], thresholdData['temp_threshold'], 'temperature'),
-                              ),
-                              SensorCard(
-                                title: 'INDOOR AIR QUALITY',
-                                status: determineStatus(sensorData['indoor_air_quality'], thresholdData['iaq_threshold'], 'iaq'),
-                                value: '${sensorData['indoor_air_quality']} AQI',
-                                statusColor: determineStatusColor(sensorData['indoor_air_quality'], thresholdData['iaq_threshold'], 'iaq'),
-                                valueColor: determineStatusColor(sensorData['indoor_air_quality'], thresholdData['iaq_threshold'], 'iaq'),
-                                titleStyle: TextStyle(
-                                  fontSize: 14, // Modified font size
-                                  fontWeight: FontWeight.w600, // Same font weight as before
-                                  color: Color(0xFF494949), // Same color as before
-                                  fontFamily: 'Jost', // Same font family as before
-                                ), // Modify the font size for this title
-                              ),
-                            ],
+                          Padding(
+                            padding: EdgeInsets.only(bottom: 20.0), // Add bottom margin to the entire GridView
+                            child: GridView.count(
+                              shrinkWrap: true,
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 20,
+                              mainAxisSpacing: 20,
+                              childAspectRatio: 1,
+                              physics: NeverScrollableScrollPhysics(),
+                              children: [
+                                SensorCard(
+                                  title: 'HUMIDITY',
+                                  status: determineStatus(sensorData['humidity_dht22'], thresholdData['humidity_threshold'], 'humidity'),
+                                  value: '${sensorData['humidity_dht22']}%',
+                                  statusColor: determineStatusColor(sensorData['humidity_dht22'], thresholdData['humidity_threshold'], 'humidity'),
+                                  valueColor: determineStatusColor(sensorData['humidity_dht22'], thresholdData['humidity_threshold'], 'humidity'),
+                                ),
+                                SensorCard(
+                                  title: 'TEMP.1',
+                                  status: determineStatus(sensorData['temperature_dht22'], thresholdData['temp_threshold'], 'temperature'),
+                                  value: '${sensorData['temperature_dht22']}°C',
+                                  statusColor: determineStatusColor(sensorData['temperature_dht22'], thresholdData['temp_threshold'], 'temperature'),
+                                  valueColor: determineStatusColor(sensorData['temperature_dht22'], thresholdData['temp_threshold'], 'temperature'),
+                                ),
+                                SensorCard(
+                                  title: 'CO',
+                                  status: determineStatus(sensorData['carbon_monoxide'], thresholdData['co_threshold'], 'co'),
+                                  value: '${sensorData['carbon_monoxide']} ppm',
+                                  statusColor: determineStatusColor(sensorData['carbon_monoxide'], thresholdData['co_threshold'], 'co'),
+                                  valueColor: determineStatusColor(sensorData['carbon_monoxide'], thresholdData['co_threshold'], 'co'),
+                                ),
+                                SensorCard(
+                                  title: 'SMOKE',
+                                  status: determineStatus(sensorData['smoke_level'], thresholdData['smoke_threshold'], 'smoke'),
+                                  value: '${sensorData['smoke_level']}%',
+                                  statusColor: determineStatusColor(sensorData['smoke_level'], thresholdData['smoke_threshold'], 'smoke'),
+                                  valueColor: determineStatusColor(sensorData['smoke_level'], thresholdData['smoke_threshold'], 'smoke'),
+                                ),
+                                SensorCard(
+                                  title: 'TEMP.2',
+                                  status: determineStatus(sensorData['temperature_mlx90614'], thresholdData['temp_threshold'], 'temperature'),
+                                  value: '${sensorData['temperature_mlx90614']}°C',
+                                  statusColor: determineStatusColor(sensorData['temperature_mlx90614'], thresholdData['temp_threshold'], 'temperature'),
+                                  valueColor: determineStatusColor(sensorData['temperature_mlx90614'], thresholdData['temp_threshold'], 'temperature'),
+                                ),
+                                SensorCard(
+                                  title: 'INDOOR AIR QUAL.',
+                                  status: determineStatus(sensorData['indoor_air_quality'], thresholdData['iaq_threshold'], 'iaq'),
+                                  value: '${sensorData['indoor_air_quality']} AQI',
+                                  statusColor: determineStatusColor(sensorData['indoor_air_quality'], thresholdData['iaq_threshold'], 'iaq'),
+                                  valueColor: determineStatusColor(sensorData['indoor_air_quality'], thresholdData['iaq_threshold'], 'iaq'),
+                                  titleStyle: TextStyle(
+                                    fontSize: 17, // Modified font size
+                                    fontWeight: FontWeight.bold, // Same font weight as before
+                                    color: Color(0xFF494949), // Same color as before
+                                    fontFamily: 'Arimo', // Same font family as before
+                                  ), // Modify the font size for this title
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
-
 
                   // Display the bottom text and icon
                   Padding(
@@ -331,7 +372,7 @@ class MonitorScreen extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Image.asset(bottomIcon, width: 50, height: 50),
+                        Image.asset(bottomIcon, width: 60, height: 60),
                         SizedBox(width: 5),
                         Flexible(
                           child: Text.rich(
@@ -341,20 +382,20 @@ class MonitorScreen extends StatelessWidget {
                                   TextSpan(
                                     text: "FIRE DETECTED! ",
                                     style: TextStyle(
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.w900,
                                       fontSize: 15,
                                       color: Colors.red,
-                                      fontFamily: 'Jost',
+                                      fontFamily: 'Arimo',
                                     ),
                                   ),
                                 if (bottomText.contains("CAUTION!"))
                                   TextSpan(
                                     text: "CAUTION! ",
                                     style: TextStyle(
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.w900,
                                       fontSize: 15,
                                       color: Color(0xFFFF7020),
-                                      fontFamily: 'Jost',
+                                      fontFamily: 'Arimo',
                                     ),
                                   ),
                                 TextSpan(
@@ -362,9 +403,9 @@ class MonitorScreen extends StatelessWidget {
                                       RegExp(r'^(FIRE DETECTED!|CAUTION!) '), ""),
                                   style: TextStyle(
                                     fontSize: 15,
-                                    fontWeight: FontWeight.w500,
-                                    color: Color(0xFF414141),
-                                    fontFamily: 'Jost',
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.grey[700],
+                                    fontFamily: 'Arimo',
                                     height: 1.3, // Adjusted line spacing
                                   ),
                                 ),
@@ -490,9 +531,9 @@ class SensorCard extends StatelessWidget {
   // Default sensor title style
   static const TextStyle defaultTitleStyle = TextStyle(
     fontSize: 18,
-    fontWeight: FontWeight.w600,
+    fontWeight: FontWeight.bold,
     color: Color(0xFF494949),
-    fontFamily: 'Jost',
+    fontFamily: 'Arimo',
   );
 
   SensorCard({
@@ -508,38 +549,79 @@ class SensorCard extends StatelessWidget {
     String sensorInfo = '';
     switch (title) {
       case 'HUMIDITY':
-        sensorInfo = 'Humidity Sensor: Measures the amount of water vapor in the air. High humidity can indicate potential mold growth, while low humidity can cause discomfort and respiratory issues.';
+        sensorInfo = 'Measures air moisture. Low humidity can indicate heat and dryness, while high humidity may lead to mold growth.';
         break;
       case 'TEMP.1':
       case 'TEMP.2':
-        sensorInfo = 'Temperature Sensor: Measures the ambient temperature. High temperatures can indicate a fire risk, while low temperatures can indicate a cooling system failure.';
+        sensorInfo = 'Checks the temperature around you. If it gets too hot, there might be a fire risk. If it’s unusually cold, it could mean something is wrong with the environment.';
         break;
       case 'CO':
-        sensorInfo = 'Carbon Monoxide Sensor: Detects the presence of carbon monoxide gas, which is toxic and can be lethal in high concentrations.';
+        sensorInfo = 'Detects carbon monoxide, a dangerous gas you can’t see or smell. High levels can be very harmful, so it’s important to stay safe.';
         break;
       case 'SMOKE':
-        sensorInfo = 'Smoke Sensor: Detects the presence of smoke, which can indicate a fire. High smoke levels are a direct indicator of a fire risk.';
+        sensorInfo = 'Looks for smoke in the air. If it detects a lot of smoke, it could mean there’s a fire nearby.';
         break;
-      case 'INDOOR AIR QUALITY':
-        sensorInfo = 'Indoor Air Quality Sensor: Measures the overall air quality inside a building. Poor air quality can indicate the presence of pollutants or inadequate ventilation.';
+      case 'INDOOR AIR QUAL.':
+        sensorInfo = 'Checks how clean the air is inside. If the air quality is poor, it might mean there are pollutants or not enough fresh air coming in.';
         break;
       default:
-        sensorInfo = 'Sensor Information: No specific information available for this sensor.';
+        sensorInfo = 'No specific information available for this sensor.';
     }
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(title),
-          content: Text(sensorInfo),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('OK'),
+          backgroundColor: Colors.white,
+          content: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center, // Center the image and text vertically
+              children: [
+                Image.asset(
+                  'assets/person.png', // Path to your image
+                  width: 90, // Make the image bigger
+                  height: 90, // Make the image bigger
+                ),
+                SizedBox(width: 10), // Add space between the image and the text
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start, // Align text to the left
+                    mainAxisSize: MainAxisSize.min, // Allow the column to shrink-wrap its content
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 18, // Adjust font size for the title
+                          fontWeight: FontWeight.bold, // Make the title bold
+                          color: Colors.black, // Set title color
+                        ),
+                      ),
+                      SizedBox(height: 4), // Add a small space between the title and subtitle
+                      Text(
+                        'Sensor Information',
+                        style: TextStyle(
+                          fontStyle: FontStyle.italic, // Italicize the text
+                          color: Colors.grey, // Set the text color to grey
+                          fontSize: 14, // Adjust the font size if needed
+                        ),
+                      ),
+                      SizedBox(height: 8), // Add space between the subtitle and sensor info
+                      Text(
+                        sensorInfo,
+                        style: TextStyle(
+                          fontSize: 14, // Adjust font size for the sensor info
+                          color: Colors.black87, // Set text color
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
+          ),
+          contentPadding: EdgeInsets.fromLTRB(16, 20, 16, 10), // Adjust spacing here
+          actionsAlignment: MainAxisAlignment.center, // Center-align the actions (OK button)
+          actions: [
           ],
         );
       },
@@ -576,7 +658,16 @@ class SensorCard extends StatelessWidget {
                   title,
                   style: titleStyle,
                 ),
-                SizedBox(height: 5),
+                SizedBox(height: 1),
+                Container(
+                  width: 17,
+                  height: 3,
+                  decoration: BoxDecoration(
+                    color: Color(0xFFB9B9B9),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                SizedBox(height: 10),
                 Text(
                   'Status Level:',
                   style: TextStyle(
@@ -589,10 +680,10 @@ class SensorCard extends StatelessWidget {
                 Text(
                   status,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: statusColor,
-                    fontFamily: 'Jost',
+                    fontFamily: 'Arimo',
                   ),
                 ),
                 SizedBox(height: 10),
@@ -608,10 +699,10 @@ class SensorCard extends StatelessWidget {
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: valueColor,
-                    fontFamily: 'Jost',
+                    fontFamily: 'Arimo',
                   ),
                 ),
               ],
@@ -668,7 +759,7 @@ class SensorCard extends StatelessWidget {
                   height: 30,
                 ),
               ),
-            if (title == 'INDOOR AIR QUALITY')
+            if (title == 'INDOOR AIR QUAL.')
               Positioned(
                 bottom: -5,
                 right: -5,
