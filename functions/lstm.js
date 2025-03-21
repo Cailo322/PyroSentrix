@@ -25,105 +25,119 @@ exports.predictEvery1Minute = onSchedule(
   },
   async (event) => {
     try {
-      // Fetch the latest 4 sensor readings from Firestore
-      const sensorDataRef = db
-        .collection("SensorData")
-        .doc("FireAlarm")
-        .collection("oURnq0vZrP");
-      const snapshot = await sensorDataRef.orderBy("timestamp", "desc").limit(4).get();
+      // Step 1: Fetch all product codes under SensorData/FireAlarm
+      const sensorDataRef = db.collection("SensorData").doc("FireAlarm");
+      const productCodesSnapshot = await sensorDataRef.listCollections();
 
-      if (snapshot.empty) {
-        console.log("No sensor data found.");
-        return;
-      }
+      // Step 2: Process each product code dynamically
+      for (const productCodeCollection of productCodesSnapshot) {
+        const productCode = productCodeCollection.id;
 
-      // Get the latest document's timestamp
-      const latestDocTimestamp = snapshot.docs[0].data().timestamp;
+        // Fetch the latest 4 sensor readings for the current product code
+        const snapshot = await productCodeCollection
+          .orderBy("timestamp", "desc")
+          .limit(4)
+          .get();
 
-      // Check if the latest document has already been processed
-      const lastProcessedRef = db.collection("Metadata").doc("lastProcessed");
-      const lastProcessedDoc = await lastProcessedRef.get();
+        if (snapshot.empty) {
+          console.log(`No sensor data found for product code: ${productCode}`);
+          continue;
+        }
 
-      if (lastProcessedDoc.exists && lastProcessedDoc.data().timestamp === latestDocTimestamp) {
-        console.log("No new data to process. Latest data already processed.");
-        return;
-      }
+        // Get the latest document's timestamp
+        const latestDocTimestamp = snapshot.docs[0].data().timestamp;
 
-      // Extract and scale sensor values
-      const sensorData = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        sensorData.push([
-          scaleValue(data.carbon_monoxide, minMaxValues.carbon_monoxide),
-          scaleValue(data.humidity_dht22, minMaxValues.humidity_dht22),
-          scaleValue(data.indoor_air_quality, minMaxValues.indoor_air_quality),
-          scaleValue(data.smoke_level, minMaxValues.smoke_level),
-          scaleValue(data.temperature_dht22, minMaxValues.temperature_dht22),
-          scaleValue(data.temperature_mlx90614, minMaxValues.temperature_mlx90614),
-        ]);
-      });
+        // Check if the latest document has already been processed
+        const lastProcessedRef = db
+          .collection("LSTM")
+          .doc("Metadata")
+          .collection(productCode)
+          .doc("lastProcessed");
+        const lastProcessedDoc = await lastProcessedRef.get();
 
-      // Reverse the array to get the readings in ascending order (oldest first)
-      sensorData.reverse();
+        if (lastProcessedDoc.exists && lastProcessedDoc.data().timestamp === latestDocTimestamp) {
+          console.log(`No new data to process for product code: ${productCode}. Latest data already processed.`);
+          continue;
+        }
 
-      // Check if we have exactly 4 timesteps
-      if (sensorData.length !== 4) {
-        console.log("Not enough sensor data. Need exactly 4 timesteps.");
-        return;
-      }
+        // Extract and scale sensor values
+        const sensorData = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          sensorData.push([
+            scaleValue(data.carbon_monoxide, minMaxValues.carbon_monoxide),
+            scaleValue(data.humidity_dht22, minMaxValues.humidity_dht22),
+            scaleValue(data.indoor_air_quality, minMaxValues.indoor_air_quality),
+            scaleValue(data.smoke_level, minMaxValues.smoke_level),
+            scaleValue(data.temperature_dht22, minMaxValues.temperature_dht22),
+            scaleValue(data.temperature_mlx90614, minMaxValues.temperature_mlx90614),
+          ]);
+        });
 
-      // Log the scaled sensor data
-      console.log("Scaled Sensor Data:", JSON.stringify(sensorData, null, 2));
+        // Reverse the array to get the readings in ascending order (oldest first)
+        sensorData.reverse();
 
-      // Format the data for Vertex AI prediction
-      const instances = [sensorData];
-      const requestBody = { instances: instances };
-      console.log("Request Body:", JSON.stringify(requestBody, null, 2));
+        // Check if we have exactly 4 timesteps
+        if (sensorData.length !== 4) {
+          console.log(`Not enough sensor data for product code: ${productCode}. Need exactly 4 timesteps.`);
+          continue;
+        }
 
-      // Get the access token for authentication
-      const accessToken = await getAccessToken();
-      console.log("Access Token:", accessToken);
+        // Log the scaled sensor data
+        console.log(`Scaled Sensor Data for ${productCode}:`, JSON.stringify(sensorData, null, 2));
 
-      // Make a prediction using the Vertex AI endpoint
-      const response = await axios.post(
-        endpointUrl,
-        requestBody,
-        {
+        // Format the data for Vertex AI prediction
+        const instances = [sensorData];
+        const requestBody = { instances: instances };
+        console.log("Request Body:", JSON.stringify(requestBody, null, 2));
+
+        // Get the access token for authentication
+        const accessToken = await getAccessToken();
+        console.log("Access Token:", accessToken);
+
+        // Make a prediction using the Vertex AI endpoint
+        const response = await axios.post(endpointUrl, requestBody, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
+        });
+
+        // Log the predictions for verification
+        console.log("Predictions from Vertex AI:", JSON.stringify(response.data.predictions, null, 2));
+
+        // Unscale and format the predictions
+        const predictions = response.data.predictions[0]; // Extract the nested array of predictions
+        if (predictions && predictions.length > 0) {
+          for (let i = 0; i < predictions.length; i++) {
+            const unscaledPrediction = {
+              carbon_monoxide: roundToDecimal(unscaleValue(predictions[i][0], minMaxValues.carbon_monoxide), 1),
+              humidity_dht22: roundToDecimal(unscaleValue(predictions[i][1], minMaxValues.humidity_dht22), 1),
+              indoor_air_quality: Math.round(unscaleValue(predictions[i][2], minMaxValues.indoor_air_quality)), // No decimals
+              smoke_level: roundToDecimal(unscaleValue(predictions[i][3], minMaxValues.smoke_level), 2), // 2 decimals
+              temperature_dht22: roundToDecimal(unscaleValue(predictions[i][4], minMaxValues.temperature_dht22), 1),
+              temperature_mlx90614: roundToDecimal(unscaleValue(predictions[i][5], minMaxValues.temperature_mlx90614), 1),
+              timestamp: new Date(Date.now() + (i + 1) * 60000).toISOString(), // Increment timestamp by 1 minute for each prediction
+            };
+
+            // Add the unscaled and formatted prediction data to the LSTM/Predictions/{productCode} collection
+            await db
+              .collection("LSTM")
+              .doc("Predictions")
+              .collection(productCode)
+              .add(unscaledPrediction);
+            console.log(`Unscaled Prediction ${i + 1} stored in Firestore for ${productCode}:`, JSON.stringify(unscaledPrediction, null, 2));
+          }
+        } else {
+          console.log("No predictions returned from Vertex AI.");
         }
-      );
 
-      // Log the predictions for verification
-      console.log("Predictions from Vertex AI:", JSON.stringify(response.data.predictions, null, 2));
-
-      // Unscale and format the predictions
-      const predictions = response.data.predictions[0]; // Extract the nested array of predictions
-      if (predictions && predictions.length > 0) {
-        for (let i = 0; i < predictions.length; i++) {
-          const unscaledPrediction = {
-            carbon_monoxide: roundToDecimal(unscaleValue(predictions[i][0], minMaxValues.carbon_monoxide), 1),
-            humidity_dht22: roundToDecimal(unscaleValue(predictions[i][1], minMaxValues.humidity_dht22), 1),
-            indoor_air_quality: Math.round(unscaleValue(predictions[i][2], minMaxValues.indoor_air_quality)), // No decimals
-            smoke_level: roundToDecimal(unscaleValue(predictions[i][3], minMaxValues.smoke_level), 2), // 2 decimals
-            temperature_dht22: roundToDecimal(unscaleValue(predictions[i][4], minMaxValues.temperature_dht22), 1),
-            temperature_mlx90614: roundToDecimal(unscaleValue(predictions[i][5], minMaxValues.temperature_mlx90614), 1),
-            timestamp: new Date(Date.now() + (i + 1) * 60000).toISOString(), // Increment timestamp by 1 minute for each prediction
-          };
-
-          // Add the unscaled and formatted prediction data to the Predictions collection
-          await db.collection("Predictions").add(unscaledPrediction);
-          console.log(`Unscaled Prediction ${i + 1} stored in Firestore:`, JSON.stringify(unscaledPrediction, null, 2));
-        }
-      } else {
-        console.log("No predictions returned from Vertex AI.");
+        // Update the last processed timestamp in Firestore for the current product code
+        await lastProcessedRef.set({ timestamp: latestDocTimestamp });
+        console.log(`Updated last processed timestamp for product code: ${productCode}`);
       }
 
-      // Update the last processed timestamp in Firestore
-      await lastProcessedRef.set({ timestamp: latestDocTimestamp });
-      console.log("Updated last processed timestamp in Firestore.");
+      console.log("Processing completed for all product codes.");
     } catch (error) {
       console.error("Error in Cloud Function:", error);
       if (error.response) {

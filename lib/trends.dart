@@ -60,7 +60,9 @@ class TrendAnalysisService {
     try {
       // Fetch the latest 4 predictions ordered by timestamp (descending)
       QuerySnapshot snapshot = await _firestore
-          .collection('Predictions')
+          .collection('LSTM')
+          .doc('Predictions')
+          .collection('HpLk33atBI')
           .orderBy('timestamp', descending: true)
           .limit(4)
           .get();
@@ -94,7 +96,7 @@ class TrendAnalysisService {
 
     if (_isUpwardTrend(sensorValues)) {
       String title = "⚠️ $sensorName Alert";
-      String body = "$sensorName is projected to rise!";
+      String body = "$sensorName is projected to rise in the next 40 seconds! Please inspect your surroundings";
 
       print("$sensorName is on an upward trend. Sending notification...");
       _sendNotification(title, body);
@@ -126,7 +128,7 @@ class TrendAnalysisService {
     var platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
 
     await flutterLocalNotificationsPlugin.show(
-      0,
+      1,
       title,
       body,
       platformChannelSpecifics,
