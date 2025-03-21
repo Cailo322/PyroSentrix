@@ -190,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Container(
                         padding: EdgeInsets.symmetric(horizontal: 50), // Add horizontal margin
                         child: Text(
-                          'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor',
+                          'Stay connected to your fire alarm system—sign in to monitor alerts in real time',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                               fontFamily: 'Jost',

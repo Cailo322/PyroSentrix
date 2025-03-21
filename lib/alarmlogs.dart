@@ -180,24 +180,44 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                   ),
                   SizedBox(height: 10),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween, // Space between dropdowns and button
                     children: [
-                      DropdownButton<String>(
-                        value: selectedMonth,
-                        hint: Text('Select Month'),
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            selectedMonth = newValue;
-                            _filterAlarms();
-                          });
-                        },
-                        items: months.map<DropdownMenuItem<String>>((
-                            String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
-                          );
-                        }).toList(),
+                      Row(
+                        children: [
+                          DropdownButton<String>(
+                            value: selectedMonth,
+                            hint: Text('Select Month'),
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                selectedMonth = newValue;
+                                _filterAlarms();
+                              });
+                            },
+                            items: months.map<DropdownMenuItem<String>>((String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(value),
+                              );
+                            }).toList(),
+                          ),
+                          SizedBox(width: 10), // Add spacing between the dropdowns
+                          DropdownButton<String>(
+                            value: selectedYear,
+                            hint: Text('Select Year'),
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                selectedYear = newValue;
+                                _filterAlarms();
+                              });
+                            },
+                            items: years.map<DropdownMenuItem<String>>((String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(value),
+                              );
+                            }).toList(),
+                          ),
+                        ],
                       ),
                       ElevatedButton(
                         onPressed: () {
@@ -207,24 +227,23 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                             filteredAlarmLogs = alarmLogs; // Show all alarms
                           });
                         },
-                        child: Text('Show All'),
-                      ),
-                      DropdownButton<String>(
-                        value: selectedYear,
-                        hint: Text('Select Year'),
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            selectedYear = newValue;
-                            _filterAlarms();
-                          });
-                        },
-                        items: years.map<DropdownMenuItem<String>>((
-                            String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
-                          );
-                        }).toList(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.yellow[600], // Background color
+                          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10), // Padding
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20), // Rounded corners
+                          ),
+                          elevation: 2, // Shadow
+                        ),
+
+                        child: Text(
+                            'Show All',
+                            style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            fontFamily: 'Arimo',
+                            color: Colors.black),
+                        ),
                       ),
                     ],
                   ),
@@ -250,7 +269,10 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                     color: Colors.grey[300], // Changed to light grey
                     margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: ListTile(
-                      title: Text(alarm['id']),
+                      title: Text(alarm['id'],
+                      style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w800)),
                       subtitle: Text("Timestamp: ${_formatTimestamp(
                           alarm['timestamp'])}"),
                       onTap: () => _showSensorValues(context, alarm),
@@ -489,12 +511,9 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
   }
 
   // Show detailed sensor values in a dialog when an alarm is tapped
-  void _showSensorValues(BuildContext context,
-      Map<String, dynamic> alarm) async {
+  void _showSensorValues(BuildContext context, Map<String, dynamic> alarm) async {
     // Fetch the thresholds
-    var thresholdDoc = await FirebaseFirestore.instance.collection('Threshold')
-        .doc('Proxy')
-        .get();
+    var thresholdDoc = await FirebaseFirestore.instance.collection('Threshold').doc('Proxy').get();
     if (!thresholdDoc.exists) return;
 
     var thresholds = thresholdDoc.data()!;
@@ -514,99 +533,102 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
 
     showDialog(
       context: context,
-      builder: (context) =>
-          AlertDialog(
-            backgroundColor: Colors.white, // Set the background color to white
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  alarm['id'],
-                  style: TextStyle(
-                    fontSize: 25, // Set the font size
-                    fontWeight: FontWeight.bold, // Set the font weight
-                    color: Colors.black87, // Set the text color
-                  ),
-                ),
-                SizedBox(height: 5),
-                // Add a small gap between the title and timestamp
-                Text(
-                  "Timestamp: $formattedTimestamp", // Formatted timestamp
-                  style: TextStyle(fontSize: 17), // Larger font size
-                ),
-              ],
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white, // Set the background color to white
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              alarm['id'],
+              style: TextStyle(
+                fontSize: 25, // Set the font size
+                fontWeight: FontWeight.bold, // Set the font weight
+                color: Colors.black87, // Set the text color
+              ),
             ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(height: 10),
-                // Add some space below the timestamp
-                ...alarm['values'].entries.map<Widget>((entry) {
-                  // Skip the 'timestamp' field in sensor values
-                  if (entry.key == 'timestamp') return SizedBox.shrink();
-
-                  // Get readable name and unit for the sensor
-                  var sensorInfo = sensorDetails[entry.key] ??
-                      {'name': entry.key, 'unit': ''};
-                  String sensorName = sensorInfo['name']!;
-                  String sensorUnit = sensorInfo['unit']!;
-
-                  // Check if the sensor value exceeds the threshold
-                  bool exceedsThreshold = _exceedsThresholdForSensor(
-                      entry.key, entry.value, thresholds);
-
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    // Align sensor values to the right
-                    children: [
-                      Text(
-                        "$sensorName:", // Sensor name
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: exceedsThreshold
-                              ? FontWeight.bold
-                              : FontWeight.bold, // Bold if exceeds threshold
-                          color: exceedsThreshold ? Colors.red[700] : Colors
-                              .black, // Keep the color black
-                        ),
-                      ),
-                      Text(
-                        "${entry.value} $sensorUnit", // Sensor value with unit
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: exceedsThreshold
-                              ? FontWeight.bold
-                              : FontWeight.normal, // Bold if exceeds threshold
-                          color: exceedsThreshold ? Colors.red[700] : Colors
-                              .black, // Highlight in red if exceeds threshold
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
-                SizedBox(height: 15),
-                Divider(color: Colors.grey[300], thickness: 1),
-                // Add a divider below the last sensor
-                SizedBox(height: 5),
-                Center(
-                  child: Text(
-                    "Image Captured:",
-                    style: TextStyle(fontWeight: FontWeight.bold,
-                        fontSize: 16), // Larger font size
-                  ),
-                ),
-                SizedBox(height: 10),
-                if (alarm['imageUrl'] != null)
-                  Image.network(alarm['imageUrl']),
-                // Display the image if available
-              ],
+            SizedBox(height: 5),
+            // Add a small gap between the title and timestamp
+            Text(
+              "Timestamp: $formattedTimestamp", // Formatted timestamp
+              style: TextStyle(fontSize: 17), // Larger font size
             ),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(context), child: Text("Close"))
-            ],
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: 5),
+            // Add some space below the timestamp
+            ...alarm['values'].entries.map<Widget>((entry) {
+              // Skip the 'timestamp' field in sensor values
+              if (entry.key == 'timestamp') return SizedBox.shrink();
+
+              // Get readable name and unit for the sensor
+              var sensorInfo = sensorDetails[entry.key] ?? {'name': entry.key, 'unit': ''};
+              String sensorName = sensorInfo['name']!;
+              String sensorUnit = sensorInfo['unit']!;
+
+              // Check if the sensor value exceeds the threshold
+              bool exceedsThreshold = _exceedsThresholdForSensor(entry.key, entry.value, thresholds);
+
+              return Container(
+                decoration: exceedsThreshold
+                    ? BoxDecoration(
+                  color: Colors.red[100], // Light red background
+                  borderRadius: BorderRadius.circular(5), // Rounded corners
+                  border: Border.all(
+                    color: Colors.red[800]!, // Red border
+                    width: 1.0,
+                  ),
+                )
+                    : null, // No decoration if not exceeding threshold
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4), // Padding inside the box
+                margin: EdgeInsets.symmetric(vertical: 1), // Margin between rows
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "$sensorName:", // Sensor name
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold, // Always bold
+                        color: exceedsThreshold ? Colors.red[700] : Colors.black, // Red if exceeds threshold
+                      ),
+                    ),
+                    Text(
+                      "${entry.value} $sensorUnit", // Sensor value with unit
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold, // Always bold
+                        color: exceedsThreshold ? Colors.red[700] : Colors.black, // Red if exceeds threshold
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+            SizedBox(height: 15),
+            Divider(color: Colors.grey[300], thickness: 1),
+            // Add a divider below the last sensor
+            SizedBox(height: 5),
+            Center(
+              child: Text(
+                "Image Captured:",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16), // Larger font size
+              ),
+            ),
+            SizedBox(height: 10),
+            if (alarm['imageUrl'] != null) Image.network(alarm['imageUrl']), // Display the image if available
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Close"),
           ),
+        ],
+      ),
     );
   }
 
@@ -631,6 +653,3 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
     }
   }
 }
-
-//THIS IS EDITED NA --RONI
-

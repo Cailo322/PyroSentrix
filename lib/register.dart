@@ -252,7 +252,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             Container(
                               padding: EdgeInsets.symmetric(horizontal: 50), // Add horizontal margin
                               child: Text(
-                                'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor',
+                                'Create an account to get real-time fire alerts and ensure safety.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontFamily: 'Jost',

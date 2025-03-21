@@ -124,7 +124,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   padding: EdgeInsets.symmetric(horizontal: 40), // Add horizontal margin
                   alignment: Alignment.center, // Center the text
                   child: Text(
-                    'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+                    'Welcome to PyroSentrix! Stay safe with our smart fire detection system—monitor, detect, and receive real-time alerts anytime, anywhere.',
                     textAlign: TextAlign.center, // Center-align the text content
                     style: TextStyle(
                       fontFamily: 'Inter',

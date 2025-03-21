@@ -116,7 +116,6 @@ flutter:
     - assets/caution.png
     - assets/warning.png
     - assets/reset.png
-    - assets/gallery.png
     - assets/warning2.png
     - assets/temperature.png
     - assets/IAQ.png
