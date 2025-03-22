@@ -154,6 +154,7 @@ class ResetSystemScreen extends StatelessWidget {
         _resetHushedStatus();
         _resetAlarmLoggingStatus(); // Reset the alarm logging status in Firestore
         _resetDialogStatus(); // Reset the Dialogpop field in DialogStatus collection
+        _resetNotifStatus(); // Reset the notif field in NotifStatus collection
 
         // Restart the app on Android
         SystemNavigator.pop(); // Closes the app on Android
@@ -209,14 +210,14 @@ class ResetSystemScreen extends StatelessWidget {
           .collection('AlarmStatus')
           .doc('HpLk33atBI')
           .update({'AlarmLogged': false});
+      print("AlarmLogged reset to false for HpLk33atBI.");
 
       // Reset AlarmLogged for oURnq0vZrP
       await _firestore
           .collection('AlarmStatus')
           .doc('oURnq0vZrP')
           .update({'AlarmLogged': false});
-
-      print("AlarmLogged reset to false for HpLk33atBI and oURnq0vZrP.");
+      print("AlarmLogged reset to false for oURnq0vZrP.");
     } catch (e) {
       print("Error resetting alarm logging status: $e");
     }
@@ -230,16 +231,30 @@ class ResetSystemScreen extends StatelessWidget {
           .collection('DialogStatus')
           .doc('HpLk33atBI')
           .update({'Dialogpop': false});
+      print("Dialogpop reset to false for HpLk33atBI.");
 
       // Reset Dialogpop for oURnq0vZrP
       await _firestore
           .collection('DialogStatus')
           .doc('oURnq0vZrP')
           .update({'Dialogpop': false});
-
-      print("Dialogpop reset to false for HpLk33atBI and oURnq0vZrP.");
+      print("Dialogpop reset to false for oURnq0vZrP.");
     } catch (e) {
       print("Error resetting Dialogpop: $e");
+    }
+  }
+
+  // Reset the notif field in NotifStatus collection
+  void _resetNotifStatus() async {
+    try {
+      // Reset the notif field for the specific productCode
+      await _firestore
+          .collection('NotifStatus')
+          .doc(productCode)
+          .update({'notif': false});
+      print("notif reset to false for $productCode.");
+    } catch (e) {
+      print("Error resetting notif field: $e");
     }
   }
 }

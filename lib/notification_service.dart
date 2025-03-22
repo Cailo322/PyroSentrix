@@ -45,7 +45,7 @@ class NotificationService {
         .orderBy('timestamp', descending: true)
         .limit(1)
         .snapshots()
-        .listen((snapshot) {
+        .listen((snapshot) async {
       if (snapshot.docs.isNotEmpty) {
         var latestData = snapshot.docs.first.data();
         print("New sensor data received for $productCode: $latestData");
@@ -55,7 +55,7 @@ class NotificationService {
 
           if (thresholds != null) {
             print("Thresholds found: $thresholds");
-            _compareSensorValues(latestData, thresholds);
+            _compareSensorValues(latestData, thresholds, productCode);
           } else {
             print("No thresholds found for $productCode");
           }
@@ -71,7 +71,7 @@ class NotificationService {
   }
 
   // Compare sensor values with the threshold values
-  void _compareSensorValues(Map<String, dynamic> latestData, Map<String, dynamic> thresholds) {
+  void _compareSensorValues(Map<String, dynamic> latestData, Map<String, dynamic> thresholds, String productCode) async {
     print("Comparing sensor values with thresholds...");
     print("Latest Data: $latestData");
     print("Thresholds: $thresholds");
@@ -102,6 +102,14 @@ class NotificationService {
       Set<String> currentAlerts = alerts.toSet();
 
       if (!_acknowledgedAlerts.containsAll(currentAlerts)) {
+        // Check the NotifStatus collection
+        var notifStatusDoc = await _firestore.collection('NotifStatus').doc(productCode).get();
+
+        if (notifStatusDoc.exists && notifStatusDoc.data()?['notif'] == true) {
+          print("Notification already sent for $productCode. Skipping...");
+          return;
+        }
+
         String title = "Alert: Sensor Levels Exceeded";
         String body = alerts.length <= 3
             ? alerts.join('\n')
@@ -110,6 +118,11 @@ class NotificationService {
         print("Sending notification: $title - $body");
         sendNotification(title, body);
         _acknowledgedAlerts = currentAlerts;
+
+        // Update the NotifStatus collection
+        await _firestore.collection('NotifStatus').doc(productCode).set({
+          'notif': true,
+        });
       } else {
         print("Alerts already acknowledged: $alerts");
       }
