@@ -13,7 +13,7 @@ class AlarmLogScreen extends StatefulWidget {
 class _AlarmLogScreenState extends State<AlarmLogScreen> {
   List<Map<String, dynamic>> alarmLogs = [];
   List<Map<String, dynamic>> filteredAlarmLogs = [];
-  int alarmCount = 0;
+  int alarmCount = 0; // Initialize alarmCount
   String? selectedMonth;
   String? selectedYear;
 
@@ -31,8 +31,8 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
   @override
   void initState() {
     super.initState();
-    _listenToLatestSensorData();
     _fetchAlarmHistory(); // Fetch historical alarms when the screen loads
+    _listenToLatestSensorData();
   }
 
   @override
@@ -237,12 +237,12 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                         ),
 
                         child: Text(
-                            'Show All',
-                            style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            fontFamily: 'Arimo',
-                            color: Colors.black),
+                          'Show All',
+                          style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              fontFamily: 'Arimo',
+                              color: Colors.black),
                         ),
                       ),
                     ],
@@ -270,7 +270,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                     margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: ListTile(
                       title: Text(alarm['id'],
-                      style: TextStyle(
+                          style: TextStyle(
                               fontFamily: 'Inter',
                               fontWeight: FontWeight.w800)),
                       subtitle: Text("Timestamp: ${_formatTimestamp(
@@ -415,17 +415,15 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
           // Fetch the latest image URL from the Firestore collection
           String? imageUrl = await _fetchLatestImageUrl();
 
+          // Increment alarmCount and create the new alarm ID
           alarmCount++;
           var alarmData = {
             'id': 'Alarm $alarmCount',
             'timestamp': data['timestamp'],
             'values': data,
             'sensorDataDocId': sensorDataDocId,
-            // Store the sensor data document ID
             'imageUrl': imageUrl,
-            // Store the image URL
             'logged': true,
-            // Mark this alarm as logged
           };
 
           // Save alarm data to Firestore under SensorData > AlarmLogs > {productCode}
@@ -507,6 +505,14 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
       }).toList();
       filteredAlarmLogs =
           alarmLogs; // Initialize filteredAlarmLogs with all alarms
+
+      // Initialize alarmCount based on the number of existing alarms
+      if (alarmLogs.isNotEmpty) {
+        var lastAlarmId = alarmLogs.first['id'];
+        if (lastAlarmId != null && lastAlarmId.startsWith('Alarm ')) {
+          alarmCount = int.parse(lastAlarmId.split(' ')[1]);
+        }
+      }
     });
   }
 
@@ -632,7 +638,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
     );
   }
 
-// Helper method to check if a specific sensor value exceeds its threshold
+  // Helper method to check if a specific sensor value exceeds its threshold
   bool _exceedsThresholdForSensor(String sensorKey, dynamic sensorValue,
       Map<String, dynamic> thresholds) {
     switch (sensorKey) {

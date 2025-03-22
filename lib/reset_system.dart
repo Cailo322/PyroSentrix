@@ -152,7 +152,7 @@ class ResetSystemScreen extends StatelessWidget {
         // Perform reset actions
         _resetNotifications();
         _resetHushedStatus();
-        _resetAlarmLoggingStatus(); // Reset the alarm logging status in Firestore
+        await _resetAlarmLoggingStatus(); // Reset the alarm logging status in Firestore
         _resetDialogStatus(); // Reset the Dialogpop field in DialogStatus collection
         _resetNotifStatus(); // Reset the notif field in NotifStatus collection
 
@@ -191,7 +191,7 @@ class ResetSystemScreen extends StatelessWidget {
   }
 
   // Reset the alarm logging status in Firestore
-  void _resetAlarmLoggingStatus() async {
+  Future<void> _resetAlarmLoggingStatus() async {
     try {
       // Reset the 'logged' field to false for all alarms in SensorData > AlarmLogs > {productCode}
       var snapshot = await _firestore
