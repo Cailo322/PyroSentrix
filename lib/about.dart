@@ -48,8 +48,7 @@ class AboutScreen extends StatelessWidget {
               ),
               SizedBox(height: 24),
               // Section Title
-              Center(
-              ),
+              Center(),
               SizedBox(height: 3),
               // First Image (Centered and Rounded)
               Center(
@@ -102,6 +101,117 @@ class AboutScreen extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+              SizedBox(height: 30),
+              // Line divider before new contents
+              Divider(
+                color: Color(0xFFC54B00),
+                thickness: 2,
+              ),
+              SizedBox(height: 16),
+              // Additional Content: Firemonitor.png (First New Section)
+              Center(
+                child: Image.asset(
+                  'assets/Firemonitor.png',
+                  height: 100, // Adjust height as needed
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Real-time and effortless monitoring of six sensor values from the IoT device.',
+                style: TextStyle(
+                  fontFamily: 'Jost',
+                  fontSize: 16,
+                  color: Color(0xFF494949),
+                ),
+              ),
+              SizedBox(height: 16),
+              Divider(
+                color: Color(0xFFC54B00),
+                thickness: 2,
+              ),
+              SizedBox(height: 16),
+              // Additional Content: Alarm.png
+              Center(
+                child: Image.asset(
+                  'assets/Alarm.png',
+                  height: 100, // Adjust height as needed
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Instant alarm notifications when sensor values exceed predefined thresholds on both the mobile application and IoT device.',
+                style: TextStyle(
+                  fontFamily: 'Jost',
+                  fontSize: 16,
+                  color: Color(0xFF494949),
+                ),
+              ),
+              SizedBox(height: 16),
+              Divider(
+                color: Color(0xFFC54B00),
+                thickness: 2,
+              ),
+              SizedBox(height: 16),
+              // Additional Content: firestation.png
+              Center(
+                child: Image.asset(
+                  'assets/firestation.png',
+                  height: 100, // Adjust height as needed
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Displays the two nearest fire stations based on your location using Google Maps and Google Places API.',
+                style: TextStyle(
+                  fontFamily: 'Jost',
+                  fontSize: 16,
+                  color: Color(0xFF494949),
+                ),
+              ),
+              SizedBox(height: 16),
+              Divider(
+                color: Color(0xFFC54B00),
+                thickness: 2,
+              ),
+              SizedBox(height: 16),
+              // Additional Content: Firemonitor.png (Second New Section)
+              Center(
+                child: Image.asset(
+                  'assets/insight.png',
+                  height: 100, // Adjust height as needed
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Integrated with the Long Short-Term Memory (LSTM) algorithm, providing notification insights when it detects an upward trend in sensor readings over the next 40 seconds. This allows users to stay aware of their surroundings by alerting them in advance when sensor readings are projected to rise.',
+                style: TextStyle(
+                  fontFamily: 'Jost',
+                  fontSize: 16,
+                  color: Color(0xFF494949),
+                ),
+              ),
+              SizedBox(height: 16),
+              Divider(
+                color: Color(0xFFC54B00),
+                thickness: 2,
+              ),
+              SizedBox(height: 16),
+              // Additional Content: Firemonitor.png (Third New Section)
+              Center(
+                child: Image.asset(
+                  'assets/districtlogo.png',
+                  height: 100, // Adjust height as needed
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'The system has been validated and approved by the Quezon City Fire District (QCFD). It has undergone rigorous testing with fire safety professionals to ensure reliability and effectiveness.',
+                style: TextStyle(
+                  fontFamily: 'Jost',
+                  fontSize: 16,
+                  color: Color(0xFF494949),
+                ),
               ),
             ],
           ),

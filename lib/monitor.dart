@@ -205,7 +205,7 @@ class MonitorScreen extends StatelessWidget {
                                       ),
                                     ),
                                   ),
-                                  SizedBox(height: 1), // Space between text and image
+                              /*    SizedBox(height: 1), // Space between text and image
                                   // Show the latest image below the text
                                   if (latestImage != null)
                                     Image.network(
@@ -216,7 +216,7 @@ class MonitorScreen extends StatelessWidget {
                                     ),
                                   if (latestImage == null)
                                     Image.asset('assets/About-pic1.jpg',
-                                        width: 120, height: 120), //filler picture only, this will be changed!!
+                                        width: 120, height: 120), //filler picture only, this will be changed!!*/
                                   SizedBox(height: 10),
                                   // Buttons row
                                   // Inside the showDialog widget (HUSH and CALL FIRESTATION buttons)
@@ -379,7 +379,7 @@ class MonitorScreen extends StatelessWidget {
                                 SensorCard(
                                   title: 'SMOKE',
                                   status: determineStatus(sensorData['smoke_level'], thresholdData['smoke_threshold'], 'smoke'),
-                                  value: '${sensorData['smoke_level']}%',
+                                  value: '${sensorData['smoke_level']}µg/m³',
                                   statusColor: determineStatusColor(sensorData['smoke_level'], thresholdData['smoke_threshold'], 'smoke'),
                                   valueColor: determineStatusColor(sensorData['smoke_level'], thresholdData['smoke_threshold'], 'smoke'),
                                 ),
@@ -397,7 +397,7 @@ class MonitorScreen extends StatelessWidget {
                                   statusColor: determineStatusColor(sensorData['indoor_air_quality'], thresholdData['iaq_threshold'], 'iaq'),
                                   valueColor: determineStatusColor(sensorData['indoor_air_quality'], thresholdData['iaq_threshold'], 'iaq'),
                                   titleStyle: TextStyle(
-                                    fontSize: 17, // Modified font size
+                                    fontSize: 15, // Modified font size
                                     fontWeight: FontWeight.bold, // Same font weight as before
                                     color: Color(0xFF494949), // Same color as before
                                     fontFamily: 'Arimo', // Same font family as before
@@ -598,16 +598,16 @@ class SensorCard extends StatelessWidget {
         break;
       case 'TEMP.1':
       case 'TEMP.2':
-        sensorInfo = 'Checks the temperature around you. If it gets too hot, there might be a fire risk. If it’s unusually cold, it could mean something is wrong with the environment.';
+        sensorInfo = 'Checks the temperature around you. If it gets too hot, there might be a fire risk.If it rises too high, it may indicate a fire risk. The higher the Celsius value, the hotter the environment ';
         break;
       case 'CO':
-        sensorInfo = 'Detects carbon monoxide, a dangerous gas you can’t see or smell. High levels can be very harmful, so it’s important to stay safe.';
+        sensorInfo = 'Detects carbon monoxide (CO), an invisible, odorless, and hazardous gas commonly produced by incomplete combustion. Measured in parts per million (PPM), higher levels indicate increased danger.';
         break;
       case 'SMOKE':
-        sensorInfo = 'Looks for smoke in the air. If it detects a lot of smoke, it could mean there’s a fire nearby.';
+        sensorInfo = 'Detects PM2.5 smoke particles, which are fine airborne particles that can indicate potential fire hazards. Elevated smoke levels may pose both fire and health risks. Measured in micrograms per cubic meter (µg/m³).';
         break;
       case 'INDOOR AIR QUAL.':
-        sensorInfo = 'Checks how clean the air is inside. If the air quality is poor, it might mean there are pollutants or not enough fresh air coming in.';
+        sensorInfo = 'Measures general gases in the air, including VOCs, smoke, and carbon dioxide (CO₂), indicating overall air quality and pollutant levels. A higher index signifies poorer air quality.';
         break;
       default:
         sensorInfo = 'No specific information available for this sensor.';

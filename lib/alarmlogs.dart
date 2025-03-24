@@ -360,17 +360,20 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
     });
   }
 
-  // Format timestamp to "March 7, 2025" format
+  // Format timestamp to "March 7, 2025 (10:21 PM)" format
   String _formatTimestamp(String timestamp) {
     if (timestamp.isEmpty) return "No timestamp";
 
     try {
       // Parse the string timestamp into a DateTime object
-      DateTime dateTime = DateTime.parse(timestamp)
-          .toLocal(); // Convert to local time
-      final DateFormat formatter = DateFormat(
-          'MMMM d, yyyy'); // Format like "March 7, 2025"
-      return formatter.format(dateTime);
+      DateTime dateTime = DateTime.parse(timestamp).toLocal(); // Convert to local time
+      final DateFormat dateFormatter = DateFormat('MMMM d, yyyy'); // Format like "March 7, 2025"
+      final DateFormat timeFormatter = DateFormat('h:mm a'); // Format like "10:21 PM"
+
+      String formattedDate = dateFormatter.format(dateTime);
+      String formattedTime = timeFormatter.format(dateTime);
+
+      return "$formattedDate ($formattedTime)"; // Combine date and time
     } catch (e) {
       return "Invalid timestamp format";
     }
@@ -556,7 +559,10 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
             // Add a small gap between the title and timestamp
             Text(
               "Timestamp: $formattedTimestamp", // Formatted timestamp
-              style: TextStyle(fontSize: 17), // Larger font size
+              style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.grey[700],
+                  fontFamily: 'Arimo'), // Larger font size
             ),
           ],
         ),
@@ -614,18 +620,14 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                 ),
               );
             }).toList(),
-            SizedBox(height: 15),
-            Divider(color: Colors.grey[300], thickness: 1),
-            // Add a divider below the last sensor
-            SizedBox(height: 5),
-            Center(
+            /* Center(
               child: Text(
                 "Image Captured:",
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16), // Larger font size
               ),
             ),
             SizedBox(height: 10),
-            if (alarm['imageUrl'] != null) Image.network(alarm['imageUrl']), // Display the image if available
+            if (alarm['imageUrl'] != null) Image.network(alarm['imageUrl']), // Display the image if available */
           ],
         ),
         actions: [

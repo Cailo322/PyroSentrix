@@ -122,7 +122,11 @@ flutter:
     - assets/humidity.png
     - assets/CO.png
     - assets/smoke.png
-
+    - assets/Firemonitor.png
+    - assets/firestation.png
+    - assets/Alarm.png
+    - assets/insight.png
+    - assets/districtlogo.png
   fonts:
     - family: Jost
       fonts:
