@@ -535,8 +535,8 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
       'humidity_dht22': {'name': 'Humidity', 'unit': '%'},
       'temperature_dht22': {'name': 'Temperature 1', 'unit': '°C'},
       'temperature_mlx90614': {'name': 'Temperature 2', 'unit': '°C'},
-      'smoke_level': {'name': 'Smoke', 'unit': 'ppm'},
-      'indoor_air_quality': {'name': 'Indoor Air Quality', 'unit': 'ppm'},
+      'smoke_level': {'name': 'Smoke', 'unit': 'µg/m³'},
+      'indoor_air_quality': {'name': 'Air Quality', 'unit': 'AQI'},
       'carbon_monoxide': {'name': 'Carbon Monoxide', 'unit': 'ppm'},
     };
 

@@ -391,13 +391,13 @@ class MonitorScreen extends StatelessWidget {
                                   valueColor: determineStatusColor(sensorData['temperature_mlx90614'], thresholdData['temp_threshold'], 'temperature'),
                                 ),
                                 SensorCard(
-                                  title: 'INDOOR AIR QUAL.',
+                                  title: 'AIR QUALITY',
                                   status: determineStatus(sensorData['indoor_air_quality'], thresholdData['iaq_threshold'], 'iaq'),
                                   value: '${sensorData['indoor_air_quality']} AQI',
                                   statusColor: determineStatusColor(sensorData['indoor_air_quality'], thresholdData['iaq_threshold'], 'iaq'),
                                   valueColor: determineStatusColor(sensorData['indoor_air_quality'], thresholdData['iaq_threshold'], 'iaq'),
                                   titleStyle: TextStyle(
-                                    fontSize: 15, // Modified font size
+                                    fontSize: 17, // Modified font size
                                     fontWeight: FontWeight.bold, // Same font weight as before
                                     color: Color(0xFF494949), // Same color as before
                                     fontFamily: 'Arimo', // Same font family as before
