@@ -11,6 +11,58 @@ class AnalyticsScreen extends StatefulWidget {
   _AnalyticsScreenState createState() => _AnalyticsScreenState();
 }
 
+class TrendLinePainter extends CustomPainter {
+  final List<FlSpot> trendLine;
+  final double minX;
+  final double maxX;
+  final double minY;
+  final double maxY;
+  final Color color;
+
+  TrendLinePainter({
+    required this.trendLine,
+    required this.minX,
+    required this.maxX,
+    required this.minY,
+    required this.maxY,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (trendLine.isEmpty) return;
+
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    // Convert FlSpot points to Offset points
+    final startX = trendLine.first.x;
+    final startY = trendLine.first.y;
+    final endX = trendLine.last.x;
+    final endY = trendLine.last.y;
+
+    // Map the points to the canvas coordinates
+    final startPoint = Offset(
+      (startX - minX) / (maxX - minX) * size.width,
+      size.height - (startY - minY) / (maxY - minY) * size.height,
+    );
+    final endPoint = Offset(
+      (endX - minX) / (maxX - minX) * size.width,
+      size.height - (endY - minY) / (maxY - minY) * size.height,
+    );
+
+    // Draw the trend line
+    canvas.drawLine(startPoint, endPoint, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return true;
+  }
+}
+
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
   late List<SensorData> _sensorData = [];
   String? _selectedProductCode;
@@ -387,8 +439,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     }
 
     // Prepare data for the scatter plot
-    final List<FlSpot> spots = _sensorData.map((data) {
-      return FlSpot(
+    final List<ScatterSpot> spots = _sensorData.map((data) {
+      return ScatterSpot(
         data.temperatureDHT22, // X-axis: Temperature
         data.humidity, // Y-axis: Humidity
       );
@@ -433,89 +485,101 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             ),
             child: SizedBox(
               height: 200, // Fixed height for the scatter plot
-              child: ScatterChart(
-                ScatterChartData(
-                  scatterSpots: [
-                    // Data points
-                    ...spots.map((spot) => ScatterSpot(spot.x, spot.y)),
-                    // Trend line points
-                    ...trendLine.map((spot) => ScatterSpot(spot.x, spot.y)),
-                  ],
-                  minX: minTemp,
-                  maxX: maxTemp,
-                  minY: minHumidity,
-                  maxY: maxHumidity,
-                  borderData: FlBorderData(show: false),
-                  gridData: FlGridData(
-                    show: true,
-                    drawHorizontalLine: true,
-                    drawVerticalLine: true,
-                    getDrawingHorizontalLine: (value) => FlLine(
-                      color: Colors.grey.withOpacity(0.5),
-                      strokeWidth: 1,
-                    ),
-                    getDrawingVerticalLine: (value) => FlLine(
-                      color: Colors.grey.withOpacity(0.5),
-                      strokeWidth: 1,
-                    ),
-                  ),
-                  titlesData: FlTitlesData(
-                    show: true,
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 30, // Space for y-axis labels
-                        interval: humidityInterval, // Use calculated interval
-                        getTitlesWidget: (value, meta) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8.0), // Add spacing to the right of y-axis labels
-                            child: Text(
-                              value.toStringAsFixed(1), // Round to 1 decimal place
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.black,
-                              ),
-                            ),
-                          );
-                        },
+              child: Stack(
+                children: [
+                  // Scatter Chart
+                  ScatterChart(
+                    ScatterChartData(
+                      scatterSpots: spots,
+                      minX: minTemp,
+                      maxX: maxTemp,
+                      minY: minHumidity,
+                      maxY: maxHumidity,
+                      borderData: FlBorderData(show: false),
+                      gridData: FlGridData(
+                        show: true,
+                        drawHorizontalLine: true,
+                        drawVerticalLine: true,
+                        getDrawingHorizontalLine: (value) => FlLine(
+                          color: Colors.grey.withOpacity(0.5),
+                          strokeWidth: 1,
+                        ),
+                        getDrawingVerticalLine: (value) => FlLine(
+                          color: Colors.grey.withOpacity(0.5),
+                          strokeWidth: 1,
+                        ),
+                      ),
+                      titlesData: FlTitlesData(
+                        show: true,
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 30, // Space for y-axis labels
+                            interval: humidityInterval, // Use calculated interval
+                            getTitlesWidget: (value, meta) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8.0), // Add spacing to the right of y-axis labels
+                                child: Text(
+                                  value.toStringAsFixed(1), // Round to 1 decimal place
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 30, // Space for x-axis labels
+                            interval: tempInterval, // Use calculated interval
+                            getTitlesWidget: (value, meta) {
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8.0), // Add spacing above x-axis labels
+                                child: Text(
+                                  value.toStringAsFixed(1), // Round to 1 decimal place
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      ),
+                      scatterTouchData: ScatterTouchData(
+                        enabled: true,
+                        touchTooltipData: ScatterTouchTooltipData(
+                          fitInsideHorizontally: true,
+                          fitInsideVertically: true,
+                          getTooltipItems: (ScatterSpot spot) {
+                            return ScatterTooltipItem(
+                              'Temp: ${spot.x.toStringAsFixed(2)}°C\nHumidity: ${spot.y.toStringAsFixed(2)}%',
+                              textStyle: TextStyle(color: Colors.white),
+                            );
+                          },
+                        ),
                       ),
                     ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 30, // Space for x-axis labels
-                        interval: tempInterval, // Use calculated interval
-                        getTitlesWidget: (value, meta) {
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 8.0), // Add spacing above x-axis labels
-                            child: Text(
-                              value.toStringAsFixed(1), // Round to 1 decimal place
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.black,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   ),
-                  scatterTouchData: ScatterTouchData(
-                    enabled: true,
-                    touchTooltipData: ScatterTouchTooltipData(
-                      fitInsideHorizontally: true,
-                      fitInsideVertically: true,
-                      getTooltipItems: (ScatterSpot spot) {
-                        return ScatterTooltipItem(
-                          'Temp: ${spot.x.toStringAsFixed(2)}°C\nHumidity: ${spot.y.toStringAsFixed(2)}%',
-                          textStyle: TextStyle(color: Colors.white),
-                        );
-                      },
+                  // Trend Line Overlay
+                  CustomPaint(
+                    size: Size(double.infinity, 200), // Match the size of the scatter plot
+                    painter: TrendLinePainter(
+                      trendLine: trendLine,
+                      minX: minTemp,
+                      maxX: maxTemp,
+                      minY: minHumidity,
+                      maxY: maxHumidity,
+                      color: Colors.red, // Trend line color
                     ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
@@ -535,7 +599,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     return (range / 5).ceilToDouble(); // Larger range, divide into 5 intervals
   }
 
-// Helper method to calculate the trend line (linear regression)
+
   List<FlSpot> _calculateTrendLine(List<FlSpot> spots) {
     if (spots.isEmpty) return [];
 
