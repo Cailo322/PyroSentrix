@@ -18,13 +18,15 @@ class DevicesScreen extends StatefulWidget {
   _DevicesScreenState createState() => _DevicesScreenState();
 }
 
-class _DevicesScreenState extends State<DevicesScreen> {
+class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateMixin {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final Map<String, String> _deviceNames = {};
   bool isNavigating = false;
   Set<String> _alertedDevices = {};
   StreamSubscription<Set<String>>? _alertSubscription;
+  late AnimationController _blinkController;
+  late Animation<Color?> _colorAnimation;
 
   @override
   void initState() {
@@ -32,10 +34,23 @@ class _DevicesScreenState extends State<DevicesScreen> {
     _loadDeviceNames();
     _checkUser();
     _setupAlertListener();
+
+    // Initialize the animation controller
+    _blinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+
+    // Create color animation
+    _colorAnimation = ColorTween(
+      begin: Colors.red[300],
+      end: Colors.grey[300],
+    ).animate(_blinkController);
   }
 
   @override
   void dispose() {
+    _blinkController.dispose();
     _alertSubscription?.cancel();
     super.dispose();
   }
@@ -248,82 +263,87 @@ class _DevicesScreenState extends State<DevicesScreen> {
           isNavigating = false;
         });
       },
-      child: Card(
-        margin: EdgeInsets.only(bottom: 16),
-        elevation: 2,
-        color: hasAlert ? Colors.red[300] : Colors.grey[300],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: AnimatedBuilder(
+        animation: _blinkController,
+        builder: (context, child) {
+          return Card(
+            margin: EdgeInsets.only(bottom: 16),
+            elevation: 2,
+            color: hasAlert ? _colorAnimation.value : Colors.grey[300],
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      if (hasAlert)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: Image.asset(
-                            'assets/devicewarning.png',
-                            width: 24,
-                            height: 24,
-                          ),
-                        ),
-                      ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: 200),
-                        child: InkWell(
-                          onTap: () => _editDeviceName(context, productId),
-                          child: Text(
-                            deviceName,
-                            style: TextStyle(
-                              fontFamily: 'Jost',
-                              fontSize: 21,
-                              fontWeight: FontWeight.w500,
-                              color: hasAlert ? Colors.red[900] : Colors.black,
+                      Row(
+                        children: [
+                          if (hasAlert)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: Image.asset(
+                                'assets/devicewarning.png',
+                                width: 24,
+                                height: 24,
+                              ),
+                            ),
+                          ConstrainedBox(
+                            constraints: BoxConstraints(maxWidth: 200),
+                            child: InkWell(
+                              onTap: () => _editDeviceName(context, productId),
+                              child: Text(
+                                deviceName,
+                                style: TextStyle(
+                                  fontFamily: 'Jost',
+                                  fontSize: 21,
+                                  fontWeight: FontWeight.w500,
+                                  color: hasAlert ? Colors.red[900] : Colors.black,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-                  PopupMenuButton<String>(
-                    icon: Icon(Icons.more_vert, color: hasAlert ? Colors.red[900] : Colors.black),
-                    color: Colors.white,
-                    onSelected: (value) {
-                      if (value == 'details') {
-                        _showDeviceDetails(context, doc);
-                      } else if (value == 'delete') {
-                        _deleteDevice(context, doc);
-                      } else if (value == 'add_people') {
-                        _addPeople(context, doc);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        value: 'details',
-                        child: Text('Details', style: TextStyle(color: Colors.black)),
-                      ),
-                      if (isAdmin)
-                        PopupMenuItem(
-                          value: 'add_people',
-                          child: Text('Add People', style: TextStyle(color: Colors.black)),
-                        ),
-                      PopupMenuItem(
-                        value: 'delete',
-                        child: Text('Delete', style: TextStyle(color: Colors.red)),
+                      PopupMenuButton<String>(
+                        icon: Icon(Icons.more_vert, color: hasAlert ? Colors.red[900] : Colors.black),
+                        color: Colors.white,
+                        onSelected: (value) {
+                          if (value == 'details') {
+                            _showDeviceDetails(context, doc);
+                          } else if (value == 'delete') {
+                            _deleteDevice(context, doc);
+                          } else if (value == 'add_people') {
+                            _addPeople(context, doc);
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'details',
+                            child: Text('Details', style: TextStyle(color: Colors.black)),
+                          ),
+                          if (isAdmin)
+                            PopupMenuItem(
+                              value: 'add_people',
+                              child: Text('Add People', style: TextStyle(color: Colors.black)),
+                            ),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Text('Delete', style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
