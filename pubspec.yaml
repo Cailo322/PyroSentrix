@@ -127,6 +127,8 @@ flutter:
     - assets/Alarm.png
     - assets/insight.png
     - assets/districtlogo.png
+    - assets/devicefire.png
+    - assets/devicewarning.png
   fonts:
     - family: Jost
       fonts:

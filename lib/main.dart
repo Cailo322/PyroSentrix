@@ -10,37 +10,38 @@ import 'call.dart';
 import 'custom_app_bar.dart';
 import 'queries.dart';
 import 'login.dart';
-import 'notification_service.dart'; // Import the notification service
-import 'trends.dart'; // Import the trend analysis service
+import 'notification_service.dart';
+import 'trends.dart';
 import 'about.dart';
 import 'reset_system.dart';
 import 'alarmlogs.dart';
-import 'device_provider.dart'; // Import your DeviceProvider
+import 'device_provider.dart';
 import 'analytics.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
-  // Initialize NotificationService
-  NotificationService notificationService = NotificationService();
-  notificationService.initialize(); // Initialize the notification plugin
-  notificationService.requestPermissions(); // Request notification permissions
-  notificationService.listenForSensorUpdates(); // Start listening for sensor updates
+  // Initialize services
+  final notificationService = NotificationService();
+  notificationService.initialize(); // No await needed
+  notificationService.requestPermissions(); // No await needed
 
-  // Initialize TrendAnalysisService
-  TrendAnalysisService trendAnalysisService = TrendAnalysisService();
-  trendAnalysisService.initialize(); // Initialize the trend analysis service
-  trendAnalysisService.startTrendAnalysis(); // Start analyzing trends every 1 minute
+  final trendAnalysisService = TrendAnalysisService();
+  trendAnalysisService.initialize(); // No await needed
+  trendAnalysisService.startTrendAnalysis(); // No await needed
 
   // Check login state
   final prefs = await SharedPreferences.getInstance();
   final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
 
   runApp(
-    // Wrap your app with the DeviceProvider
-    ChangeNotifierProvider(
-      create: (context) => DeviceProvider(), // Create an instance of DeviceProvider
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => DeviceProvider()),
+        Provider<NotificationService>.value(value: notificationService),
+        Provider<TrendAnalysisService>.value(value: trendAnalysisService),
+      ],
       child: MyApp(isLoggedIn: isLoggedIn),
     ),
   );
@@ -49,7 +50,7 @@ void main() async {
 class MyApp extends StatelessWidget {
   final bool isLoggedIn;
 
-  const MyApp({super.key, required this.isLoggedIn});
+  const MyApp({Key? key, required this.isLoggedIn}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -61,28 +62,24 @@ class MyApp extends StatelessWidget {
       ),
       home: isLoggedIn ? DevicesScreen() : SplashScreen(),
       onGenerateRoute: (settings) {
-        // Handle arguments for MonitorScreen
         if (settings.name == '/MonitorScreen') {
-          final args = settings.arguments as String; // productCode is passed as a String
+          final args = settings.arguments as String;
           return MaterialPageRoute(
             builder: (context) => MonitorScreen(productCode: args),
           );
         }
-        // Handle arguments for AlarmLogScreen
         if (settings.name == '/AlarmLogScreen') {
           final args = settings.arguments as Map<String, dynamic>;
           return MaterialPageRoute(
             builder: (context) => AlarmLogScreen(productCode: args['productCode']),
           );
         }
-        // Handle arguments for ResetSystemScreen
         if (settings.name == '/ResetSystemScreen') {
-          final args = settings.arguments as String; // productCode is passed as a String
+          final args = settings.arguments as String;
           return MaterialPageRoute(
             builder: (context) => ResetSystemScreen(productCode: args),
           );
         }
-
         return null;
       },
       routes: {
@@ -93,14 +90,13 @@ class MyApp extends StatelessWidget {
         '/LoginScreen': (context) => LoginScreen(),
         '/AnalyticsScreen': (context) => AnalyticsScreen(),
         '/AboutScreen': (context) => AboutScreen(),
-        '/devices': (context) => DevicesScreen(),
       },
     );
   }
 }
 
 class MyHomePage extends StatelessWidget {
-  const MyHomePage({super.key});
+  const MyHomePage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

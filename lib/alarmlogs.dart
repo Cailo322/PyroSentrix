@@ -323,8 +323,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         filteredAlarmLogs = alarmLogs.where((alarm) {
           DateTime dateTime;
           try {
-            dateTime = DateTime.parse(alarm['timestamp'])
-                .toLocal(); // Convert to local time
+            dateTime = DateTime.parse(alarm['timestamp']); // No timezone conversion
           } catch (e) {
             print("Error parsing timestamp: ${alarm['timestamp']}");
             return false; // Skip this alarm if the timestamp is invalid
@@ -360,13 +359,13 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
     });
   }
 
-  // Format timestamp to "March 7, 2025 (10:21 PM)" format
+  // Format timestamp to "March 7, 2025 (10:21 PM)" format without timezone conversion
   String _formatTimestamp(String timestamp) {
     if (timestamp.isEmpty) return "No timestamp";
 
     try {
-      // Parse the string timestamp into a DateTime object
-      DateTime dateTime = DateTime.parse(timestamp).toLocal(); // Convert to local time
+      // Parse the string timestamp into a DateTime object without converting to local time
+      DateTime dateTime = DateTime.parse(timestamp);
       final DateFormat dateFormatter = DateFormat('MMMM d, yyyy'); // Format like "March 7, 2025"
       final DateFormat timeFormatter = DateFormat('h:mm a'); // Format like "10:21 PM"
 

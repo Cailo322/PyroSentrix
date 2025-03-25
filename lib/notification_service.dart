@@ -2,43 +2,77 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 
 class NotificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-  final AudioPlayer _audioPlayer = AudioPlayer(); // Audio player instance
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+  FlutterLocalNotificationsPlugin();
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
+  final StreamController<Set<String>> _alertedDevicesController =
+  StreamController<Set<String>>.broadcast();
+
   NotificationService._privateConstructor();
-  static final NotificationService _instance = NotificationService._privateConstructor();
+  static final NotificationService _instance =
+  NotificationService._privateConstructor();
   factory NotificationService() => _instance;
 
-  Set<String> _acknowledgedAlerts = {}; // To track acknowledged alerts
+  Set<String> _alertedProductCodes = {};
+  Set<String> _activeProductCodes = {};
+  Map<String, StreamSubscription<QuerySnapshot>> _productSubscriptions = {};
 
-  // Initialize the notification plugin
-  void initialize() {
+  Stream<Set<String>> get alertedDevices => _alertedDevicesController.stream;
+
+  Future<void> initialize() async {
     const AndroidInitializationSettings initializationSettingsAndroid =
     AndroidInitializationSettings('@mipmap/ic_launcher');
-
     const InitializationSettings initializationSettings =
     InitializationSettings(android: initializationSettingsAndroid);
 
-    flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    await requestPermissions();
+    _listenForActiveProducts();
   }
 
-  // Start listening for sensor data updates and compare with thresholds
-  void listenForSensorUpdates() {
-    // Monitor the first collection: HpLk33atBI
-    _monitorProductCode('HpLk33atBI');
-
-    // Monitor the second collection: oURnq0vZrP
-    _monitorProductCode('oURnq0vZrP');
+  Future<void> requestPermissions() async {
+    NotificationSettings settings = await _messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      provisional: true,
+    );
+    print('Notification permission status: ${settings.authorizationStatus}');
   }
 
-  // Monitor a specific product code's sensor data
-  void _monitorProductCode(String productCode) {
-    print("Setting up listener for product code: $productCode");
+  void _listenForActiveProducts() {
+    _firestore.collection('ProductActivation').snapshots().listen((snapshot) {
+      final newProductCodes = snapshot.docs
+          .map((doc) => doc['product_code'] as String)
+          .where((code) => code != null)
+          .toSet();
 
-    _firestore
+      _updateProductSubscriptions(newProductCodes);
+    });
+  }
+
+  void _updateProductSubscriptions(Set<String> newProductCodes) {
+    _activeProductCodes.difference(newProductCodes).forEach((removedCode) {
+      _productSubscriptions[removedCode]?.cancel();
+      _productSubscriptions.remove(removedCode);
+    });
+
+    newProductCodes.difference(_activeProductCodes).forEach((newCode) {
+      _productSubscriptions[newCode] = _monitorProductCode(newCode);
+    });
+
+    _activeProductCodes = newProductCodes;
+  }
+
+  StreamSubscription<QuerySnapshot> _monitorProductCode(String productCode) {
+    return _firestore
         .collection('SensorData')
         .doc('FireAlarm')
         .collection(productCode)
@@ -47,154 +81,207 @@ class NotificationService {
         .snapshots()
         .listen((snapshot) async {
       if (snapshot.docs.isNotEmpty) {
-        var latestData = snapshot.docs.first.data();
-        print("New sensor data received for $productCode: $latestData");
-
-        _firestore.collection('Threshold').doc('Proxy').get().then((thresholdDoc) {
-          var thresholds = thresholdDoc.data();
-
-          if (thresholds != null) {
-            print("Thresholds found: $thresholds");
-            _compareSensorValues(latestData, thresholds, productCode);
-          } else {
-            print("No thresholds found for $productCode");
-          }
-        }).catchError((error) {
-          print("Error fetching thresholds: $error");
-        });
-      } else {
-        print("No documents found in the $productCode subcollection");
+        final latestData = snapshot.docs.first.data();
+        await _checkThresholds(latestData, productCode);
       }
-    }, onError: (error) {
-      print("Error listening to $productCode: $error");
     });
   }
 
-  // Compare sensor values with the threshold values
-  void _compareSensorValues(Map<String, dynamic> latestData, Map<String, dynamic> thresholds, String productCode) async {
-    print("Comparing sensor values with thresholds...");
-    print("Latest Data: $latestData");
-    print("Thresholds: $thresholds");
+  Future<void> _checkThresholds(
+      Map<String, dynamic> data, String productCode) async {
+    try {
+      final thresholdDoc = await _firestore.collection('Threshold').doc('Proxy').get();
+      final thresholds = thresholdDoc.data();
 
-    List<String> alerts = [];
-
-    if (latestData['carbon_monoxide'] > thresholds['co_threshold']) {
-      alerts.add("🔴 CO levels are too high!");
-    }
-    if (latestData['smoke_level'] > thresholds['smoke_threshold']) {
-      alerts.add("🔴 Smoke levels are too high!");
-    }
-    if (latestData['humidity_dht22'] < thresholds['humidity_threshold']) {
-      alerts.add("🔴 Humidity levels are critically low!");
-    }
-    if (latestData['indoor_air_quality'] > thresholds['iaq_threshold']) {
-      alerts.add("🔴 Indoor air quality is poor!");
-    }
-    if (latestData['temperature_dht22'] > thresholds['temp_threshold']) {
-      alerts.add("🔴 Temperature is too high!");
-    }
-    if (latestData['temperature_mlx90614'] > thresholds['temp_threshold']) {
-      alerts.add("🔴 Temperature is too high!");
-    }
-
-    if (alerts.isNotEmpty) {
-      print("Alerts triggered: $alerts");
-      Set<String> currentAlerts = alerts.toSet();
-
-      if (!_acknowledgedAlerts.containsAll(currentAlerts)) {
-        // Check the NotifStatus collection
-        var notifStatusDoc = await _firestore.collection('NotifStatus').doc(productCode).get();
-
-        if (notifStatusDoc.exists && notifStatusDoc.data()?['notif'] == true) {
-          print("Notification already sent for $productCode. Skipping...");
-          return;
+      if (thresholds != null) {
+        // Merge thresholds with current data for easier comparison
+        final combinedData = {...data, ...thresholds};
+        final isAlert = _isThresholdExceeded(combinedData);
+        if (isAlert) {
+          await _handleAlert(productCode);
+        } else {
+          _clearAlert(productCode);
         }
+      }
+    } catch (e) {
+      print('Error checking thresholds: $e');
+    }
+  }
 
-        String title = "Alert: Sensor Levels Exceeded";
-        String body = alerts.length <= 3
-            ? alerts.join('\n')
-            : "${alerts.take(3).join('\n')}\n\nAnd ${alerts.length - 3} more alerts...";
+  bool _isThresholdExceeded(Map<String, dynamic> combinedData) {
+    return (combinedData['carbon_monoxide'] > combinedData['co_threshold']) ||
+        (combinedData['smoke_level'] > combinedData['smoke_threshold']) ||
+        (combinedData['humidity_dht22'] < combinedData['humidity_threshold']) ||
+        (combinedData['indoor_air_quality'] > combinedData['iaq_threshold']) ||
+        (combinedData['temperature_dht22'] > combinedData['temp_threshold']) ||
+        (combinedData['temperature_mlx90614'] > combinedData['temp_threshold']);
+  }
 
-        print("Sending notification: $title - $body");
-        sendNotification(title, body);
-        _acknowledgedAlerts = currentAlerts;
+  Future<void> _handleAlert(String productCode) async {
+    if (!_alertedProductCodes.contains(productCode)) {
+      _alertedProductCodes.add(productCode);
+      _alertedDevicesController.add(_alertedProductCodes);
 
-        // Update the NotifStatus collection
+      final notifStatus = await _firestore.collection('NotifStatus').doc(productCode).get();
+      if (!(notifStatus.exists && notifStatus.data()?['notif'] == true)) {
+        await _sendNotification(productCode);
         await _firestore.collection('NotifStatus').doc(productCode).set({
           'notif': true,
+          'timestamp': FieldValue.serverTimestamp(),
         });
-      } else {
-        print("Alerts already acknowledged: $alerts");
       }
-    } else {
-      print("No alerts triggered.");
     }
   }
 
-  // Acknowledge the current alerts
-  void acknowledgeAlerts() {
-    _acknowledgedAlerts.clear(); // Reset the acknowledged alerts
-    stopAlarmSound(); // Stop any ongoing alarm sound
+  void _clearAlert(String productCode) {
+    if (_alertedProductCodes.contains(productCode)) {
+      _alertedProductCodes.remove(productCode);
+      _alertedDevicesController.add(_alertedProductCodes);
+      _firestore.collection('NotifStatus').doc(productCode).update({
+        'notif': false,
+      });
+    }
   }
 
-  // Send a push notification and play alarm sound
-  void sendNotification(String title, String body) async {
-    var androidPlatformChannelSpecifics = const AndroidNotificationDetails(
-      'channel_id',
-      'channel_name',
-      channelDescription: 'Channel for sensor alerts',
-      importance: Importance.high,
-      priority: Priority.high,
-    );
-
-    var platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
-
-    await flutterLocalNotificationsPlugin.show(
-      0,
-      title,
-      body,
-      platformChannelSpecifics,
-      payload: 'Notification Payload',
-    );
-
-    _playAlarmSound();
+  Future<String> _getDeviceName(String productCode) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('device_name_$productCode') ?? 'Device';
+    } catch (e) {
+      print('Error getting device name: $e');
+      return 'Device';
+    }
   }
 
-  // Play alarm sound on repeat
-  void _playAlarmSound() async {
+  Future<Map<String, dynamic>> _getLatestSensorData(String productCode) async {
+    try {
+      final snapshot = await _firestore
+          .collection('SensorData')
+          .doc('FireAlarm')
+          .collection(productCode)
+          .orderBy('timestamp', descending: true)
+          .limit(1)
+          .get();
+
+      return snapshot.docs.isNotEmpty ? snapshot.docs.first.data() : {};
+    } catch (e) {
+      print('Error getting sensor data: $e');
+      return {};
+    }
+  }
+
+  Future<Map<String, dynamic>> _getThresholdValues() async {
+    try {
+      final snapshot = await _firestore.collection('Threshold').doc('Proxy').get();
+      return snapshot.data() ?? {};
+    } catch (e) {
+      print('Error getting thresholds: $e');
+      return {};
+    }
+  }
+
+  Future<void> _sendNotification(String productCode) async {
+    try {
+      final deviceName = await _getDeviceName(productCode);
+      final latestData = await _getLatestSensorData(productCode);
+      final thresholds = await _getThresholdValues();
+
+      if (latestData.isEmpty || thresholds.isEmpty) return;
+
+      final combinedData = {...latestData, ...thresholds};
+      final exceededThresholds = _getExceededThresholds(combinedData);
+
+      if (exceededThresholds.isEmpty) return;
+
+      final title = "$deviceName: Fire Alert!";
+      final body = _createNotificationBody(exceededThresholds);
+
+      const androidDetails = AndroidNotificationDetails(
+        'channel_id',
+        'channel_name',
+        channelDescription: 'Threshold alerts',
+        importance: Importance.high,
+        priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
+      );
+
+      await flutterLocalNotificationsPlugin.show(
+        0,
+        title,
+        body,
+        const NotificationDetails(android: androidDetails),
+      );
+
+      await _playAlarmSound();
+    } catch (e) {
+      print('Error sending notification: $e');
+    }
+  }
+
+  List<String> _getExceededThresholds(Map<String, dynamic> combinedData) {
+    final List<String> exceeded = [];
+
+    if (combinedData['carbon_monoxide'] > combinedData['co_threshold']) {
+      exceeded.add('Carbon monoxide');
+    }
+    if (combinedData['smoke_level'] > combinedData['smoke_threshold']) {
+      exceeded.add('Smoke level');
+    }
+    if (combinedData['humidity_dht22'] < combinedData['humidity_threshold']) {
+      exceeded.add('Humidity');
+    }
+    if (combinedData['indoor_air_quality'] > combinedData['iaq_threshold']) {
+      exceeded.add('Air quality');
+    }
+    if (combinedData['temperature_dht22'] > combinedData['temp_threshold']) {
+      exceeded.add('Temperature');
+    }
+    if (combinedData['temperature_mlx90614'] > combinedData['temp_threshold']) {
+      exceeded.add('Infrared temperature');
+    }
+
+    return exceeded;
+  }
+
+  String _createNotificationBody(List<String> exceededThresholds) {
+    if (exceededThresholds.isEmpty) {
+      return "Sensor readings are normal";
+    }
+
+    if (exceededThresholds.length == 1) {
+      return "${exceededThresholds[0]} has exceeded the safe threshold!";
+    }
+
+    return "Multiple thresholds exceeded (${exceededThresholds.join(', ')})";
+  }
+
+  Future<void> _playAlarmSound() async {
     try {
       await _audioPlayer.setReleaseMode(ReleaseMode.loop);
       await _audioPlayer.play(AssetSource('alarm.mp3'));
-      print("Alarm sound started.");
     } catch (e) {
-      print("Error playing alarm sound: $e");
+      print('Error playing alarm: $e');
     }
   }
 
-  // Stop alarm sound
-  void stopAlarmSound() async {
+  Future<void> stopAlarmSound() async {
     try {
       await _audioPlayer.stop();
-      print("Alarm sound stopped.");
     } catch (e) {
-      print("Error stopping alarm sound: $e");
+      print('Error stopping alarm: $e');
     }
   }
 
-  // Request notification permissions
-  void requestPermissions() async {
-    NotificationSettings settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+  Future<void> acknowledgeAlerts() async {
+    _alertedProductCodes.clear();
+    _alertedDevicesController.add(_alertedProductCodes);
+    await stopAlarmSound();
+  }
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('User granted permission');
-    } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
-      print('User granted provisional permission');
-    } else {
-      print('User declined or has not accepted permission');
-    }
+  Future<void> dispose() async {
+    _productSubscriptions.values.forEach((sub) => sub.cancel());
+    await _audioPlayer.dispose();
+    await _alertedDevicesController.close();
   }
 }

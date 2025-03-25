@@ -7,9 +7,13 @@ import 'custom_app_bar.dart';
 import 'add_device.dart';
 import 'login.dart';
 import 'monitor.dart';
+import 'dart:async';
 import 'device_provider.dart';
+import 'notification_service.dart';
 
 class DevicesScreen extends StatefulWidget {
+  const DevicesScreen({Key? key}) : super(key: key);
+
   @override
   _DevicesScreenState createState() => _DevicesScreenState();
 }
@@ -19,15 +23,34 @@ class _DevicesScreenState extends State<DevicesScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final Map<String, String> _deviceNames = {};
   bool isNavigating = false;
+  Set<String> _alertedDevices = {};
+  StreamSubscription<Set<String>>? _alertSubscription;
 
   @override
   void initState() {
     super.initState();
-    _loadDeviceNames(); // Load device names when the screen initializes
+    _loadDeviceNames();
     _checkUser();
+    _setupAlertListener();
   }
 
-  // Load device names from SharedPreferences
+  @override
+  void dispose() {
+    _alertSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _setupAlertListener() {
+    final notificationService = Provider.of<NotificationService>(context, listen: false);
+    _alertSubscription = notificationService.alertedDevices.listen((alerts) {
+      if (mounted) {
+        setState(() {
+          _alertedDevices = alerts;
+        });
+      }
+    });
+  }
+
   Future<void> _loadDeviceNames() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -40,7 +63,6 @@ class _DevicesScreenState extends State<DevicesScreen> {
     });
   }
 
-  // Save device name to SharedPreferences
   Future<void> _saveDeviceName(String productCode, String deviceName) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('device_name_$productCode', deviceName);
@@ -63,7 +85,6 @@ class _DevicesScreenState extends State<DevicesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Access the DeviceProvider
     final deviceProvider = Provider.of<DeviceProvider>(context);
 
     return Scaffold(
@@ -80,6 +101,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
               .collection('ProductActivation')
               .where('user_email', isEqualTo: _auth.currentUser?.email)
               .get();
+          setState(() {});
         },
         child: StreamBuilder<QuerySnapshot>(
           stream: _firestore
@@ -109,7 +131,6 @@ class _DevicesScreenState extends State<DevicesScreen> {
                   return Center(child: Text('Error loading user devices'));
                 }
 
-                // Merge the results of both queries
                 Map<String, DocumentSnapshot> uniqueDevices = {};
                 if (userSnapshot.hasData) {
                   for (var doc in userSnapshot.data!.docs) {
@@ -135,8 +156,8 @@ class _DevicesScreenState extends State<DevicesScreen> {
                       child: Column(
                         children: [
                           SizedBox(
-                            width: 150,
-                            height: 150,
+                            width: 190,
+                            height: 190,
                             child: Image.asset('assets/official-logo.png'),
                           ),
                           SizedBox(height: 20),
@@ -160,7 +181,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                           ),
                           SizedBox(height: 20),
                           Text(
-                            'Your devices will be displayed here.\nAdd a new flame sensor by tapping the add icon.',
+                            'Your devices will be displayed here.\nAdd a new Iot device by tapping the add icon.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontFamily: 'Jost',
@@ -210,10 +231,11 @@ class _DevicesScreenState extends State<DevicesScreen> {
     String productId = doc['product_code'];
     String deviceName = _deviceNames[productId] ?? 'Device';
     bool isAdmin = doc['user_email'] == _auth.currentUser?.email;
+    bool hasAlert = _alertedDevices.contains(productId);
 
     return GestureDetector(
       onTap: () {
-        if (isNavigating) return; // Prevent multiple navigation attempts
+        if (isNavigating) return;
         isNavigating = true;
 
         deviceProvider.setSelectedProductCode(productId);
@@ -223,13 +245,13 @@ class _DevicesScreenState extends State<DevicesScreen> {
             builder: (context) => MonitorScreen(productCode: productId),
           ),
         ).then((_) {
-          isNavigating = false; // Reset the flag after navigation
+          isNavigating = false;
         });
       },
       child: Card(
         margin: EdgeInsets.only(bottom: 16),
         elevation: 2,
-        color: Colors.grey[300],
+        color: hasAlert ? Colors.red[300] : Colors.grey[300],
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
@@ -241,28 +263,37 @@ class _DevicesScreenState extends State<DevicesScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: 250,
-                    ),
-                    child: InkWell(
-                      onTap: () {
-                        _editDeviceName(context, doc['product_code']);
-                      },
-                      child: Text(
-                        deviceName,
-                        style: TextStyle(
-                          fontFamily: 'Jost',
-                          fontSize: 20,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black,
+                  Row(
+                    children: [
+                      if (hasAlert)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: Image.asset(
+                            'assets/devicewarning.png',
+                            width: 24,
+                            height: 24,
+                          ),
+                        ),
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: 200),
+                        child: InkWell(
+                          onTap: () => _editDeviceName(context, productId),
+                          child: Text(
+                            deviceName,
+                            style: TextStyle(
+                              fontFamily: 'Jost',
+                              fontSize: 21,
+                              fontWeight: FontWeight.w500,
+                              color: hasAlert ? Colors.red[900] : Colors.black,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                   PopupMenuButton<String>(
-                    icon: Icon(Icons.more_vert),
-                    color: Colors.white, // Set the background color of the popup menu to white
+                    icon: Icon(Icons.more_vert, color: hasAlert ? Colors.red[900] : Colors.black),
+                    color: Colors.white,
                     onSelected: (value) {
                       if (value == 'details') {
                         _showDeviceDetails(context, doc);
@@ -275,16 +306,16 @@ class _DevicesScreenState extends State<DevicesScreen> {
                     itemBuilder: (context) => [
                       PopupMenuItem(
                         value: 'details',
-                        child: Text('Details', style: TextStyle(color: Colors.black)), // Set text color to black
+                        child: Text('Details', style: TextStyle(color: Colors.black)),
                       ),
-                      if (isAdmin) // Only show 'Add People' for admin
+                      if (isAdmin)
                         PopupMenuItem(
                           value: 'add_people',
-                          child: Text('Add People', style: TextStyle(color: Colors.black)), // Set text color to black
+                          child: Text('Add People', style: TextStyle(color: Colors.black)),
                         ),
                       PopupMenuItem(
                         value: 'delete',
-                        child: Text('Delete', style: TextStyle(color: Colors.red)), // Keep red text for delete
+                        child: Text('Delete', style: TextStyle(color: Colors.red)),
                       ),
                     ],
                   ),
@@ -297,7 +328,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
     );
   }
 
-  void _editDeviceName(BuildContext context, String productId) async {
+  Future<void> _editDeviceName(BuildContext context, String productId) async {
     TextEditingController controller = TextEditingController(
       text: _deviceNames[productId] ?? 'Device',
     );
@@ -306,7 +337,6 @@ class _DevicesScreenState extends State<DevicesScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: Colors.white,
           title: Text('Edit Device Name'),
           content: TextField(
             controller: controller,
@@ -339,7 +369,6 @@ class _DevicesScreenState extends State<DevicesScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: Colors.white,
           title: Text('Device Details'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -365,12 +394,11 @@ class _DevicesScreenState extends State<DevicesScreen> {
     );
   }
 
-  void _deleteDevice(BuildContext context, DocumentSnapshot doc) async {
+  Future<void> _deleteDevice(BuildContext context, DocumentSnapshot doc) async {
     bool confirmDelete = await showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: Colors.white,
           title: Text('Delete Device'),
           content: Text('Are you sure you want to delete this device?'),
           actions: [
@@ -397,14 +425,13 @@ class _DevicesScreenState extends State<DevicesScreen> {
     }
   }
 
-  void _addPeople(BuildContext context, DocumentSnapshot doc) async {
+  Future<void> _addPeople(BuildContext context, DocumentSnapshot doc) async {
     TextEditingController controller = TextEditingController();
 
     await showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: Colors.white,
           title: Text('Add People'),
           content: TextField(
             controller: controller,

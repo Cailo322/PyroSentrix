@@ -74,11 +74,10 @@ class AboutScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'PyroSentrix is focused on enhancing fire safety through advanced IoT solutions.\n\n'
-                              'Our multi-sensor fire detection system, integrated with a mobile app, provides real-time monitoring and alerts from a network of flame sensors.\n\n'
-                              'By leveraging cutting-edge technology, PyroSentrix ensures prompt and accurate fire detection, safeguarding lives and property. Our commitment to innovation makes PyroSentrix a leader in the fire safety industry.',
+                          'PyroSentrix is an IoT-based fire monitoring system with a mobile app designed to enhance household safety. It uses multiple sensors to detect fire hazards like smoke, temperature spikes, and poor air quality, providing real-time alerts.\n\n'
+                              'Beyond instant alarms, PyroSentrix features AI-driven sensor reading predictions for smarter prevention. With its user-friendly app, homeowners can monitor their environment anytime, ensuring a safer living space.',
                           style: TextStyle(
-                            fontFamily: 'Jost',
+                            fontFamily: 'Inter',
                             fontSize: 16,
                             color: Color(0xFF494949),
                           ),
@@ -117,12 +116,18 @@ class AboutScreen extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 16),
-              Text(
-                'Real-time and effortless monitoring of six sensor values from the IoT device.',
-                style: TextStyle(
-                  fontFamily: 'Jost',
-                  fontSize: 16,
-                  color: Color(0xFF494949),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Text(
+                    'Real-time and effortless monitoring of six sensor values from the IoT device.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 17,
+                      color: Color(0xFF494949),
+                    ),
+                  ),
                 ),
               ),
               SizedBox(height: 16),
@@ -139,12 +144,18 @@ class AboutScreen extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 16),
-              Text(
-                'Instant alarm notifications when sensor values exceed predefined thresholds on both the mobile application and IoT device.',
-                style: TextStyle(
-                  fontFamily: 'Jost',
-                  fontSize: 16,
-                  color: Color(0xFF494949),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Text(
+                    'Instant alarm notifications when sensor values exceed predefined thresholds on both the mobile application and IoT device.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 17,
+                      color: Color(0xFF494949),
+                    ),
+                  ),
                 ),
               ),
               SizedBox(height: 16),
@@ -161,12 +172,18 @@ class AboutScreen extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 16),
-              Text(
-                'Displays the two nearest fire stations based on your location using Google Maps and Google Places API.',
-                style: TextStyle(
-                  fontFamily: 'Jost',
-                  fontSize: 16,
-                  color: Color(0xFF494949),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Text(
+                    'Displays the two nearest fire stations based on your location using Google Maps and Google Places API.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 17,
+                      color: Color(0xFF494949),
+                    ),
+                  ),
                 ),
               ),
               SizedBox(height: 16),
@@ -183,36 +200,21 @@ class AboutScreen extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 16),
-              Text(
-                'Integrated with the Long Short-Term Memory (LSTM) algorithm, providing notification insights when it detects an upward trend in sensor readings over the next 40 seconds. This allows users to stay aware of their surroundings by alerting them in advance when sensor readings are projected to rise.',
-                style: TextStyle(
-                  fontFamily: 'Jost',
-                  fontSize: 16,
-                  color: Color(0xFF494949),
-                ),
-              ),
-              SizedBox(height: 16),
-              Divider(
-                color: Color(0xFFC54B00),
-                thickness: 2,
-              ),
-              SizedBox(height: 16),
-              // Additional Content: Firemonitor.png (Third New Section)
               Center(
-                child: Image.asset(
-                  'assets/districtlogo.png',
-                  height: 100, // Adjust height as needed
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Text(
+                    'Integrated with the LSTM algorithm, PyroSentrix predicts rising sensor trends over the next 40 seconds, providing early notifications to keep users aware of potential risks.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 16,
+                      color: Color(0xFF494949),
+                    ),
+                  ),
                 ),
               ),
               SizedBox(height: 16),
-              Text(
-                'The system has been validated and approved by the Quezon City Fire District (QCFD). It has undergone rigorous testing with fire safety professionals to ensure reliability and effectiveness.',
-                style: TextStyle(
-                  fontFamily: 'Jost',
-                  fontSize: 16,
-                  color: Color(0xFF494949),
-                ),
-              ),
             ],
           ),
         ),

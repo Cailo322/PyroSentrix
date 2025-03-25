@@ -4,7 +4,7 @@ import 'custom_app_bar.dart';
 import 'call.dart';
 import 'notification_service.dart'; // Import the NotificationService
 import 'package:flutter/foundation.dart';
-//thrthrhtrhrthmyfmhyy
+
 class MonitorScreen extends StatelessWidget {
   final String productCode; // Accept productCode
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -372,7 +372,7 @@ class MonitorScreen extends StatelessWidget {
                                 SensorCard(
                                   title: 'CO',
                                   status: determineStatus(sensorData['carbon_monoxide'], thresholdData['co_threshold'], 'co'),
-                                  value: '${sensorData['carbon_monoxide']} ppm',
+                                  value: '${sensorData['carbon_monoxide']}ppm',
                                   statusColor: determineStatusColor(sensorData['carbon_monoxide'], thresholdData['co_threshold'], 'co'),
                                   valueColor: determineStatusColor(sensorData['carbon_monoxide'], thresholdData['co_threshold'], 'co'),
                                 ),
@@ -477,40 +477,40 @@ class MonitorScreen extends StatelessWidget {
     List<String> warnings = [];
 
     if (sensorData['humidity_dht22'] < thresholdData['humidity_threshold']) {
-      warnings.add('Humidity levels are critically low and unsafe.');
+      warnings.add('Humidity levels are dangerously low. This increases fire risk and may impact air quality.');
     } else if (
     sensorData['humidity_dht22'] < thresholdData['humidity_threshold'] * 1.25
     ) {
-      warnings.add('Humidity levels are nearing the unsafe threshold.');
+      warnings.add('Humidity levels are dropping and approaching unsafe thresholds. Monitor closely.');
     }
 
     if (sensorData['temperature_dht22'] > thresholdData['temp_threshold']) {
-      warnings.add('Temperature (DHT22) is elevated.');
+      warnings.add('Temperature (DHT22) has exceeded safe limits. Potential fire risk, take immediate action.');
     } else if (sensorData['temperature_dht22'] > thresholdData['temp_threshold'] * 0.75) {
-      warnings.add('Temperature (DHT22) is nearing unsafe levels.');
+      warnings.add('Temperature (DHT22) is rising and nearing unsafe levels. Monitor the area for any signs of fire.');
     }
 
     if (sensorData['carbon_monoxide'] > thresholdData['co_threshold']) {
-      warnings.add('Carbon monoxide levels are dangerously high.');
+      warnings.add('Carbon monoxide levels are dangerously high. Potential fire risk, take immediate action.');
     } else if (sensorData['carbon_monoxide'] > thresholdData['co_threshold'] * 0.75) {
-      warnings.add('Carbon monoxide levels are nearing the safe threshold.');
+      warnings.add('Carbon monoxide levels are rising. Monitor the area for any signs of fire.');
     }
     if (sensorData['smoke_level'] > thresholdData['smoke_threshold']) {
-      warnings.add('Smoke levels are high. Possible fire risk.');
+      warnings.add('High smoke levels detected. Potential fire risk, take immediate action.');
     } else if (sensorData['smoke_level'] > thresholdData['smoke_threshold'] * 0.75) {
-      warnings.add('Smoke levels are nearing the safe threshold.');
+      warnings.add('Smoke levels are rising. Monitor the area for any signs of fire.');
     }
 
     if (sensorData['temperature_mlx90614'] > thresholdData['temp_threshold']) {
-      warnings.add('Temperature (MLX90614) detected an unsafe level.');
+      warnings.add('Temperature (MLX90614) has exceeded safe limits. Potential fire risk, take immediate action.');
     } else if (sensorData['temperature_mlx90614'] > thresholdData['temp_threshold'] * 0.75) {
-      warnings.add('Temperature (MLX90614) is nearing unsafe levels.');
+      warnings.add('Temperature (MLX90614) is rising nearing unsafe levels. Monitor the area for any signs of fire.');
     }
 
     if (sensorData['indoor_air_quality'] > thresholdData['iaq_threshold']) {
-      warnings.add('Indoor air quality is poor. Ventilation is recommended.');
+      warnings.add('Indoor air quality is poor. Potential fire risk, take immediate action.');
     } else if (sensorData['indoor_air_quality'] > thresholdData['iaq_threshold'] * 0.75) {
-      warnings.add('Indoor air quality is nearing poor levels.');
+      warnings.add(' Indoor air quality is deteriorating. Monitor the area for any signs of fire.');
     }
 
     return warnings; // Empty if no thresholds are exceeded
@@ -548,7 +548,7 @@ class MonitorScreen extends StatelessWidget {
       'Carbon': 'Carbon Monoxide',
       'SMOKE': 'Smoke Level',
       'TEMP.2': 'Temperature (MLX90614)',
-      'Indoor': 'Indoor Air Quality',
+      'Air Quality': 'Air Quality',
     };
 
     // Map sensor codes to descriptions
@@ -606,7 +606,7 @@ class SensorCard extends StatelessWidget {
       case 'SMOKE':
         sensorInfo = 'Detects PM2.5 smoke particles, which are fine airborne particles that can indicate potential fire hazards. Elevated smoke levels may pose both fire and health risks. Measured in micrograms per cubic meter (µg/m³).';
         break;
-      case 'INDOOR AIR QUAL.':
+      case 'AIR QUALITY':
         sensorInfo = 'Measures general gases in the air, including VOCs, smoke, and carbon dioxide (CO₂), indicating overall air quality and pollutant levels. A higher index signifies poorer air quality.';
         break;
       default:
@@ -804,7 +804,7 @@ class SensorCard extends StatelessWidget {
                   height: 30,
                 ),
               ),
-            if (title == 'INDOOR AIR QUAL.')
+            if (title == 'AIR QUALITY')
               Positioned(
                 bottom: -5,
                 right: -5,
