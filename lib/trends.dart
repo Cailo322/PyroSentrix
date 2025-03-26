@@ -1,162 +1,180 @@
-import 'dart:async'; // Import for Timer
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
 
 class TrendAnalysisService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+  FlutterLocalNotificationsPlugin();
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
   // Define thresholds for each sensor
   final Map<String, double> sensorThresholds = {
-    'carbon_monoxide': 10.0,       // Threshold: 10
-    'indoor_air_quality': 50.0,    // Threshold: 50
-    'smoke_level': 0.05,            // Threshold: 0.05 (added this sensor)
-    'temperature_dht22': 5.0,       // Threshold: 5
-    'temperature_mlx90614': 5.0,    // Threshold: 5
+    'carbon_monoxide': 10.0,
+    'indoor_air_quality': 50.0,
+    'smoke_level': 0.05,
+    'temperature_dht22': 5.0,
+    'temperature_mlx90614': 5.0,
   };
 
-  // Track sensors that have already triggered a notification in the current window
   final Set<String> _notifiedSensors = {};
+  final Set<String> _monitoredProductCodes = {};
+  final Map<String, Timer> _productTimers = {};
+  String? _currentUserEmail;
 
   TrendAnalysisService._privateConstructor();
-  static final TrendAnalysisService _instance = TrendAnalysisService._privateConstructor();
+  static final TrendAnalysisService _instance =
+  TrendAnalysisService._privateConstructor();
   factory TrendAnalysisService() => _instance;
 
-  // Initialize the notification plugin and FirebaseMessaging
   void initialize() {
     const AndroidInitializationSettings initializationSettingsAndroid =
     AndroidInitializationSettings('@mipmap/ic_launcher');
-
     const InitializationSettings initializationSettings =
     InitializationSettings(android: initializationSettingsAndroid);
 
     flutterLocalNotificationsPlugin.initialize(initializationSettings);
-
-    // Request notification permissions for FirebaseMessaging
+    _currentUserEmail = _auth.currentUser?.email;
     _requestNotificationPermissions();
+    _startMonitoringAuthorizedDevices();
   }
 
-  // Request notification permissions
   void _requestNotificationPermissions() async {
     NotificationSettings settings = await _messaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
-
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('User granted permission for notifications');
-    } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
-      print('User granted provisional permission for notifications');
-    } else {
-      print('User declined or has not accepted permission for notifications');
-    }
+    print('Notification permission status: ${settings.authorizationStatus}');
   }
 
-  // Start analyzing trends every 1 minute
-  void startTrendAnalysis() {
-    // Analyze trends immediately when the function is called
-    analyzeTrendsAndNotify();
+  void _startMonitoringAuthorizedDevices() {
+    _firestore.collection('ProductActivation').snapshots().listen((snapshot) {
+      final newProductCodes = snapshot.docs
+          .where((doc) => _isUserAuthorized(doc))
+          .map((doc) => doc['product_code'] as String)
+          .where((code) => code != null)
+          .toSet();
 
-    // Set up a periodic timer to analyze trends every 1 minute
-    const Duration interval = Duration(minutes: 1);
-    Timer.periodic(interval, (Timer timer) async {
-      await analyzeTrendsAndNotify();
+      _updateMonitoredProducts(newProductCodes);
     });
   }
 
-  // Fetch the latest 4 predictions and analyze trends
-  Future<void> analyzeTrendsAndNotify() async {
+  bool _isUserAuthorized(DocumentSnapshot doc) {
+    if (_currentUserEmail == null) return false;
+
+    final userEmail = doc['user_email'] as String?;
+    final sharedUsers = List<String>.from(doc['shared_users'] ?? []);
+
+    return userEmail == _currentUserEmail ||
+        sharedUsers.contains(_currentUserEmail);
+  }
+
+  void _updateMonitoredProducts(Set<String> newProductCodes) {
+    // Stop monitoring removed products
+    final productsToRemove = _monitoredProductCodes.difference(newProductCodes);
+    for (final removedCode in productsToRemove) {
+      _productTimers[removedCode]?.cancel();
+      _productTimers.remove(removedCode);
+      _monitoredProductCodes.remove(removedCode);
+    }
+
+    // Start monitoring new products
+    final productsToAdd = newProductCodes.difference(_monitoredProductCodes);
+    for (final newCode in productsToAdd) {
+      _startMonitoringProduct(newCode);
+      _monitoredProductCodes.add(newCode);
+    }
+  }
+
+  void _startMonitoringProduct(String productCode) {
+    // Start immediately and then every minute
+    _analyzeProductTrends(productCode);
+
+    _productTimers[productCode] = Timer.periodic(
+      const Duration(minutes: 1),
+          (_) => _analyzeProductTrends(productCode),
+    );
+  }
+
+  Future<void> _analyzeProductTrends(String productCode) async {
     try {
-      // Reset the notified sensors set at the start of each analysis cycle
       _notifiedSensors.clear();
 
-      // Fetch the latest 4 predictions ordered by timestamp (descending)
       QuerySnapshot snapshot = await _firestore
           .collection('LSTM')
           .doc('Predictions')
-          .collection('HpLk33atBI')
+          .collection(productCode)
           .orderBy('timestamp', descending: true)
           .limit(4)
           .get();
 
       if (snapshot.docs.isEmpty) {
-        print("No predictions found.");
+        print("No predictions found for $productCode");
         return;
       }
 
-      // Extract predictions and reverse to get ascending order (oldest first)
       List<Map<String, dynamic>> predictions = snapshot.docs
           .map((doc) => doc.data() as Map<String, dynamic>)
           .toList()
           .reversed
           .toList();
 
-      // Analyze trends for each sensor
-      _analyzeAndNotifyForSensor(predictions, 'carbon_monoxide', 'Carbon Monoxide');
-      _analyzeAndNotifyForSensor(predictions, 'indoor_air_quality', 'Indoor Air Quality');
-      _analyzeAndNotifyForSensor(predictions, 'smoke_level', 'Smoke Level');
-      _analyzeAndNotifyForSensor(predictions, 'temperature_dht22', 'Temperature (DHT22)');
-      _analyzeAndNotifyForSensor(predictions, 'temperature_mlx90614', 'Temperature (MLX90614)');
+      _analyzeAndNotifyForSensor(predictions, productCode, 'carbon_monoxide', 'Carbon Monoxide');
+      _analyzeAndNotifyForSensor(predictions, productCode, 'indoor_air_quality', 'Indoor Air Quality');
+      _analyzeAndNotifyForSensor(predictions, productCode, 'smoke_level', 'Smoke Level');
+      _analyzeAndNotifyForSensor(predictions, productCode, 'temperature_dht22', 'Temperature (DHT22)');
+      _analyzeAndNotifyForSensor(predictions, productCode, 'temperature_mlx90614', 'Temperature (MLX90614)');
     } catch (error) {
-      print("Error analyzing trends: $error");
+      print("Error analyzing trends for $productCode: $error");
     }
   }
 
-  // Analyze trend for a specific sensor and send notification if on upward trend or jump exceeds threshold
-  void _analyzeAndNotifyForSensor(List<Map<String, dynamic>> predictions, String sensorKey, String sensorName) {
-    // Explicitly cast the mapped values to List<double>
-    List<double> sensorValues = predictions.map<double>((prediction) => prediction[sensorKey].toDouble()).toList();
+  void _analyzeAndNotifyForSensor(
+      List<Map<String, dynamic>> predictions,
+      String productCode,
+      String sensorKey,
+      String sensorName
+      ) {
+    List<double> sensorValues = predictions
+        .map<double>((prediction) => prediction[sensorKey].toDouble())
+        .toList();
 
-    // Method 1: Check for upward trend
     if (_isUpwardTrend(sensorValues)) {
-      String title = "⚠️ $sensorName Alert";
-      String body = "$sensorName is projected to rise in the next 40 seconds! Please inspect your surroundings";
-      print("$sensorName is on an upward trend. Sending notification...");
+      String title = "⚠️ $sensorName Alert ($productCode)";
+      String body = "$sensorName is projected to rise in the next 40 seconds!";
       _sendNotification(title, body);
     }
 
-    // Method 2: Check for positive jumps exceeding the threshold
-    if (!_notifiedSensors.contains(sensorKey) && _hasPositiveJumpExceedingThreshold(sensorValues, sensorKey)) {
-      String title = "⚠️ $sensorName Alert";
-      String body = "$sensorName is projected to rise in the next 40 seconds! Please inspect your surroundings";
-      print("$sensorName has a positive jump exceeding the threshold. Sending notification...");
+    if (!_notifiedSensors.contains(sensorKey) &&
+        _hasPositiveJumpExceedingThreshold(sensorValues, sensorKey)) {
+      String title = "⚠️ $sensorName Alert ($productCode)";
+      String body = "$sensorName has a significant increase projected!";
       _sendNotification(title, body);
-
-      // Mark this sensor as notified for the current window
       _notifiedSensors.add(sensorKey);
     }
   }
 
-  // Method 1: Check if the values are consistently increasing
   bool _isUpwardTrend(List<double> values) {
     for (int i = 1; i < values.length; i++) {
-      if (values[i] <= values[i - 1]) {
-        return false; // Not an upward trend
-      }
+      if (values[i] <= values[i - 1]) return false;
     }
-    return true; // All values are increasing
+    return true;
   }
 
-  // Method 2: Check if any positive jump exceeds the threshold
   bool _hasPositiveJumpExceedingThreshold(List<double> values, String sensorKey) {
     double threshold = sensorThresholds[sensorKey]!;
-
     for (int i = 1; i < values.length; i++) {
-      double jump = values[i] - values[i - 1]; // Positive jumps only
-      if (jump > threshold) {
-        return true; // Positive jump exceeds the threshold
-      }
+      if (values[i] - values[i - 1] > threshold) return true;
     }
-    return false; // No positive jump exceeds the threshold
+    return false;
   }
 
-  // Send a push notification
   void _sendNotification(String title, String body) async {
-    var androidPlatformChannelSpecifics = const AndroidNotificationDetails(
+    const androidDetails = AndroidNotificationDetails(
       'trend_channel_id',
       'Trend Alerts',
       channelDescription: 'Channel for trend-based alerts',
@@ -164,27 +182,18 @@ class TrendAnalysisService {
       priority: Priority.high,
     );
 
-    var platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
-
     await flutterLocalNotificationsPlugin.show(
       1,
       title,
       body,
-      platformChannelSpecifics,
+      const NotificationDetails(android: androidDetails),
       payload: 'Trend Alert Payload',
     );
-
-    // Optionally, send a Firebase Cloud Message (FCM)
-    await _sendFirebaseNotification(title, body);
   }
 
-  // Send a Firebase Cloud Message (FCM)
-  Future<void> _sendFirebaseNotification(String title, String body) async {
-    try {
-      // Replace with your FCM server logic or use Firebase Cloud Functions to send notifications
-      print("Sending Firebase notification: $title - $body");
-    } catch (error) {
-      print("Error sending Firebase notification: $error");
-    }
+  void dispose() {
+    _productTimers.values.forEach((timer) => timer.cancel());
+    _productTimers.clear();
+    _monitoredProductCodes.clear();
   }
 }

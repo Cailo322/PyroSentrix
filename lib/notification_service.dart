@@ -3,11 +3,13 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 
 class NotificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
   FlutterLocalNotificationsPlugin();
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -23,6 +25,7 @@ class NotificationService {
   Set<String> _alertedProductCodes = {};
   Set<String> _activeProductCodes = {};
   Map<String, StreamSubscription<QuerySnapshot>> _productSubscriptions = {};
+  String? _currentUserEmail;
 
   Stream<Set<String>> get alertedDevices => _alertedDevicesController.stream;
 
@@ -34,6 +37,7 @@ class NotificationService {
 
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
     await requestPermissions();
+    _currentUserEmail = _auth.currentUser?.email;
     _listenForActiveProducts();
   }
 
@@ -50,12 +54,23 @@ class NotificationService {
   void _listenForActiveProducts() {
     _firestore.collection('ProductActivation').snapshots().listen((snapshot) {
       final newProductCodes = snapshot.docs
+          .where((doc) => _isUserAuthorized(doc))
           .map((doc) => doc['product_code'] as String)
           .where((code) => code != null)
           .toSet();
 
       _updateProductSubscriptions(newProductCodes);
     });
+  }
+
+  bool _isUserAuthorized(DocumentSnapshot doc) {
+    if (_currentUserEmail == null) return false;
+
+    final userEmail = doc['user_email'] as String?;
+    final sharedUsers = List<String>.from(doc['shared_users'] ?? []);
+
+    return userEmail == _currentUserEmail ||
+        sharedUsers.contains(_currentUserEmail);
   }
 
   void _updateProductSubscriptions(Set<String> newProductCodes) {
@@ -94,7 +109,6 @@ class NotificationService {
       final thresholds = thresholdDoc.data();
 
       if (thresholds != null) {
-        // Merge thresholds with current data for easier comparison
         final combinedData = {...data, ...thresholds};
         final isAlert = _isThresholdExceeded(combinedData);
         if (isAlert) {

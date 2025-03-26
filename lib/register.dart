@@ -347,9 +347,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildTextInput('Enter Address', _addressController, onChanged: _onAddressChanged),
+                                Container(
+                                  width: 300, // Fixed width to prevent shifting
+                                  child: _buildTextInput('Enter Address', _addressController, onChanged: _onAddressChanged),
+                                ),
                                 if (_placePredictions.isNotEmpty)
                                   Container(
+                                    width: 300, // Same width as the input field
                                     margin: EdgeInsets.only(top: 5),
                                     decoration: BoxDecoration(
                                       color: Colors.white,

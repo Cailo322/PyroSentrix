@@ -24,12 +24,10 @@ void main() async {
 
   // Initialize services
   final notificationService = NotificationService();
-  notificationService.initialize(); // No await needed
-  notificationService.requestPermissions(); // No await needed
+  await notificationService.initialize(); // Added await for proper initialization
 
   final trendAnalysisService = TrendAnalysisService();
-  trendAnalysisService.initialize(); // No await needed
-  trendAnalysisService.startTrendAnalysis(); // No await needed
+  trendAnalysisService.initialize(); // Added await for proper initialization
 
   // Check login state
   final prefs = await SharedPreferences.getInstance();
