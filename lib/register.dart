@@ -1,13 +1,14 @@
-import 'dart:convert'; // Import for JSON decoding
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:http/http.dart' as http; // Import the http package
-import 'verification.dart'; // Import the VerificationScreen
+import 'package:http/http.dart' as http;
+import 'verification.dart';
 import 'login.dart';
-import 'api_service.dart'; // Import the ApiService
+import 'api_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -28,6 +29,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   String? _emailError;
   String? _passwordError;
+  List<dynamic> _placePredictions = [];
+  Timer? _debounce;
 
   List<String> _passwordRequirements = [
     "At least 8 characters",
@@ -40,6 +43,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     "At least 1 capital letter": false,
   };
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _addressController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
   void _updatePasswordStatus(String password) {
     setState(() {
       _passwordStatus["At least 8 characters"] = password.length >= 8;
@@ -51,15 +65,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _getCurrentLocation() async {
-    PermissionStatus permission = await Permission.location.request();
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enable location services')),
+      );
+      return;
+    }
 
+    PermissionStatus permission = await Permission.location.request();
     if (permission.isGranted) {
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      print('Current Position: Lat: ${position.latitude}, Lon: ${position.longitude}');
-      await _getAddressFromCoordinates(position.latitude, position.longitude);
+      try {
+        Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.best,
+          timeLimit: Duration(seconds: 10),
+        ).timeout(Duration(seconds: 15));
+
+        print('Precise Position: Lat: ${position.latitude}, Lon: ${position.longitude}');
+        await _getAddressFromCoordinates(position.latitude, position.longitude);
+      } on TimeoutException {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Getting precise location took too long')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error getting location: ${e.toString()}')),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Location permission is required to use this feature')),
+        SnackBar(content: Text('Location permission is required')),
       );
     }
   }
@@ -77,6 +112,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           String address = data['results'][0]['formatted_address'];
           setState(() {
             _addressController.text = address;
+            _placePredictions = [];
           });
           print('Address: $address');
         } else {
@@ -97,6 +133,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _addressController.text = "Error fetching address";
       });
     }
+  }
+
+  void _onAddressChanged(String value) {
+    if (_debounce?.isActive ?? false) _debounce?.cancel();
+
+    _debounce = Timer(Duration(milliseconds: 500), () {
+      if (value.isNotEmpty) {
+        _getPlacePredictions(value);
+      } else {
+        setState(() {
+          _placePredictions = [];
+        });
+      }
+    });
+  }
+
+  Future<void> _getPlacePredictions(String input) async {
+    final String url =
+        'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=$googleApiKey&components=country:ph';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        Map<String, dynamic> data = json.decode(response.body);
+        if (data['status'] == 'OK') {
+          setState(() {
+            _placePredictions = data['predictions'];
+          });
+        }
+      }
+    } catch (e) {
+      print('Error fetching place predictions: $e');
+    }
+  }
+
+  void _selectPrediction(String description) {
+    setState(() {
+      _addressController.text = description;
+      _placePredictions = [];
+      FocusScope.of(context).unfocus();
+    });
   }
 
   void _registerUser() async {
@@ -169,14 +246,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
           Container(
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/bg-2.png'), // Path to your background image
-                fit: BoxFit.cover, // Ensures the image covers the entire screen
+                image: AssetImage('assets/bg-2.png'),
+                fit: BoxFit.cover,
               ),
             ),
           ),
           // PYROSENTRIX Text and Additional Text
           Positioned(
-            top: 100, // Adjust this value to position the text vertically
+            top: 100,
             left: 0,
             right: 0,
             child: Center(
@@ -185,20 +262,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Text(
                     'PYROSENTRIX',
                     style: TextStyle(
-                      fontSize: 45, // Adjust the font size as needed
+                      fontSize: 45,
                       fontWeight: FontWeight.bold,
                       fontFamily: 'Jost',
-                      color: Colors.white, // Adjust the color as needed
+                      color: Colors.white,
                     ),
                   ),
-                  SizedBox(height: 3), // Space between the two texts
+                  SizedBox(height: 3),
                   Text(
-                    'Stay Alert', // Add your new text
+                    'Stay Alert',
                     style: TextStyle(
-                      fontSize: 35, // Adjust the font size as needed
+                      fontSize: 35,
                       fontWeight: FontWeight.w200,
                       fontFamily: 'Inter',
-                      color: Colors.white.withOpacity(0.8), // Adjust the color as needed
+                      color: Colors.white.withOpacity(0.8),
                     ),
                   ),
                 ],
@@ -209,30 +286,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
           SafeArea(
             child: Stack(
               children: [
-                // Position the Card at the bottom of the screen
                 Positioned(
-                  top: 200, // Start the Card 200 pixels from the top
-                  bottom: 0, // Extend the Card to the bottom of the screen
+                  top: 200,
+                  bottom: 0,
                   left: 0,
                   right: 0,
                   child: Card(
-                    elevation: 5, // Adds a shadow to the card
+                    elevation: 5,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(65),
                         topRight: Radius.circular(65),
-                      ), // Rounded corners only at the top
+                      ),
                     ),
-                    margin: EdgeInsets.zero, // Remove default margin
-                    color: Colors.white, // White background for the card
+                    margin: EdgeInsets.zero,
+                    color: Colors.white,
                     child: SingleChildScrollView(
-                      // Wrap the content in a SingleChildScrollView
                       child: Padding(
                         padding: const EdgeInsets.only(
                           left: 24.0,
                           right: 24.0,
                           top: 24.0,
-                          bottom: 10.0, // Added bottom padding to create space
+                          bottom: 10.0,
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -248,9 +323,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                             ),
                             SizedBox(height: 10),
-                            // Subtitle
                             Container(
-                              padding: EdgeInsets.symmetric(horizontal: 50), // Add horizontal margin
+                              padding: EdgeInsets.symmetric(horizontal: 50),
                               child: Text(
                                 'Create an account to get real-time fire alerts and ensure safety.',
                                 textAlign: TextAlign.center,
@@ -270,7 +344,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             SizedBox(height: 20),
                             _buildPasswordInput('Confirm Password', _confirmPasswordController, error: _passwordError, showRequirements: false),
                             SizedBox(height: 10),
-                            _buildTextInput('Enter Address', _addressController),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildTextInput('Enter Address', _addressController, onChanged: _onAddressChanged),
+                                if (_placePredictions.isNotEmpty)
+                                  Container(
+                                    margin: EdgeInsets.only(top: 5),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(5),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black12,
+                                          blurRadius: 5,
+                                          spreadRadius: 1,
+                                        ),
+                                      ],
+                                    ),
+                                    child: ListView.builder(
+                                      shrinkWrap: true,
+                                      physics: NeverScrollableScrollPhysics(),
+                                      itemCount: _placePredictions.length > 3 ? 3 : _placePredictions.length,
+                                      itemBuilder: (context, index) {
+                                        return ListTile(
+                                          title: Text(
+                                            _placePredictions[index]['description'],
+                                            style: TextStyle(fontSize: 14),
+                                          ),
+                                          onTap: () => _selectPrediction(
+                                              _placePredictions[index]['description']),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                              ],
+                            ),
                             SizedBox(height: 10),
                             GestureDetector(
                               onTap: _getCurrentLocation,
@@ -317,8 +426,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             SizedBox(height: 6),
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.center, // Center the children horizontally
-                              crossAxisAlignment: CrossAxisAlignment.center, // Align children vertically
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Text(
                                   'Already have an existing account?',
@@ -336,9 +445,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     );
                                   },
                                   style: TextButton.styleFrom(
-                                    padding: EdgeInsets.only(left: 5), // Remove default padding
-                                    minimumSize: Size.zero, // Remove minimum size constraints
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap, // Reduce tap target size
+                                    padding: EdgeInsets.only(left: 5),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   ),
                                   child: Text(
                                     'Sign In Here',
@@ -366,41 +475,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildTextInput(String hintText, TextEditingController controller) {
+  Widget _buildTextInput(String hintText, TextEditingController controller, {Function(String)? onChanged}) {
     return Container(
       width: 300,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-        Container(
-        height: 50, // Set the height of the input box
-        decoration: BoxDecoration(
-            color: Color(0xFFDDDDDD),
-            borderRadius: BorderRadius.circular(5),
-            boxShadow: [
-        BoxShadow(
-        color: Colors.black.withOpacity(0.1),
-        blurRadius: 5,
-        offset: Offset(0, 2),
-        ),
-            ],
-      ),
-      child: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          hintText: hintText, // Placeholder text inside the input box
-          hintStyle: TextStyle(
-            fontFamily: 'Jost',
-            fontSize: 14,
-            color: Colors.grey[600],
+          Container(
+            height: 50,
+            decoration: BoxDecoration(
+              color: Color(0xFFDDDDDD),
+              borderRadius: BorderRadius.circular(5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 5,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: hintText,
+                hintStyle: TextStyle(
+                  fontFamily: 'Jost',
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              ),
+              onChanged: onChanged,
+            ),
           ),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10), // Adjust padding
-        ),
+        ],
       ),
-    ),
-    ],
-    ),
     );
   }
 
@@ -411,7 +521,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            height: 50, // Set the height of the input box
+            height: 50,
             decoration: BoxDecoration(
               color: _emailError != null ? Colors.orange[50] : Color(0xFFDDDDDD),
               borderRadius: BorderRadius.circular(5),
@@ -430,14 +540,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: TextField(
               controller: _emailController,
               decoration: InputDecoration(
-                hintText: 'Enter Email', // Placeholder text inside the input box
+                hintText: 'Enter Email',
                 hintStyle: TextStyle(
                   fontFamily: 'Jost',
                   fontSize: 14,
                   color: Colors.grey[600],
                 ),
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10), // Adjust padding
+                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               ),
             ),
           ),
@@ -447,11 +557,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Row(
                 children: [
                   Image.asset(
-                    'assets/warning2.png', // Add the warning icon
+                    'assets/warning2.png',
                     height: 16,
                     width: 16,
                   ),
-                  SizedBox(width: 8), // Add some space between the icon and the text
+                  SizedBox(width: 8),
                   Text(
                     _emailError!,
                     style: TextStyle(
@@ -475,7 +585,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            height: 50, // Set the height of the input box
+            height: 50,
             decoration: BoxDecoration(
               color: error != null ? Colors.orange[50] : Color(0xFFDDDDDD),
               borderRadius: BorderRadius.circular(5),
@@ -495,14 +605,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
               controller: controller,
               obscureText: true,
               decoration: InputDecoration(
-                hintText: hintText, // Placeholder text inside the input box
+                hintText: hintText,
                 hintStyle: TextStyle(
                   fontFamily: 'Jost',
                   fontSize: 14,
                   color: Colors.grey[600],
                 ),
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10), // Adjust padding
+                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               ),
               onChanged: (value) {
                 if (showRequirements) {
