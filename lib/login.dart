@@ -372,7 +372,7 @@ class _LoginScreenState extends State<LoginScreen> {
               color: Color(0xFF494949),
             ),
           ),
-          SizedBox(height: 8),
+          SizedBox(height: 5),
           Container(
             decoration: BoxDecoration(
               color: _emailError != null ? Colors.orange[50] : Color(
@@ -443,7 +443,7 @@ class _LoginScreenState extends State<LoginScreen> {
               color: Color(0xFF494949),
             ),
           ),
-          SizedBox(height: 8),
+          SizedBox(height: 5),
           Container(
             height: 50, // Fixed height for consistent alignment
             decoration: BoxDecoration(
