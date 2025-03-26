@@ -236,7 +236,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> with SingleTickerProv
                     setState(() {
                       _showPasswordDialog = false;
                     });
-                    await _startProvisioning(); // Start provisioning after password submit
+                    await _startProvisioning();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFFDE59),
@@ -284,7 +284,6 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> with SingleTickerProv
                   return;
                 }
                 if (_currentStep == 2) {
-                  // No longer needed as provisioning starts after password submit
                   return;
                 }
                 if (_currentStep < 3) {
@@ -297,7 +296,6 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> with SingleTickerProv
                 if (_currentStep > 0) setState(() => _currentStep -= 1);
               },
               controlsBuilder: (BuildContext context, ControlsDetails details) {
-                // Only show controls for steps that need them
                 if (_currentStep == 2) return const SizedBox.shrink();
 
                 return Center(
@@ -364,17 +362,164 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> with SingleTickerProv
                             color: Colors.black,
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 5),
                         const Text(
-                          '1. Turn on the fire alarm and ensure it is near your device\n\n'
-                              '2. Scan the QR code on your fire alarm or manual\n\n'
-                              '3. Select your Wi-Fi network and enter password',
+                          'Follow these steps to set up your device',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 14,
                             fontFamily: 'Jost',
-                            color: Colors.black,
+                            color: Colors.black54,
                           ),
-                          textAlign: TextAlign.left,
+                        ),
+                        const SizedBox(height: 20),
+                        // Column of square boxes with big numbers
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Box 1
+                            Container(
+                              width: 150,
+                              height: 150,
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Stack(
+                                children: [
+                                  // Big number 1
+                                  Positioned(
+                                    top: 1,
+                                    left: 10,
+                                    child: Text(
+                                      '1',
+                                      style: TextStyle(
+                                        fontSize: 48,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Jost',
+                                        color: Colors.orange.withOpacity(0.5),
+                                      ),
+                                    ),
+                                  ),
+                                  // Content
+                                  Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(Icons.power_settings_new, size: 40, color: Colors.black54),
+                                        const SizedBox(height: 8),
+                                        const Text(
+                                          'Turn on the fire alarm and ensure that it is near your mobile device',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontFamily: 'Jost',
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Box 2
+                            Container(
+                              width: 150,
+                              height: 150,
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Stack(
+                                children: [
+                                  // Big number 2
+                                  Positioned(
+                                    top: 1,
+                                    left: 10,
+                                    child: Text(
+                                      '2',
+                                      style: TextStyle(
+                                        fontSize: 48,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Jost',
+                                        color: Colors.orange.withOpacity(0.5),
+                                      ),
+                                    ),
+                                  ),
+                                  // Content
+                                  Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(Icons.qr_code_scanner, size: 40, color: Colors.black54),
+                                        const SizedBox(height: 8),
+                                        const Text(
+                                          'Scan the QR code (located on your fire alarm or user manual)',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontFamily: 'Jost',
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Box 3
+                            Container(
+                              width: 150,
+                              height: 150,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Stack(
+                                children: [
+                                  // Big number 3
+                                  Positioned(
+                                    top: 1,
+                                    left: 10,
+                                    child: Text(
+                                      '3',
+                                      style: TextStyle(
+                                        fontSize: 48,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Jost',
+                                        color: Colors.orange.withOpacity(0.5),
+                                      ),
+                                    ),
+                                  ),
+                                  // Content
+                                  Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(Icons.wifi, size: 40, color: Colors.black54),
+                                        const SizedBox(height: 8),
+                                        const Text(
+                                          'Select your Wi-Fi network and enter credentials',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontFamily: 'Jost',
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

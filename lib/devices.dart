@@ -285,7 +285,7 @@ class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateM
                         children: [
                           if (hasAlert)
                             Padding(
-                              padding: const EdgeInsets.only(right: 8.0),
+                              padding: const EdgeInsets.only(right: 15.0),
                               child: Image.asset(
                                 'assets/devicewarning.png',
                                 width: 24,
@@ -300,7 +300,7 @@ class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateM
                                 deviceName,
                                 style: TextStyle(
                                   fontFamily: 'Jost',
-                                  fontSize: 21,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.w500,
                                   color: hasAlert ? Colors.red[900] : Colors.black,
                                 ),
