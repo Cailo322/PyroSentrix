@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // For saving login state
-import 'devices.dart'; // Import your Devices screen
-import 'register.dart'; // Import your Register screen
+import 'package:shared_preferences/shared_preferences.dart';
+import 'devices.dart';
+import 'register.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -16,9 +16,11 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   bool _isLoading = false;
-  String? _emailErrorMessage;
-  String? _passwordErrorMessage;
+  String? _emailError;
+  String? _passwordError;
+  bool _passwordVisible = false;
 
   @override
   void initState() {
@@ -31,33 +33,56 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  bool _validateForm() {
+    bool isValid = true;
+
+    // Email validation
+    if (_emailController.text
+        .trim()
+        .isEmpty) {
+      setState(() {
+        _emailError = "Please enter your email";
+      });
+      isValid = false;
+    } else if (!_isValidEmail(_emailController.text.trim())) {
+      setState(() {
+        _emailError = "Please enter a valid email";
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _emailError = null;
+      });
+    }
+
+    // Password validation
+    if (_passwordController.text.isEmpty) {
+      setState(() {
+        _passwordError = "Please enter your password";
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _passwordError = null;
+      });
+    }
+
+    return isValid;
+  }
+
+  bool _isValidEmail(String email) {
+    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    return emailRegex.hasMatch(email);
+  }
+
   void _loginUser(BuildContext context) async {
+    if (!_validateForm()) {
+      return;
+    }
+
     setState(() {
       _isLoading = true;
-      _emailErrorMessage = null;
-      _passwordErrorMessage = null;
     });
-
-    // Validate email and password
-    if (_emailController.text.trim().isEmpty) {
-      setState(() {
-        _emailErrorMessage = "Please enter your email.";
-      });
-      setState(() {
-        _isLoading = false;
-      });
-      return;
-    }
-
-    if (_passwordController.text.trim().isEmpty) {
-      setState(() {
-        _passwordErrorMessage = "Please enter your password.";
-      });
-      setState(() {
-        _isLoading = false;
-      });
-      return;
-    }
 
     try {
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
@@ -82,15 +107,56 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       } else if (!userCredential.user!.emailVerified) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Please verify your email to log in.')),
+          SnackBar(
+            content: Text('Please verify your email to log in.'),
+            backgroundColor: Colors.orange,
+          ),
         );
         await _auth.signOut();
       }
-    } on FirebaseAuthException {
-      String message = 'Invalid Credentials'; // Unified error message
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'user-not-found':
+          errorMessage = 'No user found with this email';
+          break;
+        case 'wrong-password':
+          errorMessage = 'Incorrect password';
+          break;
+        case 'invalid-email':
+          errorMessage = 'Invalid email address';
+          break;
+        case 'user-disabled':
+          errorMessage = 'This account has been disabled';
+          break;
+        case 'too-many-requests':
+          errorMessage = 'Too many attempts. Try again later';
+          break;
+        default:
+          errorMessage = 'Login failed. Please try again';
+      }
+
       setState(() {
-        _emailErrorMessage = message; // Display the message
+        if (e.code == 'wrong-password') {
+          _passwordError = errorMessage;
+        } else {
+          _emailError = errorMessage;
+        }
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('An unexpected error occurred'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       setState(() {
         _isLoading = false;
@@ -113,15 +179,15 @@ class _LoginScreenState extends State<LoginScreen> {
           Container(
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/bg-2.png'), // Path to your background image
-                fit: BoxFit.cover, // Ensures the image covers the entire screen
+                image: AssetImage('assets/bg-2.png'),
+                fit: BoxFit.cover,
               ),
             ),
           ),
 
           // PYROSENTRIX Text and Additional Text
           Positioned(
-            top: 170, // Adjust this value to position the text vertically
+            top: 170,
             left: 0,
             right: 0,
             child: Center(
@@ -130,20 +196,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   Text(
                     'PYROSENTRIX',
                     style: TextStyle(
-                      fontSize: 45, // Adjust the font size as needed
+                      fontSize: 45,
                       fontWeight: FontWeight.bold,
                       fontFamily: 'Jost',
-                      color: Colors.white, // Adjust the color as needed
+                      color: Colors.white,
                     ),
                   ),
-                  SizedBox(height: 3), // Space between the two texts
+                  SizedBox(height: 3),
                   Text(
-                    'Stay Alert', // Add your new text
+                    'Stay Alert',
                     style: TextStyle(
-                      fontSize: 35, // Adjust the font size as needed
+                      fontSize: 35,
                       fontWeight: FontWeight.w200,
                       fontFamily: 'Inter',
-                      color: Colors.white.withOpacity(0.8), // Adjust the color as needed
+                      color: Colors.white.withOpacity(0.8),
                     ),
                   ),
                 ],
@@ -154,23 +220,23 @@ class _LoginScreenState extends State<LoginScreen> {
           // Login Form
           Column(
             children: [
-              Spacer(), // Pushes the card to the bottom
+              Spacer(),
               Card(
-                elevation: 5, // Adds a shadow to the card
+                elevation: 5,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(65),
                     topRight: Radius.circular(65),
-                  ), // Rounded corners only at the top
+                  ),
                 ),
-                margin: EdgeInsets.zero, // Remove default margin
-                color: Colors.white, // White background for the card
+                margin: EdgeInsets.zero,
+                color: Colors.white,
                 child: Padding(
                   padding: const EdgeInsets.only(
                     left: 24.0,
                     right: 24.0,
                     top: 24.0,
-                    bottom: 40.0, // Added bottom padding to create space
+                    bottom: 40.0,
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -186,9 +252,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       SizedBox(height: 10),
-                      // Subtitle
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 50), // Add horizontal margin
+                        padding: EdgeInsets.symmetric(horizontal: 50),
                         child: Text(
                           'Stay connected to your fire alarm system—sign in to monitor alerts in real time',
                           textAlign: TextAlign.center,
@@ -198,45 +263,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: Colors.grey[600]),
                         ),
                       ),
-
                       SizedBox(height: 30),
-                      // Email Input
-                      _buildTextInput('Enter Email', _emailController, errorMessage: _emailErrorMessage),
-                      if (_emailErrorMessage != null)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 16.0, top: 8.0),
-                          child: Row(
-                            children: [
-                              Image.asset('assets/warning2.png', width: 20, height: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                _emailErrorMessage!,
-                                style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ),
+                      _buildEmailInput(),
                       SizedBox(height: 20),
-                      // Password Input
-                      _buildTextInput('Enter Password', _passwordController, obscureText: true, errorMessage: _passwordErrorMessage),
-                      if (_passwordErrorMessage != null)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 16.0, top: 8.0),
-                          child: Row(
-                            children: [
-                              Image.asset('assets/warning2.png', width: 20, height: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                _passwordErrorMessage!,
-                                style: TextStyle(color: Colors.red),
-                              ),
-                            ],
-                          ),
-                        ),
+                      _buildPasswordInput(),
                       SizedBox(height: 1),
-                      // Forget Password
                       Container(
-                        width: 300, // Same width as the input fields
+                        width: 300,
                         child: Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
@@ -254,16 +287,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       SizedBox(height: 15),
-                      // Login Button or Loading Indicator
                       _isLoading
                           ? CircularProgressIndicator()
                           : ElevatedButton(
-                        onPressed: () {
-                          _loginUser(context);
-                        },
+                        onPressed: () => _loginUser(context),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(0xFFFFF6200),
-                          padding: EdgeInsets.symmetric(horizontal: 70, vertical: 10),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 70, vertical: 10),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -278,10 +309,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       SizedBox(height: 10),
-                      // Register Section
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.center, // Center the children horizontally
-                        crossAxisAlignment: CrossAxisAlignment.center, // Align children vertically
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Text(
                             'No Account Yet?',
@@ -295,13 +325,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => RegisterScreen()),
+                                MaterialPageRoute(
+                                    builder: (context) => RegisterScreen()),
                               );
                             },
                             style: TextButton.styleFrom(
-                              padding: EdgeInsets.only(left: 5), // Remove default padding
-                              minimumSize: Size.zero, // Remove minimum size constraints
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap, // Reduce tap target size
+                              padding: EdgeInsets.only(left: 5),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                             child: Text(
                               'Register Here',
@@ -325,35 +356,32 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-  // Helper method to build text input fields with drop shadow
-  Widget _buildTextInput(String labelText, TextEditingController controller, {bool obscureText = false, String? errorMessage}) {
+
+  Widget _buildEmailInput() {
     return Container(
       width: 300,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            labelText,
+            'Enter Email',
             style: TextStyle(
               fontFamily: 'Jost',
               fontSize: 16,
               fontWeight: FontWeight.w500,
               color: Color(0xFF494949),
-              shadows: [
-                Shadow(
-                  blurRadius: 3,
-                  color: Colors.black.withOpacity(0.2),
-                  offset: Offset(1, 1),
-                ),
-              ],
             ),
           ),
           SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
-              color: errorMessage != null ? Color(0xFFFFF2D5) : Color(0xFFDDDDDD), // Lighter orange if error
+              color: _emailError != null ? Colors.orange[50] : Color(
+                  0xFFDDDDDD),
               borderRadius: BorderRadius.circular(5),
-              border: errorMessage != null ? Border.all(color: Colors.orange, width: 2) : Border.all(color: Colors.transparent),
+              border: Border.all(
+                color: _emailError != null ? Colors.orange : Colors.transparent,
+                width: 2,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),
@@ -363,14 +391,124 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
             child: TextField(
-              controller: controller,
-              obscureText: obscureText,
+              controller: _emailController,
               decoration: InputDecoration(
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(horizontal: 10),
               ),
+              onChanged: (value) {
+                if (_emailError != null && value.isNotEmpty) {
+                  setState(() {
+                    _emailError = null;
+                  });
+                }
+              },
             ),
           ),
+          if (_emailError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Row(
+                children: [
+                  Icon(Icons.warning, color: Colors.orange, size: 16),
+                  SizedBox(width: 8),
+                  Text(
+                    _emailError!,
+                    style: TextStyle(
+                      color: Colors.orange,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPasswordInput() {
+    return Container(
+      width: 300,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Enter Password',
+            style: TextStyle(
+              fontFamily: 'Jost',
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF494949),
+            ),
+          ),
+          SizedBox(height: 8),
+          Container(
+            height: 50, // Fixed height for consistent alignment
+            decoration: BoxDecoration(
+              color: _passwordError != null ? Colors.orange[50] : Color(
+                  0xFFDDDDDD),
+              borderRadius: BorderRadius.circular(5),
+              border: Border.all(
+                color: _passwordError != null ? Colors.orange : Colors
+                    .transparent,
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 5,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: TextField(
+              controller: _passwordController,
+              obscureText: !_passwordVisible,
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 15), // Adjusted vertical padding
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _passwordVisible ? Icons.visibility : Icons.visibility_off,
+                    color: Colors.grey,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _passwordVisible = !_passwordVisible;
+                    });
+                  },
+                ),
+              ),
+              onChanged: (value) {
+                if (_passwordError != null && value.isNotEmpty) {
+                  setState(() {
+                    _passwordError = null;
+                  });
+                }
+              },
+            ),
+          ),
+          if (_passwordError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Row(
+                children: [
+                  Icon(Icons.warning, color: Colors.orange, size: 16),
+                  SizedBox(width: 8),
+                  Text(
+                    _passwordError!,
+                    style: TextStyle(
+                      color: Colors.orange,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

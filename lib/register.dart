@@ -27,8 +27,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   final String googleApiKey = 'AIzaSyD21izdTx2qn4vPFcFzkSDB5xhdWxtoXuM';
 
+  String? _nameError;
   String? _emailError;
   String? _passwordError;
+  String? _confirmPasswordError;
+  String? _addressError;
   List<dynamic> _placePredictions = [];
   Timer? _debounce;
 
@@ -42,6 +45,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     "At least 1 special character": false,
     "At least 1 capital letter": false,
   };
+
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
@@ -83,6 +88,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         print('Precise Position: Lat: ${position.latitude}, Lon: ${position.longitude}');
         await _getAddressFromCoordinates(position.latitude, position.longitude);
+        setState(() {
+          _addressError = null;
+        });
       } on TimeoutException {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Getting precise location took too long')),
@@ -172,31 +180,97 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() {
       _addressController.text = description;
       _placePredictions = [];
+      _addressError = null;
       FocusScope.of(context).unfocus();
     });
   }
 
-  void _registerUser() async {
-    if (_passwordController.text != _confirmPasswordController.text) {
+  bool _validateForm() {
+    bool isValid = true;
+
+    // Name validation
+    if (_nameController.text.trim().isEmpty) {
       setState(() {
-        _passwordError = "Password does not match.";
+        _nameError = "Please enter your name";
       });
-      return;
+      isValid = false;
+    } else {
+      setState(() {
+        _nameError = null;
+      });
+    }
+
+    // Email validation
+    if (_emailController.text.trim().isEmpty) {
+      setState(() {
+        _emailError = "Please enter your email";
+      });
+      isValid = false;
+    } else if (!_isValidEmail(_emailController.text.trim())) {
+      setState(() {
+        _emailError = "Please enter a valid email address";
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _emailError = null;
+      });
+    }
+
+    // Password validation
+    if (_passwordController.text.isEmpty) {
+      setState(() {
+        _passwordError = "Please enter a password";
+      });
+      isValid = false;
+    } else if (!_passwordStatus["At least 8 characters"]! ||
+        !_passwordStatus["At least 1 special character"]! ||
+        !_passwordStatus["At least 1 capital letter"]!) {
+      setState(() {
+        _passwordError = "Password doesn't meet requirements";
+      });
+      isValid = false;
     } else {
       setState(() {
         _passwordError = null;
       });
     }
 
-    if (!_isValidEmail(_emailController.text.trim())) {
+    // Confirm password validation
+    if (_confirmPasswordController.text.isEmpty) {
       setState(() {
-        _emailError = "Please enter a valid email address.";
+        _confirmPasswordError = "Please confirm your password";
       });
-      return;
+      isValid = false;
+    } else if (_passwordController.text != _confirmPasswordController.text) {
+      setState(() {
+        _confirmPasswordError = "Passwords do not match";
+      });
+      isValid = false;
     } else {
       setState(() {
-        _emailError = null;
+        _confirmPasswordError = null;
       });
+    }
+
+    // Address validation
+    if (_addressController.text.trim().isEmpty) {
+      setState(() {
+        _addressError = "Please enter your address";
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _addressError = null;
+      });
+    }
+
+    return isValid;
+  }
+
+  void _registerUser() async {
+    if (!_validateForm()) {
+      return;
     }
 
     try {
@@ -218,16 +292,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Registration successful! Please verify your email before logging in.')),
+        SnackBar(
+          content: Text('Registration successful! Please verify your email before logging in.'),
+          backgroundColor: Colors.green,
+        ),
       );
 
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => VerificationScreen()),
       );
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'email-already-in-use':
+          errorMessage = 'The email address is already in use by another account.';
+          break;
+        case 'invalid-email':
+          errorMessage = 'The email address is not valid.';
+          break;
+        case 'operation-not-allowed':
+          errorMessage = 'Email/password accounts are not enabled.';
+          break;
+        case 'weak-password':
+          errorMessage = 'The password is too weak.';
+          break;
+        default:
+          errorMessage = 'Registration failed. Please try again.';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+        ),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Registration failed: ${e.toString()}')),
+        SnackBar(
+          content: Text('An unexpected error occurred. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -336,20 +440,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                             ),
                             SizedBox(height: 30),
-                            _buildTextInput('Enter Name', _nameController),
+                            _buildTextInput('Enter Name', _nameController, error: _nameError),
                             SizedBox(height: 10),
                             _buildEmailInput(),
                             SizedBox(height: 10),
                             _buildPasswordInput('Enter Password', _passwordController, showRequirements: true),
                             SizedBox(height: 20),
-                            _buildPasswordInput('Confirm Password', _confirmPasswordController, error: _passwordError, showRequirements: false),
+                            _buildPasswordInput('Confirm Password', _confirmPasswordController, error: _confirmPasswordError, showRequirements: false),
                             SizedBox(height: 10),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
                                   width: 300, // Fixed width to prevent shifting
-                                  child: _buildTextInput('Enter Address', _addressController, onChanged: _onAddressChanged),
+                                  child: _buildTextInput('Enter Address', _addressController, error: _addressError, onChanged: _onAddressChanged),
                                 ),
                                 if (_placePredictions.isNotEmpty)
                                   Container(
@@ -479,7 +583,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildTextInput(String hintText, TextEditingController controller, {Function(String)? onChanged}) {
+  Widget _buildTextInput(String hintText, TextEditingController controller, {
+    Function(String)? onChanged,
+    String? error,
+  }) {
     return Container(
       width: 300,
       child: Column(
@@ -488,7 +595,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           Container(
             height: 50,
             decoration: BoxDecoration(
-              color: Color(0xFFDDDDDD),
+              color: error != null ? Colors.orange[50] : Color(0xFFDDDDDD),
               borderRadius: BorderRadius.circular(5),
               boxShadow: [
                 BoxShadow(
@@ -497,6 +604,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   offset: Offset(0, 2),
                 ),
               ],
+              border: Border.all(
+                color: error != null ? Colors.orange : Colors.transparent,
+                width: 2,
+              ),
             ),
             child: TextField(
               controller: controller,
@@ -510,9 +621,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               ),
-              onChanged: onChanged,
+              onChanged: (value) {
+                if (onChanged != null) onChanged(value);
+                if (value.isNotEmpty && error != null) {
+                  setState(() {
+                    if (controller == _nameController) _nameError = null;
+                    if (controller == _addressController) _addressError = null;
+                  });
+                }
+              },
             ),
           ),
+          if (error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Row(
+                children: [
+                  Icon(Icons.warning, color: Colors.orange, size: 16),
+                  SizedBox(width: 8),
+                  Text(
+                    error,
+                    style: TextStyle(
+                      color: Colors.orange,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -553,6 +690,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               ),
+              onChanged: (value) {
+                if (_emailError != null && value.isNotEmpty) {
+                  setState(() {
+                    _emailError = null;
+                  });
+                }
+              },
             ),
           ),
           if (_emailError != null)
@@ -560,11 +704,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               padding: const EdgeInsets.only(top: 8.0),
               child: Row(
                 children: [
-                  Image.asset(
-                    'assets/warning2.png',
-                    height: 16,
-                    width: 16,
-                  ),
+                  Icon(Icons.warning, color: Colors.orange, size: 16),
                   SizedBox(width: 8),
                   Text(
                     _emailError!,
@@ -582,7 +722,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildPasswordInput(String hintText, TextEditingController controller, {String? error, bool showRequirements = false}) {
+  Widget _buildPasswordInput(String hintText, TextEditingController controller, {
+    String? error,
+    bool showRequirements = false,
+  }) {
     return Container(
       width: 300,
       child: Column(
@@ -621,6 +764,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
               onChanged: (value) {
                 if (showRequirements) {
                   _updatePasswordStatus(value);
+                }
+                if (error != null && value.isNotEmpty) {
+                  setState(() {
+                    if (controller == _passwordController) _passwordError = null;
+                    if (controller == _confirmPasswordController) _confirmPasswordError = null;
+                  });
                 }
               },
             ),
