@@ -1,52 +1,435 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; // For date formatting
+import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
 
 class AlarmLogScreen extends StatefulWidget {
-  final String productCode; // Accept productCode
-  const AlarmLogScreen({Key? key, required this.productCode}) : super(key: key);
+  const AlarmLogScreen({Key? key}) : super(key: key);
 
   @override
   _AlarmLogScreenState createState() => _AlarmLogScreenState();
 }
 
 class _AlarmLogScreenState extends State<AlarmLogScreen> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   List<Map<String, dynamic>> alarmLogs = [];
   List<Map<String, dynamic>> filteredAlarmLogs = [];
-  int alarmCount = 0; // Initialize alarmCount
+  int alarmCount = 0;
   String? selectedMonth;
   String? selectedYear;
+  String? _selectedProductCode;
+  List<Device> _devices = [];
+  StreamSubscription? _alarmSubscription;
+  StreamSubscription? _sensorSubscription;
 
   final List<String> months = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  final List<String> years = [
-    '2023',
-    '2024',
-    '2025'
-  ]; // Add more years as needed
+  final List<String> years = ['2023', '2024', '2025'];
 
   @override
   void initState() {
     super.initState();
-    _fetchAlarmHistory(); // Fetch historical alarms when the screen loads
-    _listenToLatestSensorData();
+    _fetchDevices();
+  }
+
+  @override
+  void dispose() {
+    _alarmSubscription?.cancel();
+    _sensorSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchDevices() async {
+    final userEmail = _auth.currentUser?.email;
+    if (userEmail == null) return;
+
+    try {
+      final userSnapshot = await _firestore
+          .collection('ProductActivation')
+          .where('user_email', isEqualTo: userEmail)
+          .get();
+
+      final sharedSnapshot = await _firestore
+          .collection('ProductActivation')
+          .where('shared_users', arrayContains: userEmail)
+          .get();
+
+      final uniqueDevices = <String, Device>{};
+      for (var doc in [...userSnapshot.docs, ...sharedSnapshot.docs]) {
+        final productCode = doc['product_code'] as String;
+        uniqueDevices[productCode] = Device(
+          productCode: productCode,
+          name: 'Device $productCode',
+        );
+      }
+
+      setState(() {
+        _devices = uniqueDevices.values.toList();
+        if (_devices.isNotEmpty) {
+          _selectedProductCode = _devices.first.productCode;
+          _fetchAlarmHistory();
+          _listenToLatestSensorData();
+        }
+      });
+    } catch (e) {
+      print('Error fetching devices: $e');
+    }
+  }
+
+  void _fetchAlarmHistory() {
+    if (_selectedProductCode == null) return;
+
+    _alarmSubscription?.cancel();
+    _alarmSubscription = _firestore
+        .collection('SensorData')
+        .doc('AlarmLogs')
+        .collection(_selectedProductCode!)
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+      setState(() {
+        alarmLogs = snapshot.docs.map((doc) {
+          var data = doc.data();
+          return {
+            'id': data['id'],
+            'timestamp': data['timestamp'],
+            'values': data['values'],
+            'imageUrl': data['imageUrl'],
+          };
+        }).toList();
+        filteredAlarmLogs = alarmLogs;
+
+        if (alarmLogs.isNotEmpty) {
+          var lastAlarmId = alarmLogs.first['id'];
+          if (lastAlarmId != null && lastAlarmId.startsWith('Alarm ')) {
+            alarmCount = int.parse(lastAlarmId.split(' ')[1]);
+          }
+        }
+      });
+    });
+  }
+
+  void _listenToLatestSensorData() {
+    if (_selectedProductCode == null) return;
+
+    _sensorSubscription?.cancel();
+    _sensorSubscription = _firestore
+        .collection('SensorData')
+        .doc('FireAlarm')
+        .collection(_selectedProductCode!)
+        .orderBy('timestamp', descending: true)
+        .limit(1)
+        .snapshots()
+        .listen((snapshot) async {
+      if (snapshot.docs.isEmpty) return;
+
+      var latestDoc = snapshot.docs.first;
+      var data = latestDoc.data();
+      var thresholdDoc = await _firestore.collection('Threshold').doc('Proxy').get();
+      if (!thresholdDoc.exists) return;
+
+      var thresholds = thresholdDoc.data()!;
+
+      if (_exceedsThreshold(data, thresholds)) {
+        var alarmStatusDoc = await _firestore
+            .collection('AlarmStatus')
+            .doc(_selectedProductCode)
+            .get();
+
+        if (!alarmStatusDoc.exists || alarmStatusDoc['AlarmLogged'] == false) {
+          String sensorDataDocId = latestDoc.id;
+          await Future.delayed(Duration(seconds: 1));
+          String? imageUrl = await _fetchLatestImageUrl();
+
+          alarmCount++;
+          var alarmData = {
+            'id': 'Alarm $alarmCount',
+            'timestamp': data['timestamp'],
+            'values': data,
+            'sensorDataDocId': sensorDataDocId,
+            'imageUrl': imageUrl,
+            'logged': true,
+          };
+
+          await _firestore
+              .collection('SensorData')
+              .doc('AlarmLogs')
+              .collection(_selectedProductCode!)
+              .add(alarmData);
+
+          await _firestore
+              .collection('AlarmStatus')
+              .doc(_selectedProductCode)
+              .set({'AlarmLogged': true}, SetOptions(merge: true));
+
+          setState(() {
+            alarmLogs.insert(0, alarmData);
+            _filterAlarms();
+          });
+        }
+      }
+    });
+  }
+
+  Future<String?> _fetchLatestImageUrl() async {
+    if (_selectedProductCode == null) return null;
+
+    try {
+      var snapshot = await _firestore
+          .collection(_selectedProductCode!)
+          .orderBy('timestamp', descending: true)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        return snapshot.docs.first['imageUrl'];
+      }
+    } catch (e) {
+      print('Error fetching image URL: $e');
+    }
+    return null;
+  }
+
+  Widget _buildDeviceDropdown() {
+    return DropdownButton<String>(
+      value: _selectedProductCode,
+      hint: Text('Select Device'),
+      onChanged: (String? newValue) {
+        setState(() {
+          _selectedProductCode = newValue;
+          alarmLogs.clear();
+          filteredAlarmLogs.clear();
+          _fetchAlarmHistory();
+          _listenToLatestSensorData();
+        });
+      },
+      items: _devices.map<DropdownMenuItem<String>>((Device device) {
+        return DropdownMenuItem<String>(
+          value: device.productCode,
+          child: Text(device.name),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildMonthYearLabel(String month, String year) {
+    return Row(
+      children: [
+        Expanded(
+          child: Divider(color: Colors.grey[400], thickness: 1),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Text(
+            '$month $year',
+            style: TextStyle(
+              fontFamily: 'jura',
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+        ),
+        Expanded(
+          child: Divider(color: Colors.grey[400], thickness: 1),
+        ),
+      ],
+    );
+  }
+
+  void _filterAlarms() {
+    setState(() {
+      if (selectedMonth == null && selectedYear == null) {
+        filteredAlarmLogs = alarmLogs;
+      } else {
+        filteredAlarmLogs = alarmLogs.where((alarm) {
+          DateTime dateTime;
+          try {
+            dateTime = DateTime.parse(alarm['timestamp']);
+          } catch (e) {
+            print("Error parsing timestamp: ${alarm['timestamp']}");
+            return false;
+          }
+
+          int month = dateTime.month;
+          int year = dateTime.year;
+
+          int selectedMonthInt = selectedMonth != null ? months.indexOf(selectedMonth!) + 1 : -1;
+          int selectedYearInt = selectedYear != null ? int.parse(selectedYear!) : -1;
+
+          bool matchesMonth = selectedMonth == null || month == selectedMonthInt;
+          bool matchesYear = selectedYear == null || year == selectedYearInt;
+
+          return matchesMonth && matchesYear;
+        }).toList();
+      }
+    });
+  }
+
+  String _formatTimestamp(String timestamp) {
+    if (timestamp.isEmpty) return "No timestamp";
+
+    try {
+      DateTime dateTime = DateTime.parse(timestamp);
+      final DateFormat dateFormatter = DateFormat('MMMM d, yyyy');
+      final DateFormat timeFormatter = DateFormat('h:mm a');
+
+      String formattedDate = dateFormatter.format(dateTime);
+      String formattedTime = timeFormatter.format(dateTime);
+
+      return "$formattedDate ($formattedTime)";
+    } catch (e) {
+      return "Invalid timestamp format";
+    }
+  }
+
+  bool _exceedsThreshold(Map<String, dynamic> data, Map<String, dynamic> thresholds) {
+    return (data['carbon_monoxide'] > thresholds['co_threshold'] ||
+        data['humidity_dht22'] < thresholds['humidity_threshold'] ||
+        data['indoor_air_quality'] > thresholds['iaq_threshold'] ||
+        data['smoke_level'] > thresholds['smoke_threshold'] ||
+        data['temperature_mlx90614'] > thresholds['temp_threshold'] ||
+        data['temperature_dht22'] > thresholds['temp_threshold']);
+  }
+
+  void _showSensorValues(BuildContext context, Map<String, dynamic> alarm) async {
+    var thresholdDoc = await _firestore.collection('Threshold').doc('Proxy').get();
+    if (!thresholdDoc.exists) return;
+
+    var thresholds = thresholdDoc.data()!;
+    String formattedTimestamp = _formatTimestamp(alarm['timestamp']);
+
+    final Map<String, Map<String, String>> sensorDetails = {
+      'humidity_dht22': {'name': 'Humidity', 'unit': '%'},
+      'temperature_dht22': {'name': 'Temperature 1', 'unit': '°C'},
+      'temperature_mlx90614': {'name': 'Temperature 2', 'unit': '°C'},
+      'smoke_level': {'name': 'Smoke', 'unit': 'µg/m³'},
+      'indoor_air_quality': {'name': 'Air Quality', 'unit': 'AQI'},
+      'carbon_monoxide': {'name': 'Carbon Monoxide', 'unit': 'ppm'},
+    };
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              alarm['id'],
+              style: TextStyle(
+                fontSize: 25,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: 5),
+            Text(
+              "Timestamp: $formattedTimestamp",
+              style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.grey[700],
+                  fontFamily: 'Arimo'),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: 5),
+            ...alarm['values'].entries.map<Widget>((entry) {
+              if (entry.key == 'timestamp') return SizedBox.shrink();
+
+              var sensorInfo = sensorDetails[entry.key] ?? {'name': entry.key, 'unit': ''};
+              String sensorName = sensorInfo['name']!;
+              String sensorUnit = sensorInfo['unit']!;
+              bool exceedsThreshold = _exceedsThresholdForSensor(entry.key, entry.value, thresholds);
+
+              return Container(
+                decoration: exceedsThreshold
+                    ? BoxDecoration(
+                  color: Colors.red[100],
+                  borderRadius: BorderRadius.circular(5),
+                  border: Border.all(
+                    color: Colors.red[800]!,
+                    width: 1.0,
+                  ),
+                )
+                    : null,
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                margin: EdgeInsets.symmetric(vertical: 1),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "$sensorName:",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: exceedsThreshold ? Colors.red[700] : Colors.black,
+                      ),
+                    ),
+                    Text(
+                      "${entry.value} $sensorUnit",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: exceedsThreshold ? Colors.red[700] : Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Close"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _exceedsThresholdForSensor(String sensorKey, dynamic sensorValue, Map<String, dynamic> thresholds) {
+    switch (sensorKey) {
+      case 'carbon_monoxide':
+        return sensorValue > thresholds['co_threshold'];
+      case 'humidity_dht22':
+        return sensorValue < thresholds['humidity_threshold'];
+      case 'indoor_air_quality':
+        return sensorValue > thresholds['iaq_threshold'];
+      case 'smoke_level':
+        return sensorValue > thresholds['smoke_threshold'];
+      case 'temperature_mlx90614':
+        return sensorValue > thresholds['temp_threshold'];
+      case 'temperature_dht22':
+        return sensorValue > thresholds['temp_threshold'];
+      default:
+        return false;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      // Ensure the entire screen background is white
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: IconThemeData(color: Colors.black),
       ),
       body: Container(
-        color: Colors.white, // Explicitly setting the background color
+        color: Colors.white,
         child: Column(
           children: [
             SizedBox(height: 10),
@@ -56,13 +439,11 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                 children: [
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    // Align logo to the top
                     children: <Widget>[
                       Image.asset('assets/official-logo.png', height: 100),
                       SizedBox(width: 15),
                       Padding(
                         padding: const EdgeInsets.only(top: 40),
-                        // Adjust text lower
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -91,7 +472,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                   ),
                   SizedBox(height: 15),
                   Divider(color: Colors.grey[200], thickness: 5),
-                  // Full-width line
                   SizedBox(height: 15),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -109,66 +489,52 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                         onTap: () {
                           showDialog(
                             context: context,
-                            builder: (context) =>
-                                AlertDialog(
-                                  // Adjust the width of the dialog
-                                  backgroundColor: Colors.white,
-                                  insetPadding: EdgeInsets.symmetric(
-                                      horizontal: 20.0),
-                                  // Horizontal padding for the dialog
-                                  contentPadding: EdgeInsets.all(16.0),
-                                  // Padding inside the dialog
-                                  content: Container(
-                                    width: 120,
-                                    // Set a fixed width for the content
-                                    height: 180,
-                                    // Set a fixed height for the content
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      // Make the column take up only as much space as needed
-                                      children: [
-                                        Image.asset(
-                                          'assets/question-mark.png',
-                                          // Path to your image
-                                          width: 40,
-                                          // Set the width of the image
-                                          height: 40, // Set the height of the image
-                                        ),
-                                        SizedBox(height: 16),
-                                        // Add some space between the image and the text
-                                        Text(
-                                          "Alarm Logs History",
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w800,
-                                            fontFamily: 'Inter',
-                                          ),
-                                        ),
-                                        SizedBox(height: 8),
-                                        Container(
-                                          width: 20,
-                                          height: 3,
-                                          decoration: BoxDecoration(
-                                            color: Color(0xFF494949),
-                                            borderRadius: BorderRadius.circular(
-                                                2),
-                                          ),
-                                        ),
-                                        SizedBox(height: 13),
-                                        Text(
-                                          "This section allows you to review all previously triggered alarms, helping you stay informed about past incidents and potential issues",
-                                          style: TextStyle(fontSize: 16),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ],
+                            builder: (context) => AlertDialog(
+                              backgroundColor: Colors.white,
+                              insetPadding: EdgeInsets.symmetric(horizontal: 20.0),
+                              contentPadding: EdgeInsets.all(16.0),
+                              content: Container(
+                                width: 120,
+                                height: 180,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Image.asset('assets/question-mark.png',
+                                      width: 40,
+                                      height: 40,
                                     ),
-                                  ),
+                                    SizedBox(height: 16),
+                                    Text(
+                                      "Alarm Logs History",
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w800,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                    SizedBox(height: 8),
+                                    Container(
+                                      width: 20,
+                                      height: 3,
+                                      decoration: BoxDecoration(
+                                        color: Color(0xFF494949),
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    SizedBox(height: 13),
+                                    Text(
+                                      "This section allows you to review all previously triggered alarms, helping you stay informed about past incidents and potential issues",
+                                      style: TextStyle(fontSize: 16),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
                                 ),
+                              ),
+                            ),
                           );
                         },
                         child: Opacity(
                           opacity: 0.6,
-                          // Adjust the opacity (0.0 = fully transparent, 1.0 = fully opaque)
                           child: Image.asset(
                             'assets/info-icon.png',
                             width: 20,
@@ -179,8 +545,10 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                     ],
                   ),
                   SizedBox(height: 10),
+                  _buildDeviceDropdown(),
+                  SizedBox(height: 10),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween, // Space between dropdowns and button
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(
                         children: [
@@ -200,7 +568,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                               );
                             }).toList(),
                           ),
-                          SizedBox(width: 10), // Add spacing between the dropdowns
+                          SizedBox(width: 10),
                           DropdownButton<String>(
                             value: selectedYear,
                             hint: Text('Select Year'),
@@ -224,18 +592,17 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                           setState(() {
                             selectedMonth = null;
                             selectedYear = null;
-                            filteredAlarmLogs = alarmLogs; // Show all alarms
+                            filteredAlarmLogs = alarmLogs;
                           });
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.yellow[600], // Background color
-                          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10), // Padding
+                          backgroundColor: Colors.yellow[600],
+                          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20), // Rounded corners
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                          elevation: 2, // Shadow
+                          elevation: 2,
                         ),
-
                         child: Text(
                           'Show All',
                           style: TextStyle(
@@ -266,7 +633,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                       ? alarmLogs[index]
                       : filteredAlarmLogs[index];
                   return Card(
-                    color: Colors.grey[300], // Changed to light grey
+                    color: Colors.grey[300],
                     margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: ListTile(
                       title: Text(alarm['id'],
@@ -286,377 +653,11 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
       ),
     );
   }
+}
 
-  Widget _buildMonthYearLabel(String month, String year) {
-    return Row(
-      children: [
-        Expanded(
-          child: Divider(color: Colors.grey[400], thickness: 1),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Text(
-            '$month $year',
-            style: TextStyle(
-              fontFamily: 'jura',
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[700],
-            ),
-          ),
-        ),
-        Expanded(
-          child: Divider(color: Colors.grey[400], thickness: 1),
-        ),
-      ],
-    );
-  }
+class Device {
+  final String productCode;
+  final String name;
 
-  // Filter alarms based on selected month and year
-  void _filterAlarms() {
-    setState(() {
-      if (selectedMonth == null && selectedYear == null) {
-        // If no filters are selected, show all alarms
-        filteredAlarmLogs = alarmLogs;
-      } else {
-        // Filter alarms based on selected month and year
-        filteredAlarmLogs = alarmLogs.where((alarm) {
-          DateTime dateTime;
-          try {
-            dateTime = DateTime.parse(alarm['timestamp']); // No timezone conversion
-          } catch (e) {
-            print("Error parsing timestamp: ${alarm['timestamp']}");
-            return false; // Skip this alarm if the timestamp is invalid
-          }
-
-          int month = dateTime.month; // Month as an integer (1-12)
-          int year = dateTime.year; // Year as an integer (e.g., 2025)
-
-          // Convert the selected month to its corresponding integer value
-          int selectedMonthInt = selectedMonth != null ? months.indexOf(
-              selectedMonth!) + 1 : -1;
-          int selectedYearInt = selectedYear != null
-              ? int.parse(selectedYear!)
-              : -1;
-
-          // Debugging logs
-          print("Alarm Timestamp: ${dateTime.toString()}");
-          print("Alarm Month: $month, Alarm Year: $year");
-          print(
-              "Selected Month: $selectedMonthInt, Selected Year: $selectedYearInt");
-
-          // Compare with selected month and year
-          bool matchesMonth = selectedMonth == null ||
-              month == selectedMonthInt;
-          bool matchesYear = selectedYear == null || year == selectedYearInt;
-
-          return matchesMonth && matchesYear;
-        }).toList();
-      }
-
-      // Debugging log to check the filtered alarms
-      print("Filtered Alarms: ${filteredAlarmLogs.length}");
-    });
-  }
-
-  // Format timestamp to "March 7, 2025 (10:21 PM)" format without timezone conversion
-  String _formatTimestamp(String timestamp) {
-    if (timestamp.isEmpty) return "No timestamp";
-
-    try {
-      // Parse the string timestamp into a DateTime object without converting to local time
-      DateTime dateTime = DateTime.parse(timestamp);
-      final DateFormat dateFormatter = DateFormat('MMMM d, yyyy'); // Format like "March 7, 2025"
-      final DateFormat timeFormatter = DateFormat('h:mm a'); // Format like "10:21 PM"
-
-      String formattedDate = dateFormatter.format(dateTime);
-      String formattedTime = timeFormatter.format(dateTime);
-
-      return "$formattedDate ($formattedTime)"; // Combine date and time
-    } catch (e) {
-      return "Invalid timestamp format";
-    }
-  }
-
-  // Listen to the latest document in SensorData > FireAlarm > (productCode) collection
-  void _listenToLatestSensorData() {
-    FirebaseFirestore.instance
-        .collection('SensorData')
-        .doc('FireAlarm')
-        .collection(widget.productCode) // Use the productCode
-        .orderBy('timestamp', descending: true)
-        .limit(1) // Only get the latest document
-        .snapshots()
-        .listen((snapshot) async {
-      if (snapshot.docs.isEmpty) return;
-
-      var latestDoc = snapshot.docs.first;
-      var data = latestDoc.data();
-      var thresholdDoc = await FirebaseFirestore.instance.collection(
-          'Threshold').doc('Proxy').get();
-      if (!thresholdDoc.exists) return;
-
-      var thresholds = thresholdDoc.data()!;
-
-      // Check if any sensor exceeds the threshold
-      if (_exceedsThreshold(data, thresholds)) {
-        // Check the AlarmStatus collection to see if an alarm has already been logged
-        var alarmStatusDoc = await FirebaseFirestore.instance
-            .collection('AlarmStatus')
-            .doc(widget.productCode)
-            .get();
-
-        if (!alarmStatusDoc.exists || alarmStatusDoc['AlarmLogged'] == false) {
-          // Log the alarm only if AlarmLogged is false
-          String sensorDataDocId = latestDoc
-              .id; // Use the sensor data document ID as a unique key
-
-          // Add a 1-second delay to ensure we get the latest image
-          await Future.delayed(Duration(seconds: 1));
-
-          // Fetch the latest image URL from the Firestore collection
-          String? imageUrl = await _fetchLatestImageUrl();
-
-          // Increment alarmCount and create the new alarm ID
-          alarmCount++;
-          var alarmData = {
-            'id': 'Alarm $alarmCount',
-            'timestamp': data['timestamp'],
-            'values': data,
-            'sensorDataDocId': sensorDataDocId,
-            'imageUrl': imageUrl,
-            'logged': true,
-          };
-
-          // Save alarm data to Firestore under SensorData > AlarmLogs > {productCode}
-          await FirebaseFirestore.instance
-              .collection('SensorData')
-              .doc('AlarmLogs')
-              .collection(
-              widget.productCode) // Use productCode as the collection name
-              .add(alarmData);
-
-          // Update the AlarmStatus collection to mark the alarm as logged
-          await FirebaseFirestore.instance
-              .collection('AlarmStatus')
-              .doc(widget.productCode)
-              .set({'AlarmLogged': true}, SetOptions(merge: true));
-
-          // Update the list of alarms in the UI
-          setState(() {
-            alarmLogs.insert(
-                0, alarmData); // Add the new alarm to the top of the list
-            _filterAlarms();
-          });
-        }
-      }
-    });
-  }
-
-  // Fetch the latest image URL from Firestore
-  Future<String?> _fetchLatestImageUrl() async {
-    try {
-      var snapshot = await FirebaseFirestore.instance
-          .collection(
-          widget.productCode) // Use the productCode as the collection name
-          .orderBy(
-          'timestamp', descending: true) // Order by timestamp (latest first)
-          .limit(1) // Get only the latest document
-          .get();
-
-      if (snapshot.docs.isNotEmpty) {
-        var latestDoc = snapshot.docs.first;
-        return latestDoc['imageUrl']; // Return the image URL
-      }
-    } catch (e) {
-      print('Error fetching image URL: $e');
-    }
-    return null; // Return null if no image URL is found
-  }
-
-  // Check if any sensor exceeds the threshold
-  bool _exceedsThreshold(Map<String, dynamic> data,
-      Map<String, dynamic> thresholds) {
-    return (data['carbon_monoxide'] > thresholds['co_threshold'] ||
-        data['humidity_dht22'] < thresholds['humidity_threshold'] ||
-        data['indoor_air_quality'] > thresholds['iaq_threshold'] ||
-        data['smoke_level'] > thresholds['smoke_threshold'] ||
-        data['temperature_mlx90614'] > thresholds['temp_threshold'] ||
-        data['temperature_dht22'] > thresholds['temp_threshold']);
-  }
-
-  // Fetch historical alarms from Firestore
-  void _fetchAlarmHistory() async {
-    var snapshot = await FirebaseFirestore.instance
-        .collection('SensorData')
-        .doc('AlarmLogs')
-        .collection(
-        widget.productCode) // Fetch logs for the specific productCode
-        .orderBy('timestamp', descending: true)
-        .get();
-
-    setState(() {
-      alarmLogs = snapshot.docs.map((doc) {
-        var data = doc.data();
-        return {
-          'id': data['id'],
-          'timestamp': data['timestamp'],
-          'values': data['values'],
-          'imageUrl': data['imageUrl'], // Include the image URL
-        };
-      }).toList();
-      filteredAlarmLogs =
-          alarmLogs; // Initialize filteredAlarmLogs with all alarms
-
-      // Initialize alarmCount based on the number of existing alarms
-      if (alarmLogs.isNotEmpty) {
-        var lastAlarmId = alarmLogs.first['id'];
-        if (lastAlarmId != null && lastAlarmId.startsWith('Alarm ')) {
-          alarmCount = int.parse(lastAlarmId.split(' ')[1]);
-        }
-      }
-    });
-  }
-
-  // Show detailed sensor values in a dialog when an alarm is tapped
-  void _showSensorValues(BuildContext context, Map<String, dynamic> alarm) async {
-    // Fetch the thresholds
-    var thresholdDoc = await FirebaseFirestore.instance.collection('Threshold').doc('Proxy').get();
-    if (!thresholdDoc.exists) return;
-
-    var thresholds = thresholdDoc.data()!;
-
-    // Format the timestamp
-    String formattedTimestamp = _formatTimestamp(alarm['timestamp']);
-
-    // Map sensor keys to readable names and units
-    final Map<String, Map<String, String>> sensorDetails = {
-      'humidity_dht22': {'name': 'Humidity', 'unit': '%'},
-      'temperature_dht22': {'name': 'Temperature 1', 'unit': '°C'},
-      'temperature_mlx90614': {'name': 'Temperature 2', 'unit': '°C'},
-      'smoke_level': {'name': 'Smoke', 'unit': 'µg/m³'},
-      'indoor_air_quality': {'name': 'Air Quality', 'unit': 'AQI'},
-      'carbon_monoxide': {'name': 'Carbon Monoxide', 'unit': 'ppm'},
-    };
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white, // Set the background color to white
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              alarm['id'],
-              style: TextStyle(
-                fontSize: 25, // Set the font size
-                fontWeight: FontWeight.bold, // Set the font weight
-                color: Colors.black87, // Set the text color
-              ),
-            ),
-            SizedBox(height: 5),
-            // Add a small gap between the title and timestamp
-            Text(
-              "Timestamp: $formattedTimestamp", // Formatted timestamp
-              style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.grey[700],
-                  fontFamily: 'Arimo'), // Larger font size
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 5),
-            // Add some space below the timestamp
-            ...alarm['values'].entries.map<Widget>((entry) {
-              // Skip the 'timestamp' field in sensor values
-              if (entry.key == 'timestamp') return SizedBox.shrink();
-
-              // Get readable name and unit for the sensor
-              var sensorInfo = sensorDetails[entry.key] ?? {'name': entry.key, 'unit': ''};
-              String sensorName = sensorInfo['name']!;
-              String sensorUnit = sensorInfo['unit']!;
-
-              // Check if the sensor value exceeds the threshold
-              bool exceedsThreshold = _exceedsThresholdForSensor(entry.key, entry.value, thresholds);
-
-              return Container(
-                decoration: exceedsThreshold
-                    ? BoxDecoration(
-                  color: Colors.red[100], // Light red background
-                  borderRadius: BorderRadius.circular(5), // Rounded corners
-                  border: Border.all(
-                    color: Colors.red[800]!, // Red border
-                    width: 1.0,
-                  ),
-                )
-                    : null, // No decoration if not exceeding threshold
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4), // Padding inside the box
-                margin: EdgeInsets.symmetric(vertical: 1), // Margin between rows
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "$sensorName:", // Sensor name
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold, // Always bold
-                        color: exceedsThreshold ? Colors.red[700] : Colors.black, // Red if exceeds threshold
-                      ),
-                    ),
-                    Text(
-                      "${entry.value} $sensorUnit", // Sensor value with unit
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold, // Always bold
-                        color: exceedsThreshold ? Colors.red[700] : Colors.black, // Red if exceeds threshold
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-            /* Center(
-              child: Text(
-                "Image Captured:",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16), // Larger font size
-              ),
-            ),
-            SizedBox(height: 10),
-            if (alarm['imageUrl'] != null) Image.network(alarm['imageUrl']), // Display the image if available */
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Close"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Helper method to check if a specific sensor value exceeds its threshold
-  bool _exceedsThresholdForSensor(String sensorKey, dynamic sensorValue,
-      Map<String, dynamic> thresholds) {
-    switch (sensorKey) {
-      case 'carbon_monoxide':
-        return sensorValue > thresholds['co_threshold'];
-      case 'humidity_dht22':
-        return sensorValue < thresholds['humidity_threshold'];
-      case 'indoor_air_quality':
-        return sensorValue > thresholds['iaq_threshold'];
-      case 'smoke_level':
-        return sensorValue > thresholds['smoke_threshold'];
-      case 'temperature_mlx90614':
-        return sensorValue > thresholds['temp_threshold'];
-      case 'temperature_dht22':
-        return sensorValue > thresholds['temp_threshold'];
-      default:
-        return false;
-    }
-  }
+  Device({required this.productCode, required this.name});
 }

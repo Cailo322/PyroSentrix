@@ -24,10 +24,10 @@ void main() async {
 
   // Initialize services
   final notificationService = NotificationService();
-  await notificationService.initialize(); // Added await for proper initialization
+  notificationService.initialize();
 
   final trendAnalysisService = TrendAnalysisService();
-  trendAnalysisService.initialize(); // Added await for proper initialization
+  trendAnalysisService.initialize();
 
   // Check login state
   final prefs = await SharedPreferences.getInstance();
@@ -67,9 +67,8 @@ class MyApp extends StatelessWidget {
           );
         }
         if (settings.name == '/AlarmLogScreen') {
-          final args = settings.arguments as Map<String, dynamic>;
-          return MaterialPageRoute(
-            builder: (context) => AlarmLogScreen(productCode: args['productCode']),
+          return MaterialPageRoute( // Updated this route
+            builder: (context) => AlarmLogScreen(),
           );
         }
         if (settings.name == '/ResetSystemScreen') {
