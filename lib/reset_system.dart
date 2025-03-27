@@ -1,94 +1,187 @@
-import 'dart:async'; // Import Timer
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
-import 'notification_service.dart'; // Import the NotificationService
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'notification_service.dart';
 
-class ResetSystemScreen extends StatelessWidget {
-  final String productCode; // Add productCode parameter
-  final NotificationService _notificationService = NotificationService(); // Instance of NotificationService
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance; // Firestore instance
-  ResetSystemScreen({required this.productCode}); // Update constructor
+class ResetSystemScreen extends StatefulWidget {
+  const ResetSystemScreen({Key? key}) : super(key: key);
+
+  @override
+  _ResetSystemScreenState createState() => _ResetSystemScreenState();
+}
+
+class _ResetSystemScreenState extends State<ResetSystemScreen> {
+  final NotificationService _notificationService = NotificationService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  List<Device> _devices = [];
+  String? _selectedProductCode;
+  Map<String, String> _deviceNames = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDeviceNames().then((_) => _fetchDevices());
+  }
+
+  Future<void> _loadDeviceNames() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      prefs.getKeys().forEach((key) {
+        if (key.startsWith('device_name_')) {
+          String productCode = key.replaceFirst('device_name_', '');
+          _deviceNames[productCode] = prefs.getString(key) ?? 'Device';
+        }
+      });
+    });
+  }
+
+  Future<void> _fetchDevices() async {
+    final userEmail = _auth.currentUser?.email;
+    if (userEmail == null) return;
+
+    try {
+      final userSnapshot = await _firestore
+          .collection('ProductActivation')
+          .where('user_email', isEqualTo: userEmail)
+          .get();
+
+      final sharedSnapshot = await _firestore
+          .collection('ProductActivation')
+          .where('shared_users', arrayContains: userEmail)
+          .get();
+
+      final uniqueDevices = <String, Device>{};
+      for (var doc in [...userSnapshot.docs, ...sharedSnapshot.docs]) {
+        final productCode = doc['product_code'] as String;
+        uniqueDevices[productCode] = Device(
+          productCode: productCode,
+          name: _deviceNames[productCode] ?? 'Device',
+        );
+      }
+
+      setState(() {
+        _devices = uniqueDevices.values.toList();
+        if (_devices.isNotEmpty) {
+          _selectedProductCode = _devices.first.productCode;
+        }
+      });
+    } catch (e) {
+      print('Error fetching devices: $e');
+    }
+  }
+
+  Future<void> _hushAlarm() async {
+    try {
+      await _firestore
+          .collection('BooleanConditions')
+          .doc('Alarm')
+          .update({'isHushed': true});
+
+      _notificationService.stopAlarmSound();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Alarm hushed successfully')),
+      );
+    } catch (e) {
+      print('Error hushing alarm: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to hush alarm')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.grey[300], // Gray background for the app bar
-        elevation: 0, // Removes the shadow
+        backgroundColor: Colors.grey[300],
+        elevation: 0,
       ),
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20), // Adding margins from left and right
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         child: SingleChildScrollView(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.start, // Align content to the top
+            mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Enlarged reset.png icon at the top, moved higher
               Padding(
-                padding: const EdgeInsets.only(top: 150, bottom: 20), // Add some top padding and reduce bottom padding
+                padding: const EdgeInsets.only(top: 150, bottom: 20),
                 child: Image.asset('assets/reset.png', width: 150, height: 150),
               ),
 
-              // Information text with justified alignment
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: 600), // Restrict the width for better readability
-                  child: Text.rich(
-                    TextSpan(
-                      text:
-                      'The Pyrosentrix app features a management system that prevents redundant alert notifications when the fire alarm is triggered. This ensures that your mobile device won\'t receive repetitive alerts or alarms during an emergency.\n\nAlert management begins when you click either the ',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontFamily: 'Jost', // Use Jost font family
-                        fontWeight: FontWeight.w500, // Normal font weight for body text
-                        color: Color(0xFF414141),
-                      ),
-                      children: [
-                        TextSpan(
-                          text: 'HUSH',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold, // Make HUSH bold
-                          ),
-                        ),
-                        TextSpan(
-                          text: ' or ',
-                        ),
-                        TextSpan(
-                          text: 'CALL FIRESTATION',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold, // Make CALL FIRESTATION bold
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                          ' button, confirming the notification alert. Once confirmed, you will not receive the same notification again until it is reset.\n\nTo restart the system, simply click the reset button, which will refresh the notification and alarm system, ensuring it operates from that point forward.',
-                        ),
-                      ],
+              if (_devices.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    textAlign: TextAlign.center, // Center the text
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: DropdownButton<String>(
+                      value: _selectedProductCode,
+                      hint: Text('Select Device'),
+                      isExpanded: true,
+                      underline: Container(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedProductCode = newValue;
+                        });
+                      },
+                      items: _devices.map<DropdownMenuItem<String>>((Device device) {
+                        return DropdownMenuItem<String>(
+                          value: device.productCode,
+                          child: Text(
+                            device.name,
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   ),
                 ),
-              ),
+              ],
 
-              // Reset button
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red, // Red background
-                  padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    onPressed: _hushAlarm,
+                    child: Text(
+                      'HUSH',
+                      style: TextStyle(color: Colors.white, fontSize: 18),
+                    ),
                   ),
-                ),
-                onPressed: () {
-                  _showCountdownDialog(context); // Show the countdown dialog
-                },
-                child: Text(
-                  'RESET',
-                  style: TextStyle(color: Colors.white, fontSize: 18),
-                ),
+                  SizedBox(width: 20),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    onPressed: _selectedProductCode == null
+                        ? null
+                        : () => _showCountdownDialog(context),
+                    child: Text(
+                      'RESET',
+                      style: TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -97,46 +190,37 @@ class ResetSystemScreen extends StatelessWidget {
     );
   }
 
-  // Show a countdown dialog
   void _showCountdownDialog(BuildContext context) {
-    int countdown = 5; // Start countdown from 5 seconds
+    int countdown = 5;
+    Timer? timer;
 
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent dismissing the dialog by tapping outside
+      barrierDismissible: false,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Resetting System"),
-          content: Text("The application and fire alarm will reset in $countdown seconds."),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: Text("CANCEL"),
-            ),
-          ],
-        );
-      },
-    );
+        return StatefulBuilder(
+          builder: (context, setState) {
+            timer = Timer.periodic(Duration(seconds: 1), (Timer t) async {
+              if (countdown > 0) {
+                setState(() => countdown--);
+              } else {
+                t.cancel();
+                Navigator.of(context).pop();
+                await _performResetActions();
+                if (Platform.isAndroid) {
+                  SystemNavigator.pop();
+                }
+              }
+            });
 
-    // Start the countdown timer
-    Timer.periodic(Duration(seconds: 1), (Timer timer) async {
-      if (countdown > 0) {
-        // Update the dialog content
-        Navigator.of(context).pop(); // Close the current dialog
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (BuildContext context) {
             return AlertDialog(
               title: Text("Resetting System"),
               content: Text("The application and fire alarm will reset in $countdown seconds."),
               actions: [
                 TextButton(
                   onPressed: () {
-                    timer.cancel(); // Stop the timer
-                    Navigator.of(context).pop(); // Close the dialog
+                    timer?.cancel();
+                    Navigator.of(context).pop();
                   },
                   child: Text("CANCEL"),
                 ),
@@ -144,117 +228,63 @@ class ResetSystemScreen extends StatelessWidget {
             );
           },
         );
-        countdown--;
-      } else {
-        timer.cancel(); // Stop the timer
-        Navigator.of(context).pop(); // Close the dialog
-
-        // Perform reset actions
-        _resetNotifications();
-        _resetHushedStatus();
-        await _resetAlarmLoggingStatus(); // Reset the alarm logging status in Firestore
-        _resetDialogStatus(); // Reset the Dialogpop field in DialogStatus collection
-        _resetNotifStatus(); // Reset the notif field in NotifStatus collection
-
-        // Restart the app on Android
-        SystemNavigator.pop(); // Closes the app on Android
-      }
-    });
+      },
+    );
   }
 
-  // Reset the acknowledged alerts in NotificationService
-  void _resetNotifications() {
-    _notificationService.acknowledgeAlerts(); // Reset acknowledged alerts
-  }
-
-  // Update isHushed in Firestore
-  void _resetHushedStatus() async {
-    DocumentReference alarmRef = _firestore.collection('BooleanConditions').doc('Alarm');
+  Future<void> _performResetActions() async {
+    if (_selectedProductCode == null) return;
 
     try {
-      // Fetch the current value of isHushed
+      // Reset notifications
+      _notificationService.acknowledgeAlerts();
+
+      // Reset isHushed status
+      DocumentReference alarmRef = _firestore.collection('BooleanConditions').doc('Alarm');
       DocumentSnapshot docSnapshot = await alarmRef.get();
-      if (docSnapshot.exists) {
-        bool isHushed = docSnapshot.get('isHushed');
-
-        // Only update if isHushed is true
-        if (isHushed) {
-          await alarmRef.update({'isHushed': false});
-          print("isHushed reset to false");
-        } else {
-          print("isHushed is already false, no update needed.");
-        }
+      if (docSnapshot.exists && docSnapshot.get('isHushed')) {
+        await alarmRef.update({'isHushed': false});
       }
-    } catch (e) {
-      print("Error updating isHushed: $e");
-    }
-  }
 
-  // Reset the alarm logging status in Firestore
-  Future<void> _resetAlarmLoggingStatus() async {
-    try {
-      // Reset the 'logged' field to false for all alarms in SensorData > AlarmLogs > {productCode}
-      var snapshot = await _firestore
+      // Reset alarm logs
+      var alarmLogs = await _firestore
           .collection('SensorData')
           .doc('AlarmLogs')
-          .collection(productCode) // Use the passed productCode
+          .collection(_selectedProductCode!)
           .get();
 
-      for (var doc in snapshot.docs) {
+      for (var doc in alarmLogs.docs) {
         await doc.reference.update({'logged': false});
       }
-      print("All 'logged' fields reset to false in SensorData > AlarmLogs > $productCode.");
 
-      // Reset AlarmLogged for HpLk33atBI
+      // Reset alarm status for the selected device
       await _firestore
           .collection('AlarmStatus')
-          .doc('HpLk33atBI')
+          .doc(_selectedProductCode)
           .update({'AlarmLogged': false});
-      print("AlarmLogged reset to false for HpLk33atBI.");
 
-      // Reset AlarmLogged for oURnq0vZrP
-      await _firestore
-          .collection('AlarmStatus')
-          .doc('oURnq0vZrP')
-          .update({'AlarmLogged': false});
-      print("AlarmLogged reset to false for oURnq0vZrP.");
-    } catch (e) {
-      print("Error resetting alarm logging status: $e");
-    }
-  }
-
-  // Reset the Dialogpop field in DialogStatus collection
-  void _resetDialogStatus() async {
-    try {
-      // Reset Dialogpop for HpLk33atBI
+      // Reset dialog status for the selected device
       await _firestore
           .collection('DialogStatus')
-          .doc('HpLk33atBI')
+          .doc(_selectedProductCode)
           .update({'Dialogpop': false});
-      print("Dialogpop reset to false for HpLk33atBI.");
 
-      // Reset Dialogpop for oURnq0vZrP
-      await _firestore
-          .collection('DialogStatus')
-          .doc('oURnq0vZrP')
-          .update({'Dialogpop': false});
-      print("Dialogpop reset to false for oURnq0vZrP.");
-    } catch (e) {
-      print("Error resetting Dialogpop: $e");
-    }
-  }
-
-  // Reset the notif field in NotifStatus collection
-  void _resetNotifStatus() async {
-    try {
-      // Reset the notif field for the specific productCode
+      // Reset notification status for the selected device
       await _firestore
           .collection('NotifStatus')
-          .doc(productCode)
+          .doc(_selectedProductCode)
           .update({'notif': false});
-      print("notif reset to false for $productCode.");
+
+      print("Reset completed for $_selectedProductCode");
     } catch (e) {
-      print("Error resetting notif field: $e");
+      print("Error during reset: $e");
     }
   }
+}
+
+class Device {
+  final String productCode;
+  final String name;
+
+  Device({required this.productCode, required this.name});
 }

@@ -67,14 +67,13 @@ class MyApp extends StatelessWidget {
           );
         }
         if (settings.name == '/AlarmLogScreen') {
-          return MaterialPageRoute( // Updated this route
+          return MaterialPageRoute(
             builder: (context) => AlarmLogScreen(),
           );
         }
         if (settings.name == '/ResetSystemScreen') {
-          final args = settings.arguments as String;
           return MaterialPageRoute(
-            builder: (context) => ResetSystemScreen(productCode: args),
+            builder: (context) => ResetSystemScreen(),
           );
         }
         return null;
