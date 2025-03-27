@@ -469,7 +469,7 @@ class _LoginScreenState extends State<LoginScreen> {
               decoration: InputDecoration(
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 15), // Adjusted vertical padding
+                    horizontal: 10, vertical: 12), // Adjusted vertical padding
                 suffixIcon: IconButton(
                   icon: Icon(
                     _passwordVisible ? Icons.visibility : Icons.visibility_off,

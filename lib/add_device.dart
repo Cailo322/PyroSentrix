@@ -335,7 +335,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> with SingleTickerProv
                             child: Text(
                               _currentStep == 3 ? 'Done' : 'Continue',
                               style: const TextStyle(
-                                fontFamily: 'Jost',
+                                fontFamily: 'Inter',
                                 fontWeight: FontWeight.w900,
                                 color: Colors.black,
                               ),
@@ -348,7 +348,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> with SingleTickerProv
                 );
               },
               steps: [
-                Step(
+                Step( //step 1
                   title: const SizedBox.shrink(),
                   content: Center(
                     child: Column(
@@ -357,8 +357,8 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> with SingleTickerProv
                           'Instructions',
                           style: TextStyle(
                             fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Jost',
+                            fontWeight: FontWeight.w900,
+                            fontFamily: 'Inter',
                             color: Colors.black,
                           ),
                         ),
@@ -527,7 +527,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> with SingleTickerProv
                   state: _currentStep > 0 ? StepState.complete : StepState.indexed,
                   isActive: _currentStep == 0,
                 ),
-                Step(
+                Step( //step 2
                   title: const SizedBox.shrink(),
                   content: Center(
                     child: Column(
@@ -536,8 +536,8 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> with SingleTickerProv
                           'Scan QR Code',
                           style: TextStyle(
                             fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Jost',
+                            fontWeight: FontWeight.w900,
+                            fontFamily: 'Inter',
                             color: Colors.black,
                           ),
                         ),
@@ -608,7 +608,8 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> with SingleTickerProv
                             Text(
                               _isQrScanned ? 'Scanned Successfully' : 'Align QR code within the frame',
                               style: TextStyle(
-                                fontFamily: 'Jost',
+                                fontFamily: 'Arimo',
+                                fontWeight: FontWeight.w900,
                                 color: _isQrScanned ? Colors.green : Colors.grey,
                               ),
                             ),
@@ -621,6 +622,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> with SingleTickerProv
                               'MAC: $_scannedMacAddress\nProduct ID: $_scannedProductId',
                               style: const TextStyle(
                                 fontFamily: 'Jost',
+                                fontWeight: FontWeight.w500,
                                 color: Colors.black,
                               ),
                               textAlign: TextAlign.center,
@@ -632,7 +634,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> with SingleTickerProv
                   state: _currentStep > 1 ? StepState.complete : StepState.indexed,
                   isActive: _currentStep == 1,
                 ),
-                Step(
+                Step( //step 3
                   title: const SizedBox.shrink(),
                   content: Center(
                     child: Column(
@@ -642,7 +644,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> with SingleTickerProv
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            fontFamily: 'Jost',
+                            fontFamily: 'Inter',
                             color: Colors.black,
                           ),
                         ),
@@ -672,32 +674,55 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> with SingleTickerProv
                                               ),
                                             ),
                                           )
-                                              : ListView.builder(
-                                            itemCount: _accessPoints.length,
-                                            itemBuilder: (context, index) {
-                                              final ap = _accessPoints[index];
-                                              return ListTile(
-                                                leading: _getWifiIcon(ap.level),
-                                                title: Text(
-                                                  ap.ssid,
-                                                  style: const TextStyle(color: Colors.black),
+                                              : Scrollbar(
+                                            thumbVisibility: true,
+                                            child: Card(
+                                              color: Colors.grey[100], // Light grey background
+                                              margin: const EdgeInsets.all(8.0), // Space around the card
+                                              elevation: 3, // Subtle shadow
+                                              child: ClipRRect(
+                                                borderRadius: BorderRadius.circular(8.0), // Rounded corners
+                                                child: ListView.builder(
+                                                  itemCount: _accessPoints.length,
+                                                  itemBuilder: (context, index) {
+                                                    final ap = _accessPoints[index];
+                                                    return Column(
+                                                      children: [
+                                                        ListTile(
+                                                          leading: _getWifiIcon(ap.level),
+                                                          title: Text(
+                                                            ap.ssid,
+                                                            style: const TextStyle(color: Colors.black),
+                                                          ),
+                                                          subtitle: Text(
+                                                            'Signal: ${ap.level} dBm',
+                                                            style: const TextStyle(color: Colors.black54),
+                                                          ),
+                                                          trailing: _selectedSSID == ap.ssid
+                                                              ? const Icon(Icons.check, color: Colors.green)
+                                                              : null,
+                                                          onTap: () {
+                                                            setState(() {
+                                                              _selectedSSID = ap.ssid;
+                                                              _selectedBSSID = ap.bssid;
+                                                            });
+                                                            _showPasswordInputDialog();
+                                                          },
+                                                        ),
+                                                        Padding(
+                                                          padding: const EdgeInsets.only(left: 16.0, right: 16.0),
+                                                          child: Divider(
+                                                            height: 1,
+                                                            thickness: 1,
+                                                            color: Colors.grey[300], // Lighter divider to match card
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    );
+                                                  },
                                                 ),
-                                                subtitle: Text(
-                                                  'Signal: ${ap.level} dBm',
-                                                  style: const TextStyle(color: Colors.black),
-                                                ),
-                                                trailing: _selectedSSID == ap.ssid
-                                                    ? const Icon(Icons.check, color: Colors.green)
-                                                    : null,
-                                                onTap: () {
-                                                  setState(() {
-                                                    _selectedSSID = ap.ssid;
-                                                    _selectedBSSID = ap.bssid;
-                                                  });
-                                                  _showPasswordInputDialog();
-                                                },
-                                              );
-                                            },
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -791,7 +816,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> with SingleTickerProv
                   state: _currentStep > 2 ? StepState.complete : StepState.indexed,
                   isActive: _currentStep == 2,
                 ),
-                Step(
+                Step(//step 4
                   title: const SizedBox.shrink(),
                   content: Center(
                     child: Column(
