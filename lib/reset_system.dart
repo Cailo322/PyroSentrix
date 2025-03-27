@@ -21,6 +21,7 @@ class _ResetSystemScreenState extends State<ResetSystemScreen> {
   List<Device> _devices = [];
   String? _selectedProductCode;
   Map<String, String> _deviceNames = {};
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -69,9 +70,13 @@ class _ResetSystemScreenState extends State<ResetSystemScreen> {
         if (_devices.isNotEmpty) {
           _selectedProductCode = _devices.first.productCode;
         }
+        _isLoading = false;
       });
     } catch (e) {
       print('Error fetching devices: $e');
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -109,80 +114,103 @@ class _ResetSystemScreenState extends State<ResetSystemScreen> {
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 150, bottom: 20),
-                child: Image.asset('assets/reset.png', width: 150, height: 150),
-              ),
-
-              if (_devices.isNotEmpty) ...[
+              if (_isLoading)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(8),
+                  padding: const EdgeInsets.only(top: 150),
+                  child: CircularProgressIndicator(),
+                )
+              else if (_devices.isEmpty)
+                Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 150, bottom: 30),
+                      child: Image.asset('assets/nodevice.png', width: 200, height: 200),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: DropdownButton<String>(
-                      value: _selectedProductCode,
-                      hint: Text('Select Device'),
-                      isExpanded: true,
-                      underline: Container(),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          _selectedProductCode = newValue;
-                        });
-                      },
-                      items: _devices.map<DropdownMenuItem<String>>((Device device) {
-                        return DropdownMenuItem<String>(
-                          value: device.productCode,
-                          child: Text(
-                            device.name,
-                            style: TextStyle(fontSize: 16),
+                    Text(
+                      "You don't have any IoT devices connected to your account.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 18, fontFamily: 'Inter'),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "Please add a device or ask your household admin with an IoT device to share access with you.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 16, color: Colors.grey, fontFamily: 'Inter'),
+                    ),
+                  ],
+                )
+              else ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 150, bottom: 20),
+                    child: Image.asset('assets/reset.png', width: 150, height: 150),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: DropdownButton<String>(
+                        value: _selectedProductCode,
+                        hint: Text('Select Device'),
+                        isExpanded: true,
+                        underline: Container(),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedProductCode = newValue;
+                          });
+                        },
+                        items: _devices.map<DropdownMenuItem<String>>((Device device) {
+                          return DropdownMenuItem<String>(
+                            value: device.productCode,
+                            child: Text(
+                              device.name,
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ),
-              ],
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        ),
+                        onPressed: _hushAlarm,
+                        child: Text(
+                          'HUSH',
+                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        ),
                       ),
-                    ),
-                    onPressed: _hushAlarm,
-                    child: Text(
-                      'HUSH',
-                      style: TextStyle(color: Colors.white, fontSize: 18),
-                    ),
-                  ),
-                  SizedBox(width: 20),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                      SizedBox(width: 20),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: _selectedProductCode == null
+                            ? null
+                            : () => _showCountdownDialog(context),
+                        child: Text(
+                          'RESET',
+                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        ),
                       ),
-                    ),
-                    onPressed: _selectedProductCode == null
-                        ? null
-                        : () => _showCountdownDialog(context),
-                    child: Text(
-                      'RESET',
-                      style: TextStyle(color: Colors.white, fontSize: 18),
-                    ),
+                    ],
                   ),
                 ],
-              ),
             ],
           ),
         ),

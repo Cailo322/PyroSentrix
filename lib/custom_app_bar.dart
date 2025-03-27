@@ -163,10 +163,10 @@ class _CustomDrawerState extends State<CustomDrawer> {
               _buildDrawerItem(context, 'Analytics', 'assets/analytics.png', '', isAnalytics: true),
               _buildDrawerItem(context, 'Dashboard', 'assets/dashboard.png', '', isMonitor: true),
               _buildDrawerItem(context, 'Devices', 'assets/devices.png', '/DevicesScreen'),
-              _buildDrawerItem(context, 'Alarm logs', 'assets/Alarm-Logs.png', '', isAlarmLog: true),
+              _buildDrawerItem(context, 'Alarm logs', 'assets/Alarm-Logs.png', '/AlarmLogScreen'),
             ]),
             _buildSection('Others', [
-              _buildDrawerItem(context, 'System Reset', 'assets/System-Reset.png', '/ResetSystemScreen'),
+              _buildDrawerItem(context, 'Device Controls', 'assets/System-Reset.png', '/ResetSystemScreen'),
               _buildDrawerItem(context, 'FAQs', 'assets/FAQs.png', '/QueriesScreen'),
               _buildDrawerItem(context, 'Call Help', 'assets/call.png', '/CallHelpScreen', isRed: true),
               _buildDrawerItem(context, 'Logout', 'assets/logout.png', '', isLogout: true),
@@ -198,7 +198,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
     );
   }
 
-  Widget _buildDrawerItem(BuildContext context, String title, String asset, String route, {bool isMonitor = false, bool isAlarmLog = false, bool isAnalytics = false, bool isRed = false, bool isLogout = false}) {
+  Widget _buildDrawerItem(BuildContext context, String title, String asset, String route, {bool isMonitor = false, bool isAnalytics = false, bool isRed = false, bool isLogout = false}) {
     return ListTile(
       leading: Image.asset(asset, width: 40, height: 27, fit: BoxFit.contain),
       title: Text(title, style: TextStyle(color: isRed ? Colors.red : Color(0xFF494949), fontSize: 17, fontWeight: isRed || isLogout ? FontWeight.bold : FontWeight.normal)),
@@ -210,14 +210,6 @@ class _CustomDrawerState extends State<CustomDrawer> {
           final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
           if (deviceProvider.selectedProductCode != null) {
             await Navigator.pushNamed(context, '/MonitorScreen', arguments: deviceProvider.selectedProductCode!);
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select a device first.')));
-          }
-        } else if (isAlarmLog) {
-          final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
-          print('Selected Product Code: ${deviceProvider.selectedProductCode}');
-          if (deviceProvider.selectedProductCode != null) {
-            await Navigator.pushNamed(context, '/AlarmLogScreen', arguments: {'productCode': deviceProvider.selectedProductCode!});
           } else {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select a device first.')));
           }
@@ -233,13 +225,6 @@ class _CustomDrawerState extends State<CustomDrawer> {
 
           // Navigate to the login screen
           Navigator.of(context).pushReplacementNamed('/LoginScreen');
-        } else if (route == '/ResetSystemScreen') {
-          final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
-          if (deviceProvider.selectedProductCode != null) {
-            await Navigator.pushNamed(context, route, arguments: deviceProvider.selectedProductCode!);
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select a device first.')));
-          }
         } else if (route.isNotEmpty) {
           await Navigator.pushNamed(context, route);
         }

@@ -133,6 +133,7 @@ flutter:
     - assets/districtlogo.png
     - assets/devicefire.png
     - assets/devicewarning.png
+    - assets/nodevice.png
   fonts:
     - family: Jost
       fonts:

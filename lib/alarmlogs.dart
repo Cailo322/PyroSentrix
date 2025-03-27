@@ -15,7 +15,6 @@ class AlarmLogScreen extends StatefulWidget {
 class _AlarmLogScreenState extends State<AlarmLogScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
   List<Map<String, dynamic>> alarmLogs = [];
   List<Map<String, dynamic>> filteredAlarmLogs = [];
   int alarmCount = 0;
@@ -26,6 +25,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
   StreamSubscription? _alarmSubscription;
   StreamSubscription? _sensorSubscription;
   Map<String, String> _deviceNames = {};
+  bool _isLoading = true;
 
   final List<String> months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -90,9 +90,13 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
           _fetchAlarmHistory();
           _listenToLatestSensorData();
         }
+        _isLoading = false;
       });
     } catch (e) {
       print('Error fetching devices: $e');
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -191,23 +195,324 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
     });
   }
 
-  Future<String?> _fetchLatestImageUrl() async {
-    if (_selectedProductCode == null) return null;
+  Widget _buildNoDeviceUI() {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Image.asset('assets/official-logo.png', height: 100),
+                SizedBox(width: 15),
+                Padding(
+                  padding: const EdgeInsets.only(top: 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Alarm Logs',
+                        style: TextStyle(
+                          color: Color(0xFF494949),
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Container(
+                        width: 25,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Color(0xFF494949),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 15),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 19),
+            child: Divider(color: Colors.grey[200], thickness: 5),
+          ),
+          SizedBox(height: 69),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset('assets/nodevice.png', width: 200, height: 200),
+              SizedBox(height: 20),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  "You don't have any IoT devices connected to your account.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18),
+                ),
+              ),
+              SizedBox(height: 10),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  "Please add a device or ask your household admin to share access with you.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 10),
+        ],
+      ),
+    );
+  }
 
-    try {
-      var snapshot = await _firestore
-          .collection(_selectedProductCode!)
-          .orderBy('timestamp', descending: true)
-          .limit(1)
-          .get();
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: IconThemeData(color: Colors.black),
+      ),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : _devices.isEmpty
+          ? _buildNoDeviceUI()
+          : _buildAlarmLogsContent(),
+    );
+  }
 
-      if (snapshot.docs.isNotEmpty) {
-        return snapshot.docs.first['imageUrl'];
-      }
-    } catch (e) {
-      print('Error fetching image URL: $e');
-    }
-    return null;
+  Widget _buildAlarmLogsContent() {
+    return Container(
+      color: Colors.white,
+      child: Column(
+        children: [
+          SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Column(
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Image.asset('assets/official-logo.png', height: 100),
+                    SizedBox(width: 15),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 40),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Alarm Logs',
+                            style: TextStyle(
+                              color: Color(0xFF494949),
+                              fontSize: 30,
+                              fontWeight: FontWeight.w900,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Container(
+                            width: 25,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Color(0xFF494949),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 15),
+                Divider(color: Colors.grey[200], thickness: 5),
+                SizedBox(height: 15),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Alarm Logs History',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    SizedBox(width: 5),
+                    GestureDetector(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            backgroundColor: Colors.white,
+                            insetPadding: EdgeInsets.symmetric(horizontal: 20.0),
+                            contentPadding: EdgeInsets.all(16.0),
+                            content: Container(
+                              width: 120,
+                              height: 180,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Image.asset('assets/question-mark.png',
+                                    width: 40,
+                                    height: 40,
+                                  ),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    "Alarm Logs History",
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Container(
+                                    width: 20,
+                                    height: 3,
+                                    decoration: BoxDecoration(
+                                      color: Color(0xFF494949),
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                  SizedBox(height: 13),
+                                  Text(
+                                    "This section allows you to review all previously triggered alarms, helping you stay informed about past incidents and potential issues",
+                                    style: TextStyle(fontSize: 16),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      child: Opacity(
+                        opacity: 0.6,
+                        child: Image.asset(
+                          'assets/info-icon.png',
+                          width: 20,
+                          height: 20,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 10),
+                _buildDeviceDropdown(),
+                SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        DropdownButton<String>(
+                          value: selectedMonth,
+                          hint: Text('Select Month'),
+                          onChanged: (String? newValue) {
+                            setState(() {
+                              selectedMonth = newValue;
+                              _filterAlarms();
+                            });
+                          },
+                          items: months.map<DropdownMenuItem<String>>((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value),
+                            );
+                          }).toList(),
+                        ),
+                        SizedBox(width: 10),
+                        DropdownButton<String>(
+                          value: selectedYear,
+                          hint: Text('Select Year'),
+                          onChanged: (String? newValue) {
+                            setState(() {
+                              selectedYear = newValue;
+                              _filterAlarms();
+                            });
+                          },
+                          items: years.map<DropdownMenuItem<String>>((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          selectedMonth = null;
+                          selectedYear = null;
+                          filteredAlarmLogs = alarmLogs;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.yellow[600],
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: Text(
+                        'Show All',
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            fontFamily: 'Arimo',
+                            color: Colors.black),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 10),
+                if (selectedMonth != null && selectedYear != null)
+                  _buildMonthYearLabel(selectedMonth!, selectedYear!),
+              ],
+            ),
+          ),
+          SizedBox(height: 10),
+          Expanded(
+            child: ListView.builder(
+              itemCount: filteredAlarmLogs.isEmpty && selectedMonth == null &&
+                  selectedYear == null
+                  ? alarmLogs.length
+                  : filteredAlarmLogs.length,
+              itemBuilder: (context, index) {
+                var alarm = filteredAlarmLogs.isEmpty &&
+                    selectedMonth == null && selectedYear == null
+                    ? alarmLogs[index]
+                    : filteredAlarmLogs[index];
+                return Card(
+                  color: Colors.grey[300],
+                  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: ListTile(
+                    title: Text(alarm['id'],
+                        style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w800)),
+                    subtitle: Text("Timestamp: ${_formatTimestamp(
+                        alarm['timestamp'])}"),
+                    onTap: () => _showSensorValues(context, alarm),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildDeviceDropdown() {
@@ -260,35 +565,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
     );
   }
 
-  void _filterAlarms() {
-    setState(() {
-      if (selectedMonth == null && selectedYear == null) {
-        filteredAlarmLogs = alarmLogs;
-      } else {
-        filteredAlarmLogs = alarmLogs.where((alarm) {
-          DateTime dateTime;
-          try {
-            dateTime = DateTime.parse(alarm['timestamp']);
-          } catch (e) {
-            print("Error parsing timestamp: ${alarm['timestamp']}");
-            return false;
-          }
-
-          int month = dateTime.month;
-          int year = dateTime.year;
-
-          int selectedMonthInt = selectedMonth != null ? months.indexOf(selectedMonth!) + 1 : -1;
-          int selectedYearInt = selectedYear != null ? int.parse(selectedYear!) : -1;
-
-          bool matchesMonth = selectedMonth == null || month == selectedMonthInt;
-          bool matchesYear = selectedYear == null || year == selectedYearInt;
-
-          return matchesMonth && matchesYear;
-        }).toList();
-      }
-    });
-  }
-
   String _formatTimestamp(String timestamp) {
     if (timestamp.isEmpty) return "No timestamp";
 
@@ -313,6 +589,25 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         data['smoke_level'] > thresholds['smoke_threshold'] ||
         data['temperature_mlx90614'] > thresholds['temp_threshold'] ||
         data['temperature_dht22'] > thresholds['temp_threshold']);
+  }
+
+  Future<String?> _fetchLatestImageUrl() async {
+    if (_selectedProductCode == null) return null;
+
+    try {
+      var snapshot = await _firestore
+          .collection(_selectedProductCode!)
+          .orderBy('timestamp', descending: true)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        return snapshot.docs.first['imageUrl'];
+      }
+    } catch (e) {
+      print('Error fetching image URL: $e');
+    }
+    return null;
   }
 
   void _showSensorValues(BuildContext context, Map<String, dynamic> alarm) async {
@@ -436,239 +731,33 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: IconThemeData(color: Colors.black),
-      ),
-      body: Container(
-        color: Colors.white,
-        child: Column(
-          children: [
-            SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Image.asset('assets/official-logo.png', height: 100),
-                      SizedBox(width: 15),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 40),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Alarm Logs',
-                              style: TextStyle(
-                                color: Color(0xFF494949),
-                                fontSize: 30,
-                                fontWeight: FontWeight.w900,
-                                fontFamily: 'Poppins',
-                              ),
-                            ),
-                            SizedBox(height: 2),
-                            Container(
-                              width: 25,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Color(0xFF494949),
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 15),
-                  Divider(color: Colors.grey[200], thickness: 5),
-                  SizedBox(height: 15),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Alarm Logs History',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                      SizedBox(width: 5),
-                      GestureDetector(
-                        onTap: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              backgroundColor: Colors.white,
-                              insetPadding: EdgeInsets.symmetric(horizontal: 20.0),
-                              contentPadding: EdgeInsets.all(16.0),
-                              content: Container(
-                                width: 120,
-                                height: 180,
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Image.asset('assets/question-mark.png',
-                                      width: 40,
-                                      height: 40,
-                                    ),
-                                    SizedBox(height: 16),
-                                    Text(
-                                      "Alarm Logs History",
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w800,
-                                        fontFamily: 'Inter',
-                                      ),
-                                    ),
-                                    SizedBox(height: 8),
-                                    Container(
-                                      width: 20,
-                                      height: 3,
-                                      decoration: BoxDecoration(
-                                        color: Color(0xFF494949),
-                                        borderRadius: BorderRadius.circular(2),
-                                      ),
-                                    ),
-                                    SizedBox(height: 13),
-                                    Text(
-                                      "This section allows you to review all previously triggered alarms, helping you stay informed about past incidents and potential issues",
-                                      style: TextStyle(fontSize: 16),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                        child: Opacity(
-                          opacity: 0.6,
-                          child: Image.asset(
-                            'assets/info-icon.png',
-                            width: 20,
-                            height: 20,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 10),
-                  _buildDeviceDropdown(),
-                  SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          DropdownButton<String>(
-                            value: selectedMonth,
-                            hint: Text('Select Month'),
-                            onChanged: (String? newValue) {
-                              setState(() {
-                                selectedMonth = newValue;
-                                _filterAlarms();
-                              });
-                            },
-                            items: months.map<DropdownMenuItem<String>>((String value) {
-                              return DropdownMenuItem<String>(
-                                value: value,
-                                child: Text(value),
-                              );
-                            }).toList(),
-                          ),
-                          SizedBox(width: 10),
-                          DropdownButton<String>(
-                            value: selectedYear,
-                            hint: Text('Select Year'),
-                            onChanged: (String? newValue) {
-                              setState(() {
-                                selectedYear = newValue;
-                                _filterAlarms();
-                              });
-                            },
-                            items: years.map<DropdownMenuItem<String>>((String value) {
-                              return DropdownMenuItem<String>(
-                                value: value,
-                                child: Text(value),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            selectedMonth = null;
-                            selectedYear = null;
-                            filteredAlarmLogs = alarmLogs;
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.yellow[600],
-                          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          elevation: 2,
-                        ),
-                        child: Text(
-                          'Show All',
-                          style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              fontFamily: 'Arimo',
-                              color: Colors.black),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 10),
-                  if (selectedMonth != null && selectedYear != null)
-                    _buildMonthYearLabel(selectedMonth!, selectedYear!),
-                ],
-              ),
-            ),
-            SizedBox(height: 10),
-            Expanded(
-              child: ListView.builder(
-                itemCount: filteredAlarmLogs.isEmpty && selectedMonth == null &&
-                    selectedYear == null
-                    ? alarmLogs.length
-                    : filteredAlarmLogs.length,
-                itemBuilder: (context, index) {
-                  var alarm = filteredAlarmLogs.isEmpty &&
-                      selectedMonth == null && selectedYear == null
-                      ? alarmLogs[index]
-                      : filteredAlarmLogs[index];
-                  return Card(
-                    color: Colors.grey[300],
-                    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: ListTile(
-                      title: Text(alarm['id'],
-                          style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w800)),
-                      subtitle: Text("Timestamp: ${_formatTimestamp(
-                          alarm['timestamp'])}"),
-                      onTap: () => _showSensorValues(context, alarm),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  void _filterAlarms() {
+    setState(() {
+      if (selectedMonth == null && selectedYear == null) {
+        filteredAlarmLogs = alarmLogs;
+      } else {
+        filteredAlarmLogs = alarmLogs.where((alarm) {
+          DateTime dateTime;
+          try {
+            dateTime = DateTime.parse(alarm['timestamp']);
+          } catch (e) {
+            print("Error parsing timestamp: ${alarm['timestamp']}");
+            return false;
+          }
+
+          int month = dateTime.month;
+          int year = dateTime.year;
+
+          int selectedMonthInt = selectedMonth != null ? months.indexOf(selectedMonth!) + 1 : -1;
+          int selectedYearInt = selectedYear != null ? int.parse(selectedYear!) : -1;
+
+          bool matchesMonth = selectedMonth == null || month == selectedMonthInt;
+          bool matchesYear = selectedYear == null || year == selectedYearInt;
+
+          return matchesMonth && matchesYear;
+        }).toList();
+      }
+    });
   }
 }
 
