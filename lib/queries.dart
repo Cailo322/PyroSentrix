@@ -9,7 +9,7 @@ class QueriesScreen extends StatefulWidget {
 
 class _QueriesScreenState extends State<QueriesScreen> {
   // Manage the expanded state for each item
-  List<bool> _isExpanded = [false, false, false];
+  List<bool> _isExpanded = [false, false, false, false, false];
 
   @override
   Widget build(BuildContext context) {
@@ -62,9 +62,11 @@ class _QueriesScreenState extends State<QueriesScreen> {
               _buildListTileWithIcon(Icons.phone_android, 'Application Features'), // Restoring the phone icon for Application Features
               SizedBox(height: 16),
               _buildSectionTitle('Often Asked Questions'),
-              _buildFaqTile(0, 'How to setup the device?'),
+              _buildFaqTile(0, 'How to setup the Iot device?'),
               _buildFaqTile(1, 'How does the alarm system works?'),
               _buildFaqTile(2, 'Can a single device be setup on multiple phones?'),
+              _buildFaqTile(3, 'Can I add my other family members to connect to the Iot device?'),
+              _buildFaqTile(4, 'Can I add another Iot device?'),
             ],
           ),
         ),
@@ -171,7 +173,13 @@ In case of an emergency, the app provides a list of nearby fire stations based o
 
 Stay safe!'''
                   : question == 'Can a single device be setup on multiple phones?'
-                  ? '''Yes, you can use multiple phones to monitor your IoT device/fire alarm. Simply ensure that each phone is registered and the product code for the fire alarm is entered. This way, all linked phones will have access to the device’s data and alerts.'''
+                  ? '''Yes, you can use multiple phones to monitor your IoT device/fire alarm. Just login your same account that is connected to your Iot device.'''
+                  : question == 'How to setup the Iot device?'
+                  ? '''Go to the Add device screen, turn on your iot device, scan the qr code, and then connect it to your wifi.'''
+                  : question == 'Can I add my other family members to connect to the Iot device?'
+                  ? '''Yes. Just simply go to the Devices screen and click the three dots on the device card, and click add people and enter their registered email address.'''
+                  : question == 'Can I add another Iot device?'
+                  ? '''Yes just simple scan the qr code again and connect it your wifi, just make sure your are using the same account so the devices you are adding will reflect on the Devices screen'''
                   : 'Your content for this FAQ goes here.', // Add other FAQ content if needed
               style: TextStyle(
                   fontFamily: 'Poppins', // Use Poppins Light for dropdown content

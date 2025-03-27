@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
 class AlarmLogScreen extends StatefulWidget {
@@ -24,6 +25,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
   List<Device> _devices = [];
   StreamSubscription? _alarmSubscription;
   StreamSubscription? _sensorSubscription;
+  Map<String, String> _deviceNames = {};
 
   final List<String> months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -35,7 +37,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchDevices();
+    _loadDeviceNames().then((_) => _fetchDevices());
   }
 
   @override
@@ -43,6 +45,18 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
     _alarmSubscription?.cancel();
     _sensorSubscription?.cancel();
     super.dispose();
+  }
+
+  Future<void> _loadDeviceNames() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      prefs.getKeys().forEach((key) {
+        if (key.startsWith('device_name_')) {
+          String productCode = key.replaceFirst('device_name_', '');
+          _deviceNames[productCode] = prefs.getString(key) ?? 'Device $productCode';
+        }
+      });
+    });
   }
 
   Future<void> _fetchDevices() async {
@@ -65,7 +79,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         final productCode = doc['product_code'] as String;
         uniqueDevices[productCode] = Device(
           productCode: productCode,
-          name: 'Device $productCode',
+          name: _deviceNames[productCode] ?? 'Device $productCode',
         );
       }
 
@@ -199,7 +213,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
   Widget _buildDeviceDropdown() {
     return DropdownButton<String>(
       value: _selectedProductCode,
-      hint: Text('Select Device'),
+      hint: Text('Select Device', style: TextStyle(fontSize: 14)),
       onChanged: (String? newValue) {
         setState(() {
           _selectedProductCode = newValue;
@@ -212,7 +226,10 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
       items: _devices.map<DropdownMenuItem<String>>((Device device) {
         return DropdownMenuItem<String>(
           value: device.productCode,
-          child: Text(device.name),
+          child: Text(
+            '${device.name} (${device.productCode})',
+            style: TextStyle(fontSize: 14),
+          ),
         );
       }).toList(),
     );

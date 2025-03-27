@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
 class AnalyticsScreen extends StatefulWidget {
@@ -37,13 +38,11 @@ class TrendLinePainter extends CustomPainter {
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
-    // Convert FlSpot points to Offset points
     final startX = trendLine.first.x;
     final startY = trendLine.first.y;
     final endX = trendLine.last.x;
     final endY = trendLine.last.y;
 
-    // Map the points to the canvas coordinates
     final startPoint = Offset(
       (startX - minX) / (maxX - minX) * size.width,
       size.height - (startY - minY) / (maxY - minY) * size.height,
@@ -53,7 +52,6 @@ class TrendLinePainter extends CustomPainter {
       size.height - (endY - minY) / (maxY - minY) * size.height,
     );
 
-    // Draw the trend line
     canvas.drawLine(startPoint, endPoint, paint);
   }
 
@@ -78,6 +76,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     'smokelevel',
   };
   bool _showLegend = true;
+  Map<String, String> _deviceNames = {};
 
   final List<String> _timeRanges = [
     'Current',
@@ -92,13 +91,25 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchDevices();
+    _loadDeviceNames().then((_) => _fetchDevices());
   }
 
   @override
   void dispose() {
     _sensorDataSubscription?.cancel();
     super.dispose();
+  }
+
+  Future<void> _loadDeviceNames() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      prefs.getKeys().forEach((key) {
+        if (key.startsWith('device_name_')) {
+          String productCode = key.replaceFirst('device_name_', '');
+          _deviceNames[productCode] = prefs.getString(key) ?? 'Device $productCode';
+        }
+      });
+    });
   }
 
   Future<void> _fetchDevices() async {
@@ -123,7 +134,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         final productCode = doc['product_code'];
         uniqueDevices[productCode] = Device(
           productCode: productCode,
-          name: 'Device $productCode',
+          name: _deviceNames[productCode] ?? 'Device $productCode',
         );
       }
       for (var doc in sharedSnapshot.docs) {
@@ -131,13 +142,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         if (!uniqueDevices.containsKey(productCode)) {
           uniqueDevices[productCode] = Device(
             productCode: productCode,
-            name: 'Device $productCode',
+            name: _deviceNames[productCode] ?? 'Device $productCode',
           );
         }
       }
 
       setState(() {
         _devices = uniqueDevices.values.toList();
+        if (_devices.isNotEmpty) {
+          _selectedProductCode = _devices.first.productCode;
+          _startSensorDataListener();
+        }
       });
     } catch (e) {
       print('Error fetching devices: $e');
@@ -438,32 +453,28 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       );
     }
 
-    // Prepare data for the scatter plot
     final List<ScatterSpot> spots = _sensorData.map((data) {
       return ScatterSpot(
-        data.temperatureDHT22, // X-axis: Temperature
-        data.humidity, // Y-axis: Humidity
+        data.temperatureDHT22,
+        data.humidity,
       );
     }).toList();
 
-    // Calculate min and max values for axes
     final minTemp = _sensorData.map((e) => e.temperatureDHT22).reduce((a, b) => a < b ? a : b);
     final maxTemp = _sensorData.map((e) => e.temperatureDHT22).reduce((a, b) => a > b ? a : b);
     final minHumidity = _sensorData.map((e) => e.humidity).reduce((a, b) => a < b ? a : b);
     final maxHumidity = _sensorData.map((e) => e.humidity).reduce((a, b) => a > b ? a : b);
 
-    // Calculate intervals for axes
     final tempInterval = _calculateInterval(minTemp, maxTemp);
     final humidityInterval = _calculateInterval(minHumidity, maxHumidity);
 
-    // Calculate the trend line (linear regression)
     final trendLine = _calculateTrendLine(spots);
 
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: const Color(0xFFD9D9D9), // Outer container background color
-        borderRadius: BorderRadius.circular(10), // Rounded corners
+        color: const Color(0xFFD9D9D9),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -478,16 +489,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           ),
           const SizedBox(height: 16),
           Container(
-            padding: const EdgeInsets.all(16.0), // Inner container padding
+            padding: const EdgeInsets.all(16.0),
             decoration: BoxDecoration(
-              color: Colors.white, // Inner container background color
-              borderRadius: BorderRadius.circular(10), // Rounded corners
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
             ),
             child: SizedBox(
-              height: 200, // Fixed height for the scatter plot
+              height: 200,
               child: Stack(
                 children: [
-                  // Scatter Chart
                   ScatterChart(
                     ScatterChartData(
                       scatterSpots: spots,
@@ -514,13 +524,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         leftTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
-                            reservedSize: 30, // Space for y-axis labels
-                            interval: humidityInterval, // Use calculated interval
+                            reservedSize: 30,
+                            interval: humidityInterval,
                             getTitlesWidget: (value, meta) {
                               return Padding(
-                                padding: const EdgeInsets.only(right: 8.0), // Add spacing to the right of y-axis labels
+                                padding: const EdgeInsets.only(right: 8.0),
                                 child: Text(
-                                  value.toStringAsFixed(1), // Round to 1 decimal place
+                                  value.toStringAsFixed(1),
                                   style: TextStyle(
                                     fontSize: 10,
                                     color: Colors.black,
@@ -533,13 +543,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
-                            reservedSize: 30, // Space for x-axis labels
-                            interval: tempInterval, // Use calculated interval
+                            reservedSize: 30,
+                            interval: tempInterval,
                             getTitlesWidget: (value, meta) {
                               return Padding(
-                                padding: const EdgeInsets.only(top: 8.0), // Add spacing above x-axis labels
+                                padding: const EdgeInsets.only(top: 8.0),
                                 child: Text(
-                                  value.toStringAsFixed(1), // Round to 1 decimal place
+                                  value.toStringAsFixed(1),
                                   style: TextStyle(
                                     fontSize: 10,
                                     color: Colors.black,
@@ -567,16 +577,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       ),
                     ),
                   ),
-                  // Trend Line Overlay
                   CustomPaint(
-                    size: Size(double.infinity, 200), // Match the size of the scatter plot
+                    size: Size(double.infinity, 200),
                     painter: TrendLinePainter(
                       trendLine: trendLine,
                       minX: minTemp,
                       maxX: maxTemp,
                       minY: minHumidity,
                       maxY: maxHumidity,
-                      color: Colors.red, // Trend line color
+                      color: Colors.red,
                     ),
                   ),
                 ],
@@ -588,26 +597,21 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-// Helper method to calculate intervals for axes
   double _calculateInterval(double min, double max) {
     final range = max - min;
-    if (range <= 0) return 1.0; // Default interval if range is invalid
+    if (range <= 0) return 1.0;
 
-    // Calculate a reasonable interval based on the range
-    if (range <= 1) return 0.2; // Small range, use smaller intervals
-    if (range <= 5) return 1.0; // Medium range, use intervals of 1
-    return (range / 5).ceilToDouble(); // Larger range, divide into 5 intervals
+    if (range <= 1) return 0.2;
+    if (range <= 5) return 1.0;
+    return (range / 5).ceilToDouble();
   }
-
 
   List<FlSpot> _calculateTrendLine(List<FlSpot> spots) {
     if (spots.isEmpty) return [];
 
-    // Calculate the mean of x and y values
     final meanX = spots.map((spot) => spot.x).reduce((a, b) => a + b) / spots.length;
     final meanY = spots.map((spot) => spot.y).reduce((a, b) => a + b) / spots.length;
 
-    // Calculate the slope (m) and intercept (b) for the trend line: y = mx + b
     double numerator = 0;
     double denominator = 0;
 
@@ -619,14 +623,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     final slope = numerator / denominator;
     final intercept = meanY - slope * meanX;
 
-    // Calculate the start and end points for the trend line
-    final startX = spots.map((spot) => spot.x).reduce((a, b) => a < b ? a : b); // Min x
-    final endX = spots.map((spot) => spot.x).reduce((a, b) => a > b ? a : b); // Max x
+    final startX = spots.map((spot) => spot.x).reduce((a, b) => a < b ? a : b);
+    final endX = spots.map((spot) => spot.x).reduce((a, b) => a > b ? a : b);
 
     final startY = slope * startX + intercept;
     final endY = slope * endX + intercept;
 
-    // Return the trend line as two points (start and end)
     return [
       FlSpot(startX, startY),
       FlSpot(endX, endY),
@@ -682,14 +684,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         backgroundColor: Colors.white,
         title: const Text('Analytics'),
       ),
-      body: Stack( // Use a Stack to overlay the sticky dropdown filters
+      body: Stack(
         children: [
-          // Scrollable Content
           SingleChildScrollView(
             child: Column(
-              mainAxisSize: MainAxisSize.min, // Allow the Column to expand as needed
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Logo and Title Section
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                   child: Row(
@@ -728,7 +728,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   ),
                 ),
 
-                // Chart Container
                 Container(
                   height: MediaQuery.of(context).size.height * 0.5,
                   margin: const EdgeInsets.all(16.0),
@@ -739,7 +738,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   ),
                   child: Column(
                     children: [
-                      // Subtitle and Sensor Checklist Dropdown
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -756,7 +754,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Chart
                       Expanded(
                         child: _selectedProductCode == null
                             ? const Center(child: Text('Please select a device'))
@@ -768,25 +765,21 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   ),
                 ),
 
-                // Insights Section
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                   child: _buildInsightsSection(),
                 ),
 
-                // Scatter Plot Section
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                   child: _buildScatterPlot(),
                 ),
 
-                // Add extra space at the bottom to ensure the dropdown filters don't overlap content
-                SizedBox(height: 100), // Adjust this height as needed
+                SizedBox(height: 100),
               ],
             ),
           ),
 
-          // Sticky Dropdown Filters at the Bottom
           Positioned(
             left: 0,
             right: 0,
@@ -799,14 +792,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
                     blurRadius: 10,
-                    offset: const Offset(0, -5), // Shadow at the top of the container
+                    offset: const Offset(0, -5),
                   ),
                 ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Time Range Dropdown
                   Container(
                     width: MediaQuery.of(context).size.width * 0.33,
                     decoration: BoxDecoration(
@@ -842,7 +834,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   ),
                   const SizedBox(width: 16),
 
-                  // Device Dropdown
                   Container(
                     width: MediaQuery.of(context).size.width * 0.33,
                     decoration: BoxDecoration(

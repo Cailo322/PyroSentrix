@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TrendAnalysisService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -10,6 +11,7 @@ class TrendAnalysisService {
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
   FlutterLocalNotificationsPlugin();
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  final Map<String, String> _deviceNames = {};
 
   // Define thresholds for each sensor
   final Map<String, double> sensorThresholds = {
@@ -30,16 +32,31 @@ class TrendAnalysisService {
   TrendAnalysisService._privateConstructor();
   factory TrendAnalysisService() => _instance;
 
-  void initialize() {
+  Future<void> initialize() async {
     const AndroidInitializationSettings initializationSettingsAndroid =
     AndroidInitializationSettings('@mipmap/ic_launcher');
     const InitializationSettings initializationSettings =
     InitializationSettings(android: initializationSettingsAndroid);
 
-    flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
     _currentUserEmail = _auth.currentUser?.email;
+    await _loadDeviceNames();
     _requestNotificationPermissions();
     _startMonitoringAuthorizedDevices();
+  }
+
+  Future<void> _loadDeviceNames() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.getKeys().forEach((key) {
+      if (key.startsWith('device_name_')) {
+        String productCode = key.replaceFirst('device_name_', '');
+        _deviceNames[productCode] = prefs.getString(key) ?? 'Device';
+      }
+    });
+  }
+
+  Future<String> _getDeviceName(String productCode) async {
+    return _deviceNames[productCode] ?? 'Device $productCode';
   }
 
   void _requestNotificationPermissions() async {
@@ -103,6 +120,7 @@ class TrendAnalysisService {
   Future<void> _analyzeProductTrends(String productCode) async {
     try {
       _notifiedSensors.clear();
+      final deviceName = await _getDeviceName(productCode);
 
       QuerySnapshot snapshot = await _firestore
           .collection('LSTM')
@@ -123,11 +141,11 @@ class TrendAnalysisService {
           .reversed
           .toList();
 
-      _analyzeAndNotifyForSensor(predictions, productCode, 'carbon_monoxide', 'Carbon Monoxide');
-      _analyzeAndNotifyForSensor(predictions, productCode, 'indoor_air_quality', 'Indoor Air Quality');
-      _analyzeAndNotifyForSensor(predictions, productCode, 'smoke_level', 'Smoke Level');
-      _analyzeAndNotifyForSensor(predictions, productCode, 'temperature_dht22', 'Temperature (DHT22)');
-      _analyzeAndNotifyForSensor(predictions, productCode, 'temperature_mlx90614', 'Temperature (MLX90614)');
+      _analyzeAndNotifyForSensor(predictions, deviceName, 'carbon_monoxide', 'Carbon Monoxide');
+      _analyzeAndNotifyForSensor(predictions, deviceName, 'indoor_air_quality', 'Indoor Air Quality');
+      _analyzeAndNotifyForSensor(predictions, deviceName, 'smoke_level', 'Smoke Level');
+      _analyzeAndNotifyForSensor(predictions, deviceName, 'temperature_dht22', 'Temperature (DHT22)');
+      _analyzeAndNotifyForSensor(predictions, deviceName, 'temperature_mlx90614', 'Temperature (MLX90614)');
     } catch (error) {
       print("Error analyzing trends for $productCode: $error");
     }
@@ -135,7 +153,7 @@ class TrendAnalysisService {
 
   void _analyzeAndNotifyForSensor(
       List<Map<String, dynamic>> predictions,
-      String productCode,
+      String deviceName,
       String sensorKey,
       String sensorName
       ) {
@@ -144,14 +162,14 @@ class TrendAnalysisService {
         .toList();
 
     if (_isUpwardTrend(sensorValues)) {
-      String title = "⚠️ $sensorName Alert ($productCode)";
+      String title = "📈 $deviceName: Heads Up!";
       String body = "$sensorName is projected to rise in the next 40 seconds!";
       _sendNotification(title, body);
     }
 
     if (!_notifiedSensors.contains(sensorKey) &&
         _hasPositiveJumpExceedingThreshold(sensorValues, sensorKey)) {
-      String title = "⚠️ $sensorName Alert ($productCode)";
+      String title = "📈 $deviceName: Heads Up!";
       String body = "$sensorName has a significant increase projected!";
       _sendNotification(title, body);
       _notifiedSensors.add(sensorKey);
