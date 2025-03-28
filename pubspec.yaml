@@ -83,6 +83,8 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/fire-station.png
+    - assets/PyroSentrix-Alarm.png
     - assets/bg-2.png
     - assets/Logo_NN.png
     - assets/bg.png

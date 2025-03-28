@@ -16,10 +16,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   late TextEditingController _nameController;
   late TextEditingController _addressController;
-  bool _isEditing = false;
   bool _isLoading = true;
   bool _showDetails = false;
   bool _updatingFireStations = false;
+  bool _isEditingName = false;
+  bool _isEditingAddress = false;
 
   List<dynamic> _fireStations = [];
   List<Device> _userDevices = [];
@@ -156,7 +157,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
 
         setState(() {
-          _isEditing = false;
+          _isEditingName = false;
+          _isEditingAddress = false;
           _updatingFireStations = false;
         });
       }
@@ -185,16 +187,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('Profile', style: TextStyle(fontFamily: 'Jost')),
+        title: Text('Profile', style: TextStyle(fontFamily: 'Jost', color: Colors.black)),
         centerTitle: true,
-        actions: [
-          if (!_isEditing && _showDetails)
-            IconButton(
-              icon: Icon(Icons.edit),
-              onPressed: () => setState(() => _isEditing = true),
-            ),
-        ],
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: IconThemeData(color: Colors.black),
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
@@ -214,8 +213,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _nameController.text,
                   style: TextStyle(
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Jost',
+                    fontWeight: FontWeight.w900,
+                    fontFamily: 'Inter',
                   ),
                 ),
                 Text(
@@ -223,7 +222,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey,
-                    fontFamily: 'Inter',
+                    fontFamily: 'Arimo',
                   ),
                 ),
               ],
@@ -231,7 +230,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           SizedBox(height: 20),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            padding: const EdgeInsets.symmetric(horizontal: 80.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -249,34 +248,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           SizedBox(height: 20),
+          Divider(color: Colors.grey[200], thickness: 2),
+          SizedBox(height: 10),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: _showDetails ? _buildDetailsSection() : _buildDevicesSection(),
             ),
           ),
-          if (_isEditing && _showDetails)
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: ElevatedButton(
-                onPressed: _updateUserData,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFFFDE59),
-                  minimumSize: Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: Text(
-                  'SAVE CHANGES',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -289,7 +268,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: isActive ? Color(0xFFFFDE59) : Colors.grey[200],
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             if (isActive)
               BoxShadow(
@@ -314,61 +293,107 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildDetailsSection() {
     return SingleChildScrollView(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Personal Information Section Header
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(vertical: 5),
+            child: Text(
+              'PERSONAL INFORMATION',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                color: Colors.grey[600],
+                letterSpacing: 1.5,
+              ),
+            ),
+          ),
+          SizedBox(height: 5),
           _buildEditableField(
             label: 'Name',
             controller: _nameController,
-            isEditing: _isEditing,
+            isEditing: _isEditingName,
+            onEditPressed: () {
+              setState(() {
+                _isEditingName = true;
+                _isEditingAddress = false;
+              });
+            },
           ),
           SizedBox(height: 20),
+          Divider(color: Colors.grey[200], thickness: 1),
           _buildEditableField(
             label: 'Address',
             controller: _addressController,
-            isEditing: _isEditing,
+            isEditing: _isEditingAddress,
+            onEditPressed: () {
+              setState(() {
+                _isEditingAddress = true;
+                _isEditingName = false;
+              });
+            },
           ),
           SizedBox(height: 20),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Nearest Fire Stations',
-                style: TextStyle(
-                  fontFamily: 'Jost',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[700],
-                ),
+          Divider(color: Colors.grey[200], thickness: 1),
+
+          // Fire Stations Section Header
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(vertical: 10),
+            child: Text(
+              'NEAREST FIRE STATIONS',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                color: Colors.grey[600],
+                letterSpacing: 1.5,
               ),
-              SizedBox(height: 10),
-              if (_updatingFireStations)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  child: Column(
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 8),
-                      Text(
-                        'Updating fire stations...',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
+            ),
+          ),
+          SizedBox(height: 10),
+
+          if (_updatingFireStations)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: Column(
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 8),
+                  Text(
+                    'Updating fire stations...',
+                    style: TextStyle(color: Colors.grey),
                   ),
-                )
-              else if (_fireStations.isEmpty)
-                Text(
-                  'No fire stations found for your address',
-                  style: TextStyle(color: Colors.grey),
-                )
-              else
-                ..._fireStations.map((station) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                ],
+              ),
+            )
+          else if (_fireStations.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: Text(
+                'No fire stations found for your address',
+                style: TextStyle(color: Colors.grey),
+              ),
+            )
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _fireStations.map((station) => Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12.0, top: 2.0),
+                      child: Image.asset(
+                        'assets/fire-station.png',
+                        width: 24,
+                        height: 24,
+                      ),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -387,12 +412,101 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ],
                       ),
                     ),
+                  ],
+                ),
+              )).toList(),
+            ),
+
+          if (_isEditingName || _isEditingAddress)
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: ElevatedButton(
+                onPressed: _updateUserData,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFFFFDE59),
+                  minimumSize: Size(double.infinity, 45),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(40),
                   ),
-                )).toList(),
-            ],
-          ),
+                ),
+                child: Text(
+                  'SAVE CHANGES',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
+    );
+  }
+  Widget _buildEditableField({
+    required String label,
+    required TextEditingController controller,
+    required bool isEditing,
+    required VoidCallback onEditPressed,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Jost',
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.black,
+              ),
+            ),
+            if (!isEditing)
+              IconButton(
+                icon: Icon(Icons.edit, size: 20, color: Colors.grey[600]),
+                onPressed: onEditPressed,
+              ),
+          ],
+        ),
+        SizedBox(height: 0), // Removed extra spacing
+        isEditing
+            ? Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(5),
+            border: Border.all(
+              color: Colors.deepOrange,
+              width: 1,
+            ),
+          ),
+          padding: EdgeInsets.symmetric(horizontal: 10),
+          child: TextField(
+            controller: controller,
+            enabled: true,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+            ),
+            style: TextStyle(fontFamily: 'Jost'),
+          ),
+        )
+            : Padding(
+          padding: const EdgeInsets.only(left: 2.0), // Reduced left padding
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              controller.text.isNotEmpty ? controller.text : 'Not provided',
+              style: TextStyle(
+                fontFamily: 'Jost',
+                fontSize: 16,
+                color: Colors.black,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -402,9 +516,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     if (_userDevices.isEmpty) {
-      return Center(
+      return Padding(
+        padding: const EdgeInsets.only(top: 110.0), // Adjust this value as needed
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start, // Changed from center
           children: [
             Image.asset('assets/nodevice.png', width: 150, height: 150),
             SizedBox(height: 20),
@@ -429,6 +544,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return Card(
           margin: EdgeInsets.symmetric(vertical: 8),
           elevation: 2,
+          color: Colors.orange[100],
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
@@ -436,7 +552,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             padding: const EdgeInsets.all(12.0),
             child: Row(
               children: [
-                Icon(Icons.devices, size: 30, color: Colors.deepOrange),
+                Image.asset(
+                  'assets/PyroSentrix-Alarm.png',
+                  width: 30,
+                  height: 30,
+                ),
                 SizedBox(width: 15),
                 Expanded(
                   child: Column(
@@ -490,47 +610,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildEditableField({
-    required String label,
-    required TextEditingController controller,
-    required bool isEditing,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Jost',
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[700],
-          ),
-        ),
-        SizedBox(height: 5),
-        Container(
-          decoration: BoxDecoration(
-            color: isEditing ? Colors.white : Colors.grey[200],
-            borderRadius: BorderRadius.circular(5),
-            border: Border.all(
-              color: isEditing ? Colors.deepOrange : Colors.transparent,
-              width: 1,
-            ),
-          ),
-          padding: EdgeInsets.symmetric(horizontal: 10),
-          child: TextField(
-            controller: controller,
-            enabled: isEditing,
-            decoration: InputDecoration(
-              border: InputBorder.none,
-            ),
-            style: TextStyle(fontFamily: 'Jost'),
-          ),
-        ),
-      ],
     );
   }
 }
