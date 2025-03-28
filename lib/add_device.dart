@@ -210,6 +210,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> with SingleTickerProv
           ),
           child: Container(
             padding: const EdgeInsets.all(20),
+            color: Colors.white, // This makes the background white
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

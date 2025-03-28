@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'custom_app_bar.dart';
 import 'call.dart';
-import 'notification_service.dart'; // Import the NotificationService
+import 'notification_service.dart';
 import 'package:flutter/foundation.dart';
 
 class MonitorScreen extends StatelessWidget {
-  final String productCode; // Accept productCode
+  final String productCode;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final NotificationService _notificationService = NotificationService();
   bool _isDialogOpen = false;
@@ -19,9 +19,8 @@ class MonitorScreen extends StatelessWidget {
 
   Future<Map<String, dynamic>?> fetchLatestImage() async {
     try {
-      // Use the productCode to query the corresponding collection
       QuerySnapshot querySnapshot = await _firestore
-          .collection(productCode) // Dynamic collection based on productCode
+          .collection(productCode)
           .orderBy('timestamp', descending: true)
           .limit(1)
           .get();
@@ -47,7 +46,6 @@ class MonitorScreen extends StatelessWidget {
       if (dialogStatusDoc.exists) {
         return !(dialogStatusDoc.data() as Map<String, dynamic>)['Dialogpop'];
       } else {
-        // If the document doesn't exist, create it with Dialogpop: false
         await _firestore.collection('DialogStatus').doc(productCode).set({'Dialogpop': false});
         return true;
       }
@@ -55,7 +53,7 @@ class MonitorScreen extends StatelessWidget {
       if (kDebugMode) {
         print('Error checking DialogStatus: $e');
       }
-      return true; // Default to showing the dialog if there's an error
+      return true;
     }
   }
 
@@ -91,7 +89,7 @@ class MonitorScreen extends StatelessWidget {
             stream: _firestore
                 .collection('SensorData')
                 .doc('FireAlarm')
-                .collection(productCode) // Dynamic productCode collection
+                .collection(productCode)
                 .orderBy('timestamp', descending: true)
                 .limit(1)
                 .snapshots(),
@@ -105,45 +103,43 @@ class MonitorScreen extends StatelessWidget {
               }
 
               var sensorData = sensorSnapshot.data!.docs.first.data();
-
-              // Check each sensor and build a list of warning messages if any threshold is exceeded
               List<String> allExceededWarnings = checkThresholds(sensorData, thresholdData);
               List<String> exceededWarningsForDialog = allExceededWarnings
                   .where((warning) => !_acknowledgedAlerts.contains(warning))
-                  .toList(); // Warnings that haven't been acknowledged, for dialog
+                  .toList();
 
-              // Determine the icon and message for the bottom section based on the sensor data
-              String bottomText = "";
-              String bottomIcon = 'assets/default.png';
+              // Determine caution sensors (75% close to threshold)
+              List<String> cautionSensors = [];
+              if (sensorData['humidity_dht22'] < thresholdData['humidity_threshold'] * 1.25) {
+                cautionSensors.add('HUMIDITY');
+              }
+              if (sensorData['temperature_dht22'] > thresholdData['temp_threshold'] * 0.75) {
+                cautionSensors.add('TEMP.1');
+              }
+              if (sensorData['carbon_monoxide'] > thresholdData['co_threshold'] * 0.75) {
+                cautionSensors.add('CO');
+              }
+              if (sensorData['smoke_level'] > thresholdData['smoke_threshold'] * 0.75) {
+                cautionSensors.add('SMOKE');
+              }
+              if (sensorData['temperature_mlx90614'] > thresholdData['temp_threshold'] * 0.75) {
+                cautionSensors.add('TEMP.2');
+              }
+              if (sensorData['indoor_air_quality'] > thresholdData['iaq_threshold'] * 0.75) {
+                cautionSensors.add('AIR QUALITY');
+              }
 
-              if (allExceededWarnings.isEmpty) {
-                bottomText = "All sensors are in normal level.";
-                bottomIcon = 'assets/normal.png';
-              } else {
-                List<String> cautionSensors = [];
-                List<String> fireSensors = [];
+              // Determine bottom display
+              String bottomText = "All sensors are in normal level.";
+              String bottomIcon = 'assets/normal.png';
 
-                for (var warning in allExceededWarnings) {
-                  if (warning.contains('nearing') || warning.contains('Caution')) {
-                    cautionSensors.add(warning.split(' ')[0]);
-                  } else if (warning.contains('above the safe threshold') ||
-                      warning.contains('dangerously high') ||
-                      warning.contains('unsafe level') ||
-                      warning.contains('fire risk') ||
-                      warning.contains('critically low') ||
-                      warning.contains('poor')) {
-                    fireSensors.add(warning.split(' ')[0]);
-                  }
-                }
-
-                if (fireSensors.isNotEmpty) {
-                  bottomText = "FIRE DETECTED! Please call your fire station immediately!";
-                  bottomIcon = 'assets/warning.png';
-                } else if (cautionSensors.isNotEmpty) {
-                  String sensorList = _formatSensorList(cautionSensors);
-                  bottomText = "CAUTION! $sensorList close to reaching abnormal levels. Please inspect your area immediately.";
-                  bottomIcon = 'assets/caution.png';
-                }
+              if (allExceededWarnings.isNotEmpty) {
+                bottomText = "FIRE DETECTED! Please call your fire station immediately!";
+                bottomIcon = 'assets/warning.png';
+              } else if (cautionSensors.isNotEmpty) {
+                String sensorList = _formatSensorList(cautionSensors);
+                bottomText = "CAUTION! $sensorList close to reaching abnormal levels. Please inspect your area immediately.";
+                bottomIcon = 'assets/caution.png';
               }
 
               // Alert pop up
@@ -152,11 +148,7 @@ class MonitorScreen extends StatelessWidget {
                   bool shouldShowDialog = await _shouldShowDialog();
                   if (shouldShowDialog) {
                     _isDialogOpen = true;
-
-                    // Update Dialogpop to true when the dialog is shown
                     await _updateDialogStatus(true);
-
-                    // Fetch the latest image
                     var latestImage = await fetchLatestImage();
 
                     showDialog(
@@ -164,22 +156,22 @@ class MonitorScreen extends StatelessWidget {
                       builder: (BuildContext context) {
                         return Dialog(
                           backgroundColor: Colors.white,
-                          insetPadding: EdgeInsets.zero, // Remove default padding
+                          insetPadding: EdgeInsets.zero,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8), // Sharp corners
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: ConstrainedBox(
-                            constraints: BoxConstraints(maxWidth: 100), // Set a maximum width for the card
+                            constraints: BoxConstraints(maxWidth: 100),
                             child: Container(
-                              padding: EdgeInsets.zero, // Remove padding from the container
+                              padding: EdgeInsets.zero,
                               child: Column(
-                                mainAxisSize: MainAxisSize.min, // Make the column as small as possible
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   SizedBox(height: 20),
                                   Image.asset(
-                                    'assets/warningpop_with-shadow.png', // Path to your image
-                                    width: 60, // Make the image bigger
-                                    height: 60, // Make the image bigger
+                                    'assets/warningpop_with-shadow.png',
+                                    width: 60,
+                                    height: 60,
                                   ),
                                   SizedBox(height: 8),
                                   Text(
@@ -190,10 +182,9 @@ class MonitorScreen extends StatelessWidget {
                                         fontFamily: 'Jura',
                                         color: Colors.red[900]),
                                   ),
-                                  // Text appears first
                                   SizedBox(height: 5),
                                   Padding(
-                                    padding: EdgeInsets.all(5), // Add padding only to the content
+                                    padding: EdgeInsets.all(5),
                                     child: Text(
                                       exceededWarningsForDialog.join("\n"),
                                       textAlign: TextAlign.center,
@@ -205,8 +196,7 @@ class MonitorScreen extends StatelessWidget {
                                       ),
                                     ),
                                   ),
-                              /*    SizedBox(height: 1), // Space between text and image
-                                  // Show the latest image below the text
+                                  SizedBox(height: 1),
                                   if (latestImage != null)
                                     Image.network(
                                       latestImage['imageUrl'],
@@ -216,10 +206,8 @@ class MonitorScreen extends StatelessWidget {
                                     ),
                                   if (latestImage == null)
                                     Image.asset('assets/About-pic1.jpg',
-                                        width: 120, height: 120), //filler picture only, this will be changed!!*/
+                                        width: 120, height: 120),
                                   SizedBox(height: 10),
-                                  // Buttons row
-                                  // Inside the showDialog widget (HUSH and CALL FIRESTATION buttons)
                                   Row(
                                     children: [
                                       Expanded(
@@ -232,17 +220,14 @@ class MonitorScreen extends StatelessWidget {
                                           ),
                                           onPressed: () async {
                                             try {
-                                              // Update the isHushed variable in Firestore
                                               await FirebaseFirestore.instance
                                                   .collection('BooleanConditions')
                                                   .doc('Alarm')
-                                                  .update({'isHushed': true}); // Update the isHushed field to true
-
-                                              // Acknowledge alerts when HUSH is pressed
+                                                  .update({'isHushed': true});
                                               _acknowledgedAlerts.addAll(exceededWarningsForDialog);
                                               _notificationService.stopAlarmSound();
                                               _isDialogOpen = false;
-                                              Navigator.of(context).pop(); // Close the dialog
+                                              Navigator.of(context).pop();
                                             } catch (e) {
                                               print('Error updating Firestore: $e');
                                             }
@@ -266,11 +251,10 @@ class MonitorScreen extends StatelessWidget {
                                             padding: EdgeInsets.zero,
                                           ),
                                           onPressed: () async {
-                                            // Acknowledge alerts when CALL FIRESTATION is pressed
                                             _acknowledgedAlerts.addAll(exceededWarningsForDialog);
                                             _notificationService.stopAlarmSound();
                                             _isDialogOpen = false;
-                                            Navigator.of(context).pop(); // Close the dialog
+                                            Navigator.of(context).pop();
                                             Navigator.push(context, MaterialPageRoute(builder: (context) => CallHelpScreen()));
                                           },
                                           child: Text(
@@ -288,7 +272,7 @@ class MonitorScreen extends StatelessWidget {
                         );
                       },
                     ).then((_) {
-                      _isDialogOpen = false; // Ensure the flag is reset when the dialog is close
+                      _isDialogOpen = false;
                     });
                   }
                 });
@@ -324,11 +308,11 @@ class MonitorScreen extends StatelessWidget {
                                 ),
                                 SizedBox(height: 3),
                                 Container(
-                                  height: 4,  // Height of the underline
-                                  width: 33,  // Width of the underline
+                                  height: 4,
+                                  width: 33,
                                   decoration: BoxDecoration(
-                                    color: Color(0xFF494949), // Color of the underline
-                                    borderRadius: BorderRadius.circular(5), // Rounded corners for the underline
+                                    color: Color(0xFF494949),
+                                    borderRadius: BorderRadius.circular(5),
                                   ),
                                 ),
                                 SizedBox(height: 20),
@@ -346,7 +330,7 @@ class MonitorScreen extends StatelessWidget {
                           ),
                           SizedBox(height: 30),
                           Padding(
-                            padding: EdgeInsets.only(bottom: 20.0), // Add bottom margin to the entire GridView
+                            padding: EdgeInsets.only(bottom: 20.0),
                             child: GridView.count(
                               shrinkWrap: true,
                               crossAxisCount: 2,
@@ -397,11 +381,11 @@ class MonitorScreen extends StatelessWidget {
                                   statusColor: determineStatusColor(sensorData['indoor_air_quality'], thresholdData['iaq_threshold'], 'iaq'),
                                   valueColor: determineStatusColor(sensorData['indoor_air_quality'], thresholdData['iaq_threshold'], 'iaq'),
                                   titleStyle: TextStyle(
-                                    fontSize: 17, // Modified font size
-                                    fontWeight: FontWeight.bold, // Same font weight as before
-                                    color: Color(0xFF494949), // Same color as before
-                                    fontFamily: 'Arimo', // Same font family as before
-                                  ), // Modify the font size for this title
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF494949),
+                                    fontFamily: 'Arimo',
+                                  ),
                                 ),
                               ],
                             ),
@@ -410,8 +394,6 @@ class MonitorScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-
-                  // Display the bottom text and icon
                   Padding(
                     padding: EdgeInsets.all(9.0),
                     child: Row(
@@ -451,19 +433,18 @@ class MonitorScreen extends StatelessWidget {
                                     fontWeight: FontWeight.w700,
                                     color: Colors.grey[700],
                                     fontFamily: 'Arimo',
-                                    height: 1.3, // Adjusted line spacing
+                                    height: 1.3,
                                   ),
                                 ),
                               ],
                             ),
-                            textAlign: TextAlign.left, // Align text to the center for better readability
-                            softWrap: true, // Ensure the text wraps to the next line
+                            textAlign: TextAlign.left,
+                            softWrap: true,
                           ),
                         ),
                       ],
                     ),
                   ),
-
                 ],
               );
             },
@@ -478,66 +459,52 @@ class MonitorScreen extends StatelessWidget {
 
     if (sensorData['humidity_dht22'] < thresholdData['humidity_threshold']) {
       warnings.add('Humidity levels are dangerously low. This increases fire risk and may impact air quality.');
-    } else if (
-    sensorData['humidity_dht22'] < thresholdData['humidity_threshold'] * 1.25
-    ) {
-      warnings.add('Humidity levels are dropping and approaching unsafe thresholds. Monitor closely.');
     }
 
     if (sensorData['temperature_dht22'] > thresholdData['temp_threshold']) {
       warnings.add('Temperature (DHT22) has exceeded safe limits. Potential fire risk, take immediate action.');
-    } else if (sensorData['temperature_dht22'] > thresholdData['temp_threshold'] * 0.75) {
-      warnings.add('Temperature (DHT22) is rising and nearing unsafe levels. Monitor the area for any signs of fire.');
     }
 
     if (sensorData['carbon_monoxide'] > thresholdData['co_threshold']) {
       warnings.add('Carbon monoxide levels are dangerously high. Potential fire risk, take immediate action.');
-    } else if (sensorData['carbon_monoxide'] > thresholdData['co_threshold'] * 0.75) {
-      warnings.add('Carbon monoxide levels are rising. Monitor the area for any signs of fire.');
     }
+
     if (sensorData['smoke_level'] > thresholdData['smoke_threshold']) {
       warnings.add('High smoke levels detected. Potential fire risk, take immediate action.');
-    } else if (sensorData['smoke_level'] > thresholdData['smoke_threshold'] * 0.75) {
-      warnings.add('Smoke levels are rising. Monitor the area for any signs of fire.');
     }
 
     if (sensorData['temperature_mlx90614'] > thresholdData['temp_threshold']) {
       warnings.add('Temperature (MLX90614) has exceeded safe limits. Potential fire risk, take immediate action.');
-    } else if (sensorData['temperature_mlx90614'] > thresholdData['temp_threshold'] * 0.75) {
-      warnings.add('Temperature (MLX90614) is rising nearing unsafe levels. Monitor the area for any signs of fire.');
     }
 
     if (sensorData['indoor_air_quality'] > thresholdData['iaq_threshold']) {
       warnings.add('Indoor air quality is poor. Potential fire risk, take immediate action.');
-    } else if (sensorData['indoor_air_quality'] > thresholdData['iaq_threshold'] * 0.75) {
-      warnings.add(' Indoor air quality is deteriorating. Monitor the area for any signs of fire.');
     }
 
-    return warnings; // Empty if no thresholds are exceeded
+    return warnings;
   }
-
 
   String determineStatus(dynamic value, dynamic threshold, String sensorType) {
     if (sensorType == 'humidity') {
-      if (value < threshold) return 'Abnormal'; // Humidity too low
-      if (value < threshold * 1.25) return 'Caution'; // Humidity nearing low threshold
-      return 'Normal'; // Humidity is normal
+      if (value < threshold) return 'Abnormal';
+      if (value < threshold * 1.25) return 'Caution';
+      return 'Normal';
     } else {
-      if (value > threshold) return 'Abnormal'; // Sensor exceeds the safe threshold
-      if (value > threshold * 0.75) return 'Caution'; // Sensor nearing the threshold
-      return 'Normal'; // Sensor is in a safe range
+      if (value > threshold) return 'Abnormal';
+      if (value > threshold * 0.75) return 'Caution';
+      return 'Normal';
     }
   }
 
   Color determineStatusColor(dynamic value, dynamic threshold, String sensorType) {
     if (sensorType == 'humidity') {
-      if (value < threshold) return Color(0xFFF20606); // Red for Abnormal (low humidity)
-      if (value < threshold * 1.25) return Color(0xFFFF7020); // Orange for Caution (nearing low humidity)
-      return Color(0xFF039F00); // Green for Normal humidity
+      if (value < threshold) return Color(0xFFF20606);
+      if (value < threshold * 1.25) return Color(0xFFFF7020);
+      return Color(0xFF039F00);
     } else {
-      if (value > threshold) return Color(0xFFF20606); // Red for Abnormal (high value for other sensors)
-      if (value > threshold * 0.75) return Color(0xFFFF7020); // Orange for Caution (nearing high threshold)
-      return Color(0xFF039F00); // Green for Normal
+      if (value > threshold) return Color(0xFFF20606);
+      if (value > threshold * 0.75) return Color(0xFFFF7020);
+      return Color(0xFF039F00);
     }
   }
 
@@ -551,13 +518,9 @@ class MonitorScreen extends StatelessWidget {
       'Air Quality': 'Air Quality',
     };
 
-    // Map sensor codes to descriptions
     List<String> fullSensorNames = sensors.map((s) => sensorDescriptions[s] ?? s).toList();
-
-    // Determine if we need 'is' or 'are'
     String verb = fullSensorNames.length == 1 ? "is" : "are";
 
-    // Format the list with proper grammar
     if (fullSensorNames.length == 1) {
       return "${fullSensorNames.first} $verb";
     }
@@ -573,7 +536,6 @@ class SensorCard extends StatelessWidget {
   final Color valueColor;
   final TextStyle? titleStyle;
 
-  // Default sensor title style
   static const TextStyle defaultTitleStyle = TextStyle(
     fontSize: 18,
     fontWeight: FontWeight.bold,
@@ -620,42 +582,42 @@ class SensorCard extends StatelessWidget {
           backgroundColor: Colors.white,
           content: IntrinsicHeight(
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center, // Center the image and text vertically
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Image.asset(
-                  'assets/person.png', // Path to your image
-                  width: 90, // Make the image bigger
-                  height: 90, // Make the image bigger
+                  'assets/person.png',
+                  width: 90,
+                  height: 90,
                 ),
-                SizedBox(width: 10), // Add space between the image and the text
+                SizedBox(width: 10),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start, // Align text to the left
-                    mainAxisSize: MainAxisSize.min, // Allow the column to shrink-wrap its content
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         title,
                         style: TextStyle(
-                          fontSize: 18, // Adjust font size for the title
-                          fontWeight: FontWeight.bold, // Make the title bold
-                          color: Colors.black, // Set title color
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
                         ),
                       ),
-                      SizedBox(height: 4), // Add a small space between the title and subtitle
+                      SizedBox(height: 4),
                       Text(
                         'Sensor Information',
                         style: TextStyle(
-                          fontStyle: FontStyle.italic, // Italicize the text
-                          color: Colors.grey, // Set the text color to grey
-                          fontSize: 14, // Adjust the font size if needed
+                          fontStyle: FontStyle.italic,
+                          color: Colors.grey,
+                          fontSize: 14,
                         ),
                       ),
-                      SizedBox(height: 8), // Add space between the subtitle and sensor info
+                      SizedBox(height: 8),
                       Text(
                         sensorInfo,
                         style: TextStyle(
-                          fontSize: 14, // Adjust font size for the sensor info
-                          color: Colors.black87, // Set text color
+                          fontSize: 14,
+                          color: Colors.black87,
                         ),
                       ),
                     ],
@@ -664,10 +626,9 @@ class SensorCard extends StatelessWidget {
               ],
             ),
           ),
-          contentPadding: EdgeInsets.fromLTRB(16, 20, 16, 10), // Adjust spacing here
-          actionsAlignment: MainAxisAlignment.center, // Center-align the actions (OK button)
-          actions: [
-          ],
+          contentPadding: EdgeInsets.fromLTRB(16, 20, 16, 10),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [],
         );
       },
     );
@@ -695,7 +656,6 @@ class SensorCard extends StatelessWidget {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            // Card Content
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -752,7 +712,6 @@ class SensorCard extends StatelessWidget {
                 ),
               ],
             ),
-            // Add the warning icon outside the top-right corner of the card
             if (status == 'Abnormal')
               Positioned(
                 top: -5,
@@ -763,7 +722,6 @@ class SensorCard extends StatelessWidget {
                   size: 30,
                 ),
               ),
-            // Add the humidity icon in the lower right corner for the humidity sensor
             if (title == 'HUMIDITY')
               Positioned(
                 bottom: -5,

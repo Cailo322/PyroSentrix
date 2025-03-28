@@ -147,12 +147,8 @@ class _CustomDrawerState extends State<CustomDrawer> {
                             children: [
                               CircleAvatar(
                                 radius: 20,
-                                backgroundColor: Colors.white,
-                                child: Icon(
-                                  Icons.person,
-                                  size: 27,
-                                  color: Colors.amber[600],
-                                ),
+                                backgroundColor: Colors.deepOrange,
+                                child: Icon(Icons.person, size: 25, color: Colors.white),
                               ),
                               SizedBox(width: 10),
                               Text(
