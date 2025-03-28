@@ -165,7 +165,15 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
           await Future.delayed(Duration(seconds: 1));
           String? imageUrl = await _fetchLatestImageUrl();
 
+          // Ensure alarmCount increments correctly by checking the latest alarm first
+          if (alarmLogs.isNotEmpty) {
+            var lastAlarmId = alarmLogs.first['id'];
+            if (lastAlarmId != null && lastAlarmId.startsWith('Alarm ')) {
+              alarmCount = int.parse(lastAlarmId.split(' ')[1]);
+            }
+          }
           alarmCount++;
+
           var alarmData = {
             'id': 'Alarm $alarmCount',
             'timestamp': data['timestamp'],
@@ -651,56 +659,85 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
             ),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 5),
-            ...alarm['values'].entries.map<Widget>((entry) {
-              if (entry.key == 'timestamp') return SizedBox.shrink();
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: 5),
+              ...alarm['values'].entries.map<Widget>((entry) {
+                if (entry.key == 'timestamp') return SizedBox.shrink();
 
-              var sensorInfo = sensorDetails[entry.key] ?? {'name': entry.key, 'unit': ''};
-              String sensorName = sensorInfo['name']!;
-              String sensorUnit = sensorInfo['unit']!;
-              bool exceedsThreshold = _exceedsThresholdForSensor(entry.key, entry.value, thresholds);
+                var sensorInfo = sensorDetails[entry.key] ?? {'name': entry.key, 'unit': ''};
+                String sensorName = sensorInfo['name']!;
+                String sensorUnit = sensorInfo['unit']!;
+                bool exceedsThreshold = _exceedsThresholdForSensor(entry.key, entry.value, thresholds);
 
-              return Container(
-                decoration: exceedsThreshold
-                    ? BoxDecoration(
-                  color: Colors.red[100],
-                  borderRadius: BorderRadius.circular(5),
-                  border: Border.all(
-                    color: Colors.red[800]!,
-                    width: 1.0,
+                return Container(
+                  decoration: exceedsThreshold
+                      ? BoxDecoration(
+                    color: Colors.red[100],
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(
+                      color: Colors.red[800]!,
+                      width: 1.0,
+                    ),
+                  )
+                      : null,
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  margin: EdgeInsets.symmetric(vertical: 1),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "$sensorName:",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: exceedsThreshold ? Colors.red[700] : Colors.black,
+                        ),
+                      ),
+                      Text(
+                        "${entry.value} $sensorUnit",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: exceedsThreshold ? Colors.red[700] : Colors.black,
+                        ),
+                      ),
+                    ],
                   ),
-                )
-                    : null,
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                margin: EdgeInsets.symmetric(vertical: 1),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "$sensorName:",
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: exceedsThreshold ? Colors.red[700] : Colors.black,
-                      ),
+                );
+              }).toList(),
+
+              // Add divider and image section
+              if (alarm['imageUrl'] != null) ...[
+                Divider(thickness: 1, color: Colors.grey),
+                SizedBox(height: 10),
+                Center(
+                  child: Text(
+                    "Image Captured",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
-                    Text(
-                      "${entry.value} $sensorUnit",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: exceedsThreshold ? Colors.red[700] : Colors.black,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              );
-            }).toList(),
-          ],
+                SizedBox(height: 10),
+                Center(
+                  child: Image.network(
+                    alarm['imageUrl'],
+                    width: 200,
+                    height: 200,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Text('Failed to load image');
+                    },
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
         actions: [
           TextButton(

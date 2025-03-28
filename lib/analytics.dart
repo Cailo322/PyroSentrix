@@ -77,6 +77,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   };
   bool _showLegend = true;
   Map<String, String> _deviceNames = {};
+  bool _isLoading = true;
 
   final List<String> _timeRanges = [
     'Current',
@@ -153,13 +154,94 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           _selectedProductCode = _devices.first.productCode;
           _startSensorDataListener();
         }
+        _isLoading = false;
       });
     } catch (e) {
       print('Error fetching devices: $e');
+      setState(() {
+        _isLoading = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to fetch devices: $e')),
       );
     }
+  }
+
+  Widget _buildNoDeviceUI() {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Image.asset('assets/official-logo.png', height: 100),
+                SizedBox(width: 15),
+                Padding(
+                  padding: const EdgeInsets.only(top: 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Analytics',
+                        style: TextStyle(
+                          color: Color(0xFF494949),
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Container(
+                        width: 25,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Color(0xFF494949),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 15),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 19),
+            child: Divider(color: Colors.grey[200], thickness: 5),
+          ),
+          SizedBox(height: 69),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset('assets/nodevice.png', width: 200, height: 200),
+              SizedBox(height: 20),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  "You don't have any IoT devices connected to your account.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18),
+                ),
+              ),
+              SizedBox(height: 10),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  "Please add a device or ask your household admin to share access with you.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 10),
+        ],
+      ),
+    );
   }
 
   void _startSensorDataListener() {
@@ -682,9 +764,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        title: const Text('Analytics'),
+        elevation: 0,
+        iconTheme: IconThemeData(color: Colors.black),
       ),
-      body: Stack(
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : _devices.isEmpty
+          ? _buildNoDeviceUI()
+          : Stack(
         children: [
           SingleChildScrollView(
             child: Column(
@@ -727,7 +814,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     ],
                   ),
                 ),
-
                 Container(
                   height: MediaQuery.of(context).size.height * 0.5,
                   margin: const EdgeInsets.all(16.0),
@@ -753,33 +839,26 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-
                       Expanded(
-                        child: _selectedProductCode == null
-                            ? const Center(child: Text('Please select a device'))
-                            : _sensorData.isEmpty
+                        child: _sensorData.isEmpty
                             ? const Center(child: CircularProgressIndicator())
                             : _buildChart(),
                       ),
                     ],
                   ),
                 ),
-
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                   child: _buildInsightsSection(),
                 ),
-
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                   child: _buildScatterPlot(),
                 ),
-
                 SizedBox(height: 100),
               ],
             ),
           ),
-
           Positioned(
             left: 0,
             right: 0,
@@ -833,7 +912,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
-
                   Container(
                     width: MediaQuery.of(context).size.width * 0.33,
                     decoration: BoxDecoration(
