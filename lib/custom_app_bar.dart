@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'alarmlogs.dart'; // Import the AlarmLogScreen widget
+import 'alarmlogs.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'monitor.dart'; // Ensure this import is correct for your MonitorScreen
-import 'device_provider.dart'; // Import the DeviceProvider from device_provider.dart
-import 'package:provider/provider.dart'; // Add this import
-import 'package:shared_preferences/shared_preferences.dart'; // Add this import
+import 'monitor.dart';
+import 'device_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'profile.dart'; // Added for ProfileScreen navigation
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? selectedProductCode;
@@ -115,45 +116,57 @@ class _CustomDrawerState extends State<CustomDrawer> {
                     ],
                   ),
                   SizedBox(height: 15),
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.5), // Shadow color
-                              spreadRadius: 1, // Spread radius
-                              blurRadius: 4, // Blur radius
-                              offset: Offset(0, 3), // Shadow offset
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 20,
-                              backgroundColor: Colors.white,
-                              child: Icon(
-                                Icons.person,
-                                size: 27,
-                                color: Colors.amber[600],
+                  // Clickable User Card
+                  GestureDetector(
+                    onTap: () {
+                      if (!isNavigating) {
+                        setState(() => isNavigating = true);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => ProfileScreen()),
+                        ).then((_) => setState(() => isNavigating = false));
+                      }
+                    },
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.5),
+                                spreadRadius: 1,
+                                blurRadius: 4,
+                                offset: Offset(0, 3),
                               ),
-                            ),
-                            SizedBox(width: 10),
-                            Text(
-                              userName ?? 'Loading...',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.black,
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundColor: Colors.white,
+                                child: Icon(
+                                  Icons.person,
+                                  size: 27,
+                                  color: Colors.amber[600],
+                                ),
                               ),
-                            ),
-                          ],
+                              SizedBox(width: 10),
+                              Text(
+                                userName ?? 'Loading...',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -203,7 +216,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
       leading: Image.asset(asset, width: 40, height: 27, fit: BoxFit.contain),
       title: Text(title, style: TextStyle(color: isRed ? Colors.red : Color(0xFF494949), fontSize: 17, fontWeight: isRed || isLogout ? FontWeight.bold : FontWeight.normal)),
       onTap: () async {
-        if (isNavigating) return; // Prevent multiple navigation attempts
+        if (isNavigating) return;
         isNavigating = true;
 
         if (isMonitor) {
@@ -216,14 +229,9 @@ class _CustomDrawerState extends State<CustomDrawer> {
         } else if (isAnalytics) {
           await Navigator.pushNamed(context, '/AnalyticsScreen');
         } else if (isLogout) {
-          // Clear the login state from SharedPreferences
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('isLoggedIn', false);
-
-          // Sign out from Firebase
           await FirebaseAuth.instance.signOut();
-
-          // Navigate to the login screen
           Navigator.of(context).pushReplacementNamed('/LoginScreen');
         } else if (route.isNotEmpty) {
           await Navigator.pushNamed(context, route);

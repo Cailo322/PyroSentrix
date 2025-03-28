@@ -17,6 +17,7 @@ import 'reset_system.dart';
 import 'alarmlogs.dart';
 import 'device_provider.dart';
 import 'analytics.dart';
+import 'profile.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -86,6 +87,7 @@ class MyApp extends StatelessWidget {
         '/LoginScreen': (context) => LoginScreen(),
         '/AnalyticsScreen': (context) => AnalyticsScreen(),
         '/AboutScreen': (context) => AboutScreen(),
+        '/ProfileScreen': (context) => ProfileScreen(),
       },
     );
   }
