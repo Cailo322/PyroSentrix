@@ -319,6 +319,8 @@ class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateM
                             _deleteDevice(context, doc);
                           } else if (value == 'add_people') {
                             _addPeople(context, doc);
+                          } else if (value == 'view_shared') {
+                            _showSharedUsers(context, doc);
                           }
                         },
                         itemBuilder: (context) => [
@@ -326,11 +328,16 @@ class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateM
                             value: 'details',
                             child: Text('Details', style: TextStyle(color: Colors.black)),
                           ),
-                          if (isAdmin)
+                          if (isAdmin) ...[
                             PopupMenuItem(
                               value: 'add_people',
                               child: Text('Add People', style: TextStyle(color: Colors.black)),
                             ),
+                            PopupMenuItem(
+                              value: 'view_shared',
+                              child: Text('Shared Users', style: TextStyle(color: Colors.black)),
+                            ),
+                          ],
                           PopupMenuItem(
                             value: 'delete',
                             child: Text('Delete', style: TextStyle(color: Colors.red)),
@@ -478,6 +485,78 @@ class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateM
           ],
         );
       },
+    );
+  }
+
+  Future<void> _showSharedUsers(BuildContext context, DocumentSnapshot doc) async {
+    final sharedUsers = List<String>.from(doc['shared_users'] ?? []);
+    if (sharedUsers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No shared users for this device')),
+      );
+      return;
+    }
+
+    // Fetch user names from Firestore
+    final usersSnapshot = await _firestore.collection('users')
+        .where('email', whereIn: sharedUsers)
+        .get();
+
+    final userMap = { for (var doc in usersSnapshot.docs) doc['email'] : doc['name'] };
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Shared Users', style: TextStyle(fontFamily: 'Jost')),
+          content: Container(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: sharedUsers.length,
+              itemBuilder: (context, index) {
+                final email = sharedUsers[index];
+                final name = userMap[email] ?? email;
+
+                return Card(
+                  margin: EdgeInsets.symmetric(vertical: 4),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      child: Icon(Icons.person),
+                      backgroundColor: Colors.grey[200],
+                    ),
+                    title: Text(name, style: TextStyle(fontFamily: 'Jost')),
+                    subtitle: Text(email, style: TextStyle(fontFamily: 'Inter')),
+                    trailing: IconButton(
+                      icon: Icon(Icons.remove_circle, color: Colors.red),
+                      onPressed: () async {
+                        await _removeSharedUser(doc.id, email);
+                        Navigator.of(context).pop();
+                        _showSharedUsers(context, doc);
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Close', style: TextStyle(fontFamily: 'Jost')),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _removeSharedUser(String docId, String email) async {
+    await _firestore.collection('ProductActivation').doc(docId).update({
+      'shared_users': FieldValue.arrayRemove([email])
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('User removed successfully')),
     );
   }
 }

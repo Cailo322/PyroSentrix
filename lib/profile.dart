@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'api_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -11,13 +12,16 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ApiService _apiService = ApiService();
 
   late TextEditingController _nameController;
   late TextEditingController _addressController;
   bool _isEditing = false;
   bool _isLoading = true;
   bool _showDetails = false;
+  bool _updatingFireStations = false;
 
+  List<dynamic> _fireStations = [];
   List<Device> _userDevices = [];
   bool _loadingDevices = false;
   Map<String, String> _deviceNames = {};
@@ -54,6 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           setState(() {
             _nameController.text = userDoc['name'] ?? '';
             _addressController.text = userDoc['address'] ?? '';
+            _fireStations = userDoc['fire_stations'] ?? [];
             _isLoading = false;
           });
         }
@@ -115,17 +120,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       User? user = _auth.currentUser;
       if (user != null) {
+        setState(() => _updatingFireStations = true);
+
+        final newAddress = _addressController.text.trim();
+        final oldAddress = (await _firestore.collection('users').doc(user.uid).get())['address'] ?? '';
+
         await _firestore.collection('users').doc(user.uid).update({
           'name': _nameController.text.trim(),
-          'address': _addressController.text.trim(),
+          'address': newAddress,
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Profile updated successfully!')),
-        );
-        setState(() => _isEditing = false);
+
+        if (newAddress.toLowerCase() != oldAddress.toLowerCase()) {
+          try {
+            final stations = await _apiService.fetchFireStations(newAddress);
+            await _firestore.collection('users').doc(user.uid).update({
+              'fire_stations': stations,
+            });
+            setState(() => _fireStations = stations);
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Profile and fire stations updated successfully!')),
+            );
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Profile updated but fire station update failed'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Profile updated successfully!')),
+          );
+        }
+
+        setState(() {
+          _isEditing = false;
+          _updatingFireStations = false;
+        });
       }
     } catch (e) {
-      _showError('Failed to update profile');
+      setState(() => _updatingFireStations = false);
+      _showError('Failed to update profile: ${e.toString()}');
     }
   }
 
@@ -163,7 +200,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ? Center(child: CircularProgressIndicator())
           : Column(
         children: [
-          // Profile Header
           Padding(
             padding: const EdgeInsets.only(top: 20.0),
             child: Column(
@@ -194,8 +230,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           SizedBox(height: 20),
-
-          // Section Selector
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0),
             child: Row(
@@ -215,16 +249,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           SizedBox(height: 20),
-
-          // Content Area
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: _showDetails ? _buildDetailsSection() : _buildDevicesSection(),
             ),
           ),
-
-          // Save Button
           if (_isEditing && _showDetails)
             Padding(
               padding: const EdgeInsets.all(20.0),
@@ -295,6 +325,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
             label: 'Address',
             controller: _addressController,
             isEditing: _isEditing,
+          ),
+          SizedBox(height: 20),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Nearest Fire Stations',
+                style: TextStyle(
+                  fontFamily: 'Jost',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[700],
+                ),
+              ),
+              SizedBox(height: 10),
+              if (_updatingFireStations)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: Column(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 8),
+                      Text(
+                        'Updating fire stations...',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                )
+              else if (_fireStations.isEmpty)
+                Text(
+                  'No fire stations found for your address',
+                  style: TextStyle(color: Colors.grey),
+                )
+              else
+                ..._fireStations.map((station) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            station['name'] ?? 'Fire Station',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            '${station['distance_km']} km away',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )).toList(),
+            ],
           ),
         ],
       ),
