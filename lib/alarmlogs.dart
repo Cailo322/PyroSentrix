@@ -25,6 +25,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
   StreamSubscription? _sensorSubscription;
   Map<String, String> _deviceNames = {};
   bool _isLoading = true;
+  DateTime? lastAlarmTime;
 
   static const List<String> months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -129,12 +130,10 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         filteredAlarmLogs = alarmLogs;
 
         if (alarmLogs.isNotEmpty) {
-          // Set default month and year based on latest alarm
           DateTime latestDate = DateTime.parse(alarmLogs.first['timestamp']);
           String latestMonth = months[latestDate.month - 1];
           String latestYear = latestDate.year.toString();
 
-          // Update selected month and year
           selectedMonths = {for (var month in months) month: false};
           selectedMonths[latestMonth] = true;
           selectedYear = latestYear;
@@ -170,26 +169,37 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
       var thresholds = thresholdDoc.data()!;
 
       if (_exceedsThreshold(data, thresholds)) {
+        if (lastAlarmTime != null && DateTime.now().difference(lastAlarmTime!) < Duration(seconds: 5)) {
+          return;
+        }
+
         var alarmStatusDoc = await _firestore
             .collection('AlarmStatus')
             .doc(_selectedProductCode)
             .get();
 
-        if (!alarmStatusDoc.exists || alarmStatusDoc['AlarmLogged'] == false) {
+        bool isDuplicate = alarmLogs.any((alarm) =>
+        alarm['timestamp'] == data['timestamp'] &&
+            alarm['values'] == data);
+
+        if (!alarmStatusDoc.exists ||
+            (alarmStatusDoc['AlarmLogged'] == false && !isDuplicate)) {
+          lastAlarmTime = DateTime.now();
           String sensorDataDocId = latestDoc.id;
-          await Future.delayed(Duration(seconds: 1));
+          await Future.delayed(Duration(seconds: 2));
           String? imageUrl = await _fetchLatestImageUrl();
 
+          int newAlarmCount = alarmCount;
           if (alarmLogs.isNotEmpty) {
             var lastAlarmId = alarmLogs.first['id'];
             if (lastAlarmId != null && lastAlarmId.startsWith('Alarm ')) {
-              alarmCount = int.parse(lastAlarmId.split(' ')[1]);
+              newAlarmCount = int.parse(lastAlarmId.split(' ')[1]);
             }
           }
-          alarmCount++;
+          newAlarmCount++;
 
           var alarmData = {
-            'id': 'Alarm $alarmCount',
+            'id': 'Alarm $newAlarmCount',
             'timestamp': data['timestamp'],
             'values': data,
             'sensorDataDocId': sensorDataDocId,
@@ -208,13 +218,22 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
               .doc(_selectedProductCode)
               .set({'AlarmLogged': true}, SetOptions(merge: true));
 
-          setState(() {
-            alarmLogs.insert(0, alarmData);
-            _filterAlarms();
-          });
+          if (!_isDuplicateAlarm(alarmData)) {
+            setState(() {
+              alarmCount = newAlarmCount;
+              alarmLogs.insert(0, alarmData);
+              _filterAlarms();
+            });
+          }
         }
       }
     });
+  }
+
+  bool _isDuplicateAlarm(Map<String, dynamic> newAlarm) {
+    return alarmLogs.any((existingAlarm) =>
+    existingAlarm['timestamp'] == newAlarm['timestamp'] &&
+        existingAlarm['id'] == newAlarm['id']);
   }
 
   Widget _buildNoDeviceUI() {
@@ -312,13 +331,11 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
   }
 
   Widget _buildAlarmLogsContent() {
-    // Count how many months are selected
     int selectedMonthCount = selectedMonths.values.where((selected) => selected).length;
     String? singleSelectedMonth = selectedMonthCount == 1
         ? selectedMonths.entries.firstWhere((entry) => entry.value).key
         : null;
 
-    // Check if no months are selected
     bool noMonthsSelected = selectedMonthCount == 0;
 
     return Container(
@@ -438,7 +455,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                   ],
                 ),
                 SizedBox(height: 10),
-                // Show month/year label if only one month is selected
                 if (singleSelectedMonth != null && selectedYear != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8.0),
@@ -465,7 +481,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                       ],
                     ),
                   )
-                // Show year label if no months are selected
                 else if (noMonthsSelected && selectedYear != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8.0),
@@ -532,7 +547,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Device Dropdown
                 Expanded(
                   child: Container(
                     height: 50,
@@ -571,7 +585,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                   ),
                 ),
                 SizedBox(width: 10),
-                // Month Dropdown
                 Expanded(
                   child: Container(
                     height: 50,
@@ -650,7 +663,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                   ),
                 ),
                 SizedBox(width: 10),
-                // Year Dropdown
                 Expanded(
                   child: Container(
                     height: 50,
@@ -904,16 +916,13 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
           int month = dateTime.month;
           int year = dateTime.year;
 
-          // Check if any month is selected
           bool anyMonthSelected = selectedMonths.containsValue(true);
           bool matchesMonth = !anyMonthSelected;
 
-          // If specific months are selected, check if current month matches
           if (anyMonthSelected) {
             matchesMonth = selectedMonths[months[month - 1]] ?? false;
           }
 
-          // Check year
           bool matchesYear = selectedYear == null || year == int.parse(selectedYear!);
 
           return matchesMonth && matchesYear;
