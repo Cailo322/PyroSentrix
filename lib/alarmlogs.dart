@@ -18,7 +18,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
   List<Map<String, dynamic>> alarmLogs = [];
   List<Map<String, dynamic>> filteredAlarmLogs = [];
   int alarmCount = 0;
-  String? selectedMonth;
   String? selectedYear;
   String? _selectedProductCode;
   List<Device> _devices = [];
@@ -27,12 +26,16 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
   Map<String, String> _deviceNames = {};
   bool _isLoading = true;
 
-  final List<String> months = [
+  static const List<String> months = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
   final List<String> years = ['2023', '2024', '2025'];
+
+  Map<String, bool> selectedMonths = {
+    for (var month in months) month: false
+  };
 
   @override
   void initState() {
@@ -111,6 +114,8 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         .orderBy('timestamp', descending: true)
         .snapshots()
         .listen((snapshot) {
+      if (snapshot.docs.isEmpty) return;
+
       setState(() {
         alarmLogs = snapshot.docs.map((doc) {
           var data = doc.data();
@@ -124,6 +129,16 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         filteredAlarmLogs = alarmLogs;
 
         if (alarmLogs.isNotEmpty) {
+          // Set default month and year based on latest alarm
+          DateTime latestDate = DateTime.parse(alarmLogs.first['timestamp']);
+          String latestMonth = months[latestDate.month - 1];
+          String latestYear = latestDate.year.toString();
+
+          // Update selected month and year
+          selectedMonths = {for (var month in months) month: false};
+          selectedMonths[latestMonth] = true;
+          selectedYear = latestYear;
+
           var lastAlarmId = alarmLogs.first['id'];
           if (lastAlarmId != null && lastAlarmId.startsWith('Alarm ')) {
             alarmCount = int.parse(lastAlarmId.split(' ')[1]);
@@ -165,7 +180,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
           await Future.delayed(Duration(seconds: 1));
           String? imageUrl = await _fetchLatestImageUrl();
 
-          // Ensure alarmCount increments correctly by checking the latest alarm first
           if (alarmLogs.isNotEmpty) {
             var lastAlarmId = alarmLogs.first['id'];
             if (lastAlarmId != null && lastAlarmId.startsWith('Alarm ')) {
@@ -298,6 +312,15 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
   }
 
   Widget _buildAlarmLogsContent() {
+    // Count how many months are selected
+    int selectedMonthCount = selectedMonths.values.where((selected) => selected).length;
+    String? singleSelectedMonth = selectedMonthCount == 1
+        ? selectedMonths.entries.firstWhere((entry) => entry.value).key
+        : null;
+
+    // Check if no months are selected
+    bool noMonthsSelected = selectedMonthCount == 0;
+
     return Container(
       color: Colors.white,
       child: Column(
@@ -415,93 +438,69 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                   ],
                 ),
                 SizedBox(height: 10),
-                _buildDeviceDropdown(),
-                SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
+                // Show month/year label if only one month is selected
+                if (singleSelectedMonth != null && selectedYear != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Row(
                       children: [
-                        DropdownButton<String>(
-                          value: selectedMonth,
-                          hint: Text('Select Month'),
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              selectedMonth = newValue;
-                              _filterAlarms();
-                            });
-                          },
-                          items: months.map<DropdownMenuItem<String>>((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value),
-                            );
-                          }).toList(),
+                        Expanded(
+                          child: Divider(color: Colors.grey[400], thickness: 1),
                         ),
-                        SizedBox(width: 10),
-                        DropdownButton<String>(
-                          value: selectedYear,
-                          hint: Text('Select Year'),
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              selectedYear = newValue;
-                              _filterAlarms();
-                            });
-                          },
-                          items: years.map<DropdownMenuItem<String>>((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value),
-                            );
-                          }).toList(),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                          child: Text(
+                            '$singleSelectedMonth $selectedYear',
+                            style: TextStyle(
+                              fontFamily: 'jura',
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Divider(color: Colors.grey[400], thickness: 1),
                         ),
                       ],
                     ),
-                    ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          selectedMonth = null;
-                          selectedYear = null;
-                          filteredAlarmLogs = alarmLogs;
-                        });
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.yellow[600],
-                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+                  )
+                // Show year label if no months are selected
+                else if (noMonthsSelected && selectedYear != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Divider(color: Colors.grey[400], thickness: 1),
                         ),
-                        elevation: 2,
-                      ),
-                      child: Text(
-                        'Show All',
-                        style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            fontFamily: 'Arimo',
-                            color: Colors.black),
-                      ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                          child: Text(
+                            selectedYear!,
+                            style: TextStyle(
+                              fontFamily: 'jura',
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Divider(color: Colors.grey[400], thickness: 1),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                SizedBox(height: 10),
-                if (selectedMonth != null && selectedYear != null)
-                  _buildMonthYearLabel(selectedMonth!, selectedYear!),
+                  ),
               ],
             ),
           ),
           SizedBox(height: 10),
           Expanded(
             child: ListView.builder(
-              itemCount: filteredAlarmLogs.isEmpty && selectedMonth == null &&
-                  selectedYear == null
-                  ? alarmLogs.length
-                  : filteredAlarmLogs.length,
+              itemCount: filteredAlarmLogs.length,
               itemBuilder: (context, index) {
-                var alarm = filteredAlarmLogs.isEmpty &&
-                    selectedMonth == null && selectedYear == null
-                    ? alarmLogs[index]
-                    : filteredAlarmLogs[index];
+                var alarm = filteredAlarmLogs[index];
                 return Card(
                   color: Colors.grey[300],
                   margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -518,58 +517,179 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
               },
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDeviceDropdown() {
-    return DropdownButton<String>(
-      value: _selectedProductCode,
-      hint: Text('Select Device', style: TextStyle(fontSize: 14)),
-      onChanged: (String? newValue) {
-        setState(() {
-          _selectedProductCode = newValue;
-          alarmLogs.clear();
-          filteredAlarmLogs.clear();
-          _fetchAlarmHistory();
-          _listenToLatestSensorData();
-        });
-      },
-      items: _devices.map<DropdownMenuItem<String>>((Device device) {
-        return DropdownMenuItem<String>(
-          value: device.productCode,
-          child: Text(
-            '${device.name} (${device.productCode})',
-            style: TextStyle(fontSize: 14),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildMonthYearLabel(String month, String year) {
-    return Row(
-      children: [
-        Expanded(
-          child: Divider(color: Colors.grey[400], thickness: 1),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Text(
-            '$month $year',
-            style: TextStyle(
-              fontFamily: 'jura',
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[700],
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, -5),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Device Dropdown
+                Expanded(
+                  child: Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD9D9D9),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: DropdownButton<String>(
+                      value: _selectedProductCode,
+                      hint: const Text(
+                        'Select device',
+                        style: TextStyle(fontSize: 10),
+                      ),
+                      isExpanded: true,
+                      underline: Container(),
+                      items: _devices.map((Device device) {
+                        return DropdownMenuItem<String>(
+                          value: device.productCode,
+                          child: Text(
+                            device.name,
+                            style: TextStyle(fontSize: 10),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedProductCode = newValue;
+                          alarmLogs.clear();
+                          filteredAlarmLogs.clear();
+                          _fetchAlarmHistory();
+                          _listenToLatestSensorData();
+                        });
+                      },
+                    ),
+                  ),
+                ),
+                SizedBox(width: 10),
+                // Month Dropdown
+                Expanded(
+                  child: Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD9D9D9),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: PopupMenuButton<String>(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Select Month(s)',
+                            style: TextStyle(fontSize: 10),
+                          ),
+                        ),
+                      ),
+                      itemBuilder: (BuildContext context) {
+                        return [
+                          PopupMenuItem<String>(
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Select All'),
+                                    StatefulBuilder(
+                                      builder: (BuildContext context, StateSetter setState) {
+                                        bool allSelected = selectedMonths.values.every((val) => val);
+                                        return Checkbox(
+                                          value: allSelected,
+                                          onChanged: (bool? value) {
+                                            setState(() {
+                                              for (var month in selectedMonths.keys) {
+                                                selectedMonths[month] = value!;
+                                              }
+                                            });
+                                            this.setState(() {
+                                              _filterAlarms();
+                                            });
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                Divider(),
+                              ],
+                            ),
+                          ),
+                          ...selectedMonths.keys.map((String month) {
+                            return PopupMenuItem<String>(
+                              child: StatefulBuilder(
+                                builder: (BuildContext context, StateSetter setState) {
+                                  return CheckboxListTile(
+                                    title: Text(month),
+                                    value: selectedMonths[month],
+                                    onChanged: (bool? value) {
+                                      setState(() {
+                                        selectedMonths[month] = value!;
+                                      });
+                                      this.setState(() {
+                                        _filterAlarms();
+                                      });
+                                    },
+                                  );
+                                },
+                              ),
+                            );
+                          }).toList(),
+                        ];
+                      },
+                    ),
+                  ),
+                ),
+                SizedBox(width: 10),
+                // Year Dropdown
+                Expanded(
+                  child: Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD9D9D9),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: DropdownButton<String>(
+                      value: selectedYear,
+                      hint: const Text(
+                        'Select year',
+                        style: TextStyle(fontSize: 10),
+                      ),
+                      isExpanded: true,
+                      underline: Container(),
+                      items: years.map((year) {
+                        return DropdownMenuItem<String>(
+                          value: year,
+                          child: Text(
+                            year,
+                            style: TextStyle(fontSize: 10),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedYear = value;
+                          _filterAlarms();
+                        });
+                      },
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-        Expanded(
-          child: Divider(color: Colors.grey[400], thickness: 1),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -710,7 +830,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                 );
               }).toList(),
 
-              // Add divider and image section
               if (alarm['imageUrl'] != null) ...[
                 Divider(thickness: 1, color: Colors.grey),
                 SizedBox(height: 10),
@@ -770,7 +889,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
 
   void _filterAlarms() {
     setState(() {
-      if (selectedMonth == null && selectedYear == null) {
+      if (selectedYear == null && !selectedMonths.containsValue(true)) {
         filteredAlarmLogs = alarmLogs;
       } else {
         filteredAlarmLogs = alarmLogs.where((alarm) {
@@ -785,11 +904,17 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
           int month = dateTime.month;
           int year = dateTime.year;
 
-          int selectedMonthInt = selectedMonth != null ? months.indexOf(selectedMonth!) + 1 : -1;
-          int selectedYearInt = selectedYear != null ? int.parse(selectedYear!) : -1;
+          // Check if any month is selected
+          bool anyMonthSelected = selectedMonths.containsValue(true);
+          bool matchesMonth = !anyMonthSelected;
 
-          bool matchesMonth = selectedMonth == null || month == selectedMonthInt;
-          bool matchesYear = selectedYear == null || year == selectedYearInt;
+          // If specific months are selected, check if current month matches
+          if (anyMonthSelected) {
+            matchesMonth = selectedMonths[months[month - 1]] ?? false;
+          }
+
+          // Check year
+          bool matchesYear = selectedYear == null || year == int.parse(selectedYear!);
 
           return matchesMonth && matchesYear;
         }).toList();
