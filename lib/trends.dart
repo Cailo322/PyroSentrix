@@ -16,15 +16,15 @@ class TrendAnalysisService {
   // Define thresholds for each sensor
   final Map<String, double> sensorThresholds = {
     'carbon_monoxide': 10.0,
-    'indoor_air_quality': 50.0,
-    'smoke_level': 0.05,
-    'temperature_dht22': 5.0,
-    'temperature_mlx90614': 5.0,
+    'indoor_air_quality': 15.0,
+    'smoke_level': 0.04,
+    'temperature_dht22': 3.0,
+    'temperature_mlx90614': 3.0,
   };
 
   final Set<String> _notifiedSensors = {};
   final Set<String> _monitoredProductCodes = {};
-  final Map<String, Timer> _productTimers = {};
+  final Map<String, StreamSubscription> _productSubscriptions = {};
   String? _currentUserEmail;
 
   TrendAnalysisService._privateConstructor();
@@ -94,8 +94,8 @@ class TrendAnalysisService {
     // Stop monitoring removed products
     final productsToRemove = _monitoredProductCodes.difference(newProductCodes);
     for (final removedCode in productsToRemove) {
-      _productTimers[removedCode]?.cancel();
-      _productTimers.remove(removedCode);
+      _productSubscriptions[removedCode]?.cancel();
+      _productSubscriptions.remove(removedCode);
       _monitoredProductCodes.remove(removedCode);
     }
 
@@ -108,38 +108,31 @@ class TrendAnalysisService {
   }
 
   void _startMonitoringProduct(String productCode) {
-    // Start immediately and then every minute
-    _analyzeProductTrends(productCode);
+    // Set up real-time listener for the latest 4 documents
+    _productSubscriptions[productCode] = _firestore
+        .collection('LSTM')
+        .doc('Predictions')
+        .collection(productCode)
+        .orderBy('timestamp', descending: true)
+        .limit(4)
+        .snapshots()
+        .listen((snapshot) async {
+      if (snapshot.docs.length < 4) return; // Wait until we have exactly 4 new readings
 
-    _productTimers[productCode] = Timer.periodic(
-      const Duration(minutes: 1),
-          (_) => _analyzeProductTrends(productCode),
-    );
-  }
-
-  Future<void> _analyzeProductTrends(String productCode) async {
-    try {
-      _notifiedSensors.clear();
-      final deviceName = await _getDeviceName(productCode);
-
-      QuerySnapshot snapshot = await _firestore
-          .collection('LSTM')
-          .doc('Predictions')
-          .collection(productCode)
-          .orderBy('timestamp', descending: true)
-          .limit(4)
-          .get();
-
-      if (snapshot.docs.isEmpty) {
-        print("No predictions found for $productCode");
-        return;
-      }
-
-      List<Map<String, dynamic>> predictions = snapshot.docs
+      final predictions = snapshot.docs
           .map((doc) => doc.data() as Map<String, dynamic>)
           .toList()
           .reversed
           .toList();
+
+      await _analyzeProductTrends(productCode, predictions);
+    });
+  }
+
+  Future<void> _analyzeProductTrends(String productCode, List<Map<String, dynamic>> predictions) async {
+    try {
+      _notifiedSensors.clear();
+      final deviceName = await _getDeviceName(productCode);
 
       _analyzeAndNotifyForSensor(predictions, deviceName, 'carbon_monoxide', 'Carbon Monoxide');
       _analyzeAndNotifyForSensor(predictions, deviceName, 'indoor_air_quality', 'Indoor Air Quality');
@@ -210,8 +203,8 @@ class TrendAnalysisService {
   }
 
   void dispose() {
-    _productTimers.values.forEach((timer) => timer.cancel());
-    _productTimers.clear();
+    _productSubscriptions.values.forEach((subscription) => subscription.cancel());
+    _productSubscriptions.clear();
     _monitoredProductCodes.clear();
   }
 }

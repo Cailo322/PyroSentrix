@@ -157,6 +157,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> with SingleTickerProv
         'mac_address': _scannedMacAddress,
         'product_code': _scannedProductId,
         'user_email': user.email,
+        'shared_users': [], // Initialize as empty array
         'timestamp': DateTime.now().toUtc().toIso8601String(),
       });
     } catch (e) {
