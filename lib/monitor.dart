@@ -4,27 +4,48 @@ import 'custom_app_bar.dart';
 import 'call.dart';
 import 'notification_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class MonitorScreen extends StatelessWidget {
+class MonitorScreen extends StatefulWidget {
   final String productCode;
+
+  MonitorScreen({required this.productCode});
+
+  @override
+  _MonitorScreenState createState() => _MonitorScreenState();
+}
+
+class _MonitorScreenState extends State<MonitorScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final NotificationService _notificationService = NotificationService();
   bool _isDialogOpen = false;
   List<String> _lastDisplayedWarnings = [];
   Set<String> _acknowledgedAlerts = {};
+  String _deviceName = 'Device';
 
-  MonitorScreen({required this.productCode}) {
+  @override
+  void initState() {
+    super.initState();
     _notificationService.initialize();
+    _loadDeviceName();
+  }
+
+  Future<void> _loadDeviceName() async {
+    final prefs = await SharedPreferences.getInstance();
+    final deviceNameKey = 'device_name_${widget.productCode}';
+    setState(() {
+      _deviceName = prefs.getString(deviceNameKey) ?? 'Device';
+    });
   }
 
   Future<Map<String, dynamic>?> fetchLatestImage() async {
     try {
+      await Future.delayed(Duration(seconds:2));
       QuerySnapshot querySnapshot = await _firestore
-          .collection(productCode)
+          .collection(widget.productCode)
           .orderBy('timestamp', descending: true)
           .limit(1)
           .get();
-
       if (querySnapshot.docs.isNotEmpty) {
         return querySnapshot.docs.first.data() as Map<String, dynamic>;
       }
@@ -40,13 +61,12 @@ class MonitorScreen extends StatelessWidget {
     try {
       DocumentSnapshot dialogStatusDoc = await _firestore
           .collection('DialogStatus')
-          .doc(productCode)
+          .doc(widget.productCode)
           .get();
-
       if (dialogStatusDoc.exists) {
         return !(dialogStatusDoc.data() as Map<String, dynamic>)['Dialogpop'];
       } else {
-        await _firestore.collection('DialogStatus').doc(productCode).set({'Dialogpop': false});
+        await _firestore.collection('DialogStatus').doc(widget.productCode).set({'Dialogpop': false});
         return true;
       }
     } catch (e) {
@@ -61,7 +81,7 @@ class MonitorScreen extends StatelessWidget {
     try {
       await _firestore
           .collection('DialogStatus')
-          .doc(productCode)
+          .doc(widget.productCode)
           .update({'Dialogpop': status});
     } catch (e) {
       if (kDebugMode) {
@@ -89,7 +109,7 @@ class MonitorScreen extends StatelessWidget {
             stream: _firestore
                 .collection('SensorData')
                 .doc('FireAlarm')
-                .collection(productCode)
+                .collection(widget.productCode)
                 .orderBy('timestamp', descending: true)
                 .limit(1)
                 .snapshots(),
@@ -108,7 +128,6 @@ class MonitorScreen extends StatelessWidget {
                   .where((warning) => !_acknowledgedAlerts.contains(warning))
                   .toList();
 
-              // Determine caution sensors (75% close to threshold)
               List<String> cautionSensors = [];
               if (sensorData['humidity_dht22'] < thresholdData['humidity_threshold'] * 1.25) {
                 cautionSensors.add('HUMIDITY');
@@ -129,7 +148,6 @@ class MonitorScreen extends StatelessWidget {
                 cautionSensors.add('AIR QUALITY');
               }
 
-              // Determine bottom display
               String bottomText = "All sensors are in normal level.";
               String bottomIcon = 'assets/normal.png';
 
@@ -142,15 +160,12 @@ class MonitorScreen extends StatelessWidget {
                 bottomIcon = 'assets/caution.png';
               }
 
-              // Alert pop up
               if (exceededWarningsForDialog.isNotEmpty && !_isDialogOpen) {
                 WidgetsBinding.instance.addPostFrameCallback((_) async {
                   bool shouldShowDialog = await _shouldShowDialog();
                   if (shouldShowDialog) {
                     _isDialogOpen = true;
                     await _updateDialogStatus(true);
-                    var latestImage = await fetchLatestImage();
-
                     showDialog(
                       context: context,
                       builder: (BuildContext context) {
@@ -197,16 +212,28 @@ class MonitorScreen extends StatelessWidget {
                                     ),
                                   ),
                                   SizedBox(height: 1),
-                                  if (latestImage != null)
-                                    Image.network(
-                                      latestImage['imageUrl'],
-                                      width: 200,
-                                      height: 150,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  if (latestImage == null)
-                                    Image.asset('assets/About-pic1.jpg',
-                                        width: 120, height: 120),
+                                  FutureBuilder<Map<String, dynamic>?>(
+                                    future: fetchLatestImage(),
+                                    builder: (context, snapshot) {
+                                      if (snapshot.connectionState == ConnectionState.waiting) {
+                                        return Container(
+                                          width: 200,
+                                          height: 150,
+                                          child: Center(child: CircularProgressIndicator()),
+                                        );
+                                      } else if (snapshot.hasData && snapshot.data != null) {
+                                        return Image.network(
+                                          snapshot.data!['imageUrl'],
+                                          width: 200,
+                                          height: 150,
+                                          fit: BoxFit.cover,
+                                        );
+                                      } else {
+                                        return Image.asset('assets/About-pic1.jpg',
+                                            width: 120, height: 120);
+                                      }
+                                    },
+                                  ),
                                   SizedBox(height: 10),
                                   Row(
                                     children: [
@@ -298,7 +325,7 @@ class MonitorScreen extends StatelessWidget {
                                 ),
                                 SizedBox(height: 35),
                                 Text(
-                                  'Sensor Display',
+                                  '$_deviceName Display',
                                   style: TextStyle(
                                     fontSize: 30,
                                     fontWeight: FontWeight.w900,

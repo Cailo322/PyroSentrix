@@ -163,7 +163,7 @@ class TrendAnalysisService {
     if (!_notifiedSensors.contains(sensorKey) &&
         _hasPositiveJumpExceedingThreshold(sensorValues, sensorKey)) {
       String title = "📈 $deviceName: Heads Up!";
-      String body = "$sensorName has a significant increase projected!";
+      String body = "$sensorName is projected to rise in the next 40 seconds!";
       _sendNotification(title, body);
       _notifiedSensors.add(sensorKey);
     }
