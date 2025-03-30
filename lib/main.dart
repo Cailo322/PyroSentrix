@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
 import 'splash_screen.dart';
 import 'devices.dart';
 import 'add_device.dart';
@@ -19,9 +20,11 @@ import 'device_provider.dart';
 import 'analytics.dart';
 import 'profile.dart';
 
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await FlutterDownloader.initialize();
 
   // Initialize services
   final notificationService = NotificationService();

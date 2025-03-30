@@ -3,7 +3,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:gallery_saver_plus/gallery_saver.dart';
 import 'dart:async';
+import 'dart:io';
+
 
 class AlarmLogScreen extends StatefulWidget {
   const AlarmLogScreen({Key? key}) : super(key: key);
@@ -48,6 +55,108 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
     _alarmSubscription?.cancel();
     _sensorSubscription?.cancel();
     super.dispose();
+  }
+
+  Future<bool> _checkAndRequestStoragePermission() async {
+    if (Platform.isAndroid) {
+      // For Android 10+, we need to request both storage and media permissions
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      if (androidInfo.version.sdkInt >= 29) { // Android 10+
+        var status = await Permission.photos.status;
+        if (!status.isGranted) {
+          status = await Permission.photos.request();
+        }
+        return status.isGranted;
+      } else { // Android <10
+        var status = await Permission.storage.status;
+        if (!status.isGranted) {
+          status = await Permission.storage.request();
+        }
+        return status.isGranted;
+      }
+    } else if (Platform.isIOS) {
+      // For iOS, we only need photos permission
+      var status = await Permission.photos.status;
+      if (!status.isGranted) {
+        status = await Permission.photos.request();
+      }
+      return status.isGranted;
+    }
+    return true;
+  }
+
+  Future<void> _downloadImage(BuildContext context, String imageUrl) async {
+    final scaffold = ScaffoldMessenger.of(context);
+    try {
+      final hasPermission = await _checkAndRequestStoragePermission();
+      if (!hasPermission) {
+        scaffold.showSnackBar(
+          const SnackBar(content: Text('Storage permission required to download images')),
+        );
+        return;
+      }
+
+      // Create Pyrosentrix directory in Downloads
+      Directory? directory;
+      if (Platform.isAndroid) {
+        directory = await getExternalStorageDirectory();
+      } else {
+        directory = await getApplicationDocumentsDirectory();
+      }
+
+      if (directory == null) {
+        scaffold.showSnackBar(
+          const SnackBar(content: Text('Could not access storage directory')),
+        );
+        return;
+      }
+
+      final downloadDir = Directory('${directory.path}/Pyrosentrix');
+      if (!await downloadDir.exists()) {
+        await downloadDir.create(recursive: true);
+      }
+
+      // Download the file first
+      final fileName = 'alarm_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final filePath = '${downloadDir.path}/$fileName';
+
+      // Download using flutter_downloader
+      final taskId = await FlutterDownloader.enqueue(
+        url: imageUrl,
+        savedDir: downloadDir.path,
+        fileName: fileName,
+        showNotification: true,
+        openFileFromNotification: true,
+      );
+
+      if (taskId != null) {
+        // Also save to gallery using gallery_saver_plus
+        try {
+          final saved = await GallerySaver.saveImage(imageUrl, albumName: 'Pyrosentrix');
+          if (saved == true) {
+            scaffold.showSnackBar(
+              const SnackBar(content: Text('Image saved to gallery and Pyrosentrix folder')),
+            );
+          } else {
+            scaffold.showSnackBar(
+              const SnackBar(content: Text('Image saved to Pyrosentrix folder only')),
+            );
+          }
+        } catch (e) {
+          scaffold.showSnackBar(
+            SnackBar(content: Text('Saved to Pyrosentrix folder but gallery save failed: ${e.toString()}')),
+          );
+        }
+      } else {
+        scaffold.showSnackBar(
+          const SnackBar(content: Text('Failed to start download')),
+        );
+      }
+    } catch (e) {
+      scaffold.showSnackBar(
+        SnackBar(content: Text('Download failed: ${e.toString()}')),
+      );
+    }
   }
 
   Future<void> _loadDeviceNames() async {
@@ -129,12 +238,10 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         filteredAlarmLogs = alarmLogs;
 
         if (alarmLogs.isNotEmpty) {
-          // Set default month and year based on latest alarm
           DateTime latestDate = DateTime.parse(alarmLogs.first['timestamp']);
           String latestMonth = months[latestDate.month - 1];
           String latestYear = latestDate.year.toString();
 
-          // Update selected month and year
           selectedMonths = {for (var month in months) month: false};
           selectedMonths[latestMonth] = true;
           selectedYear = latestYear;
@@ -312,13 +419,11 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
   }
 
   Widget _buildAlarmLogsContent() {
-    // Count how many months are selected
     int selectedMonthCount = selectedMonths.values.where((selected) => selected).length;
     String? singleSelectedMonth = selectedMonthCount == 1
         ? selectedMonths.entries.firstWhere((entry) => entry.value).key
         : null;
 
-    // Check if no months are selected
     bool noMonthsSelected = selectedMonthCount == 0;
 
     return Container(
@@ -438,7 +543,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                   ],
                 ),
                 SizedBox(height: 10),
-                // Show month/year label if only one month is selected
                 if (singleSelectedMonth != null && selectedYear != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8.0),
@@ -465,7 +569,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                       ],
                     ),
                   )
-                // Show year label if no months are selected
                 else if (noMonthsSelected && selectedYear != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8.0),
@@ -532,7 +635,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Device Dropdown
                 Expanded(
                   child: Container(
                     height: 50,
@@ -571,7 +673,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                   ),
                 ),
                 SizedBox(width: 10),
-                // Month Dropdown
                 Expanded(
                   child: Container(
                     height: 50,
@@ -599,7 +700,10 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text('Select All'),
+                                    Text(
+                                      'Select All',
+                                      style: TextStyle(fontSize: 10),
+                                    ),
                                     StatefulBuilder(
                                       builder: (BuildContext context, StateSetter setState) {
                                         bool allSelected = selectedMonths.values.every((val) => val);
@@ -629,7 +733,10 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                               child: StatefulBuilder(
                                 builder: (BuildContext context, StateSetter setState) {
                                   return CheckboxListTile(
-                                    title: Text(month),
+                                    title: Text(
+                                      month,
+                                      style: TextStyle(fontSize: 10),
+                                    ),
                                     value: selectedMonths[month],
                                     onChanged: (bool? value) {
                                       setState(() {
@@ -650,7 +757,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                   ),
                 ),
                 SizedBox(width: 10),
-                // Year Dropdown
                 Expanded(
                   child: Container(
                     height: 50,
@@ -843,15 +949,18 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                   ),
                 ),
                 SizedBox(height: 10),
-                Center(
-                  child: Image.network(
-                    alarm['imageUrl'],
-                    width: 200,
-                    height: 200,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Text('Failed to load image');
-                    },
+                GestureDetector(
+                  onTap: () => _showFullScreenImage(context, alarm['imageUrl']),
+                  child: Center(
+                    child: Image.network(
+                      alarm['imageUrl'],
+                      width: 200,
+                      height: 200,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Text('Failed to load image');
+                      },
+                    ),
                   ),
                 ),
               ],
@@ -864,6 +973,53 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
             child: Text("Close"),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showFullScreenImage(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.all(10),
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              panEnabled: true,
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Image.network(
+                imageUrl,
+                width: MediaQuery.of(context).size.width,
+                fit: BoxFit.contain,
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: Row(
+                children: [
+                  FloatingActionButton(
+                    heroTag: 'download_btn',
+                    mini: true,
+                    backgroundColor: Colors.white,
+                    onPressed: () async => await _downloadImage(context, imageUrl),
+                    child: Icon(Icons.download, color: Colors.black),
+                  ),
+                  SizedBox(width: 10),
+                  FloatingActionButton(
+                    heroTag: 'close_btn',
+                    mini: true,
+                    backgroundColor: Colors.white,
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Icon(Icons.close, color: Colors.black),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -904,16 +1060,13 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
           int month = dateTime.month;
           int year = dateTime.year;
 
-          // Check if any month is selected
           bool anyMonthSelected = selectedMonths.containsValue(true);
           bool matchesMonth = !anyMonthSelected;
 
-          // If specific months are selected, check if current month matches
           if (anyMonthSelected) {
             matchesMonth = selectedMonths[months[month - 1]] ?? false;
           }
 
-          // Check year
           bool matchesYear = selectedYear == null || year == int.parse(selectedYear!);
 
           return matchesMonth && matchesYear;
