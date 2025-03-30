@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
+import 'custom_app_bar.dart';
 
 class AlarmLogScreen extends StatefulWidget {
   const AlarmLogScreen({Key? key}) : super(key: key);
@@ -186,7 +187,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
             (alarmStatusDoc['AlarmLogged'] == false && !isDuplicate)) {
           lastAlarmTime = DateTime.now();
           String sensorDataDocId = latestDoc.id;
-          await Future.delayed(Duration(seconds: 2));
+          await Future.delayed(Duration(seconds: 3));
           String? imageUrl = await _fetchLatestImageUrl();
 
           int newAlarmCount = alarmCount;
@@ -317,11 +318,8 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: IconThemeData(color: Colors.black),
-      ),
+      appBar: CustomAppBar(),
+      endDrawer: CustomDrawer(),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
           : _devices.isEmpty
