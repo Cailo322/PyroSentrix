@@ -10,7 +10,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:gallery_saver_plus/gallery_saver.dart';
 import 'dart:async';
 import 'dart:io';
-
+import 'custom_app_bar.dart';
 
 class AlarmLogScreen extends StatefulWidget {
   const AlarmLogScreen({Key? key}) : super(key: key);
@@ -59,15 +59,14 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
 
   Future<bool> _checkAndRequestStoragePermission() async {
     if (Platform.isAndroid) {
-      // For Android 10+, we need to request both storage and media permissions
       final androidInfo = await DeviceInfoPlugin().androidInfo;
-      if (androidInfo.version.sdkInt >= 29) { // Android 10+
+      if (androidInfo.version.sdkInt >= 29) {
         var status = await Permission.photos.status;
         if (!status.isGranted) {
           status = await Permission.photos.request();
         }
         return status.isGranted;
-      } else { // Android <10
+      } else {
         var status = await Permission.storage.status;
         if (!status.isGranted) {
           status = await Permission.storage.request();
@@ -75,7 +74,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         return status.isGranted;
       }
     } else if (Platform.isIOS) {
-      // For iOS, we only need photos permission
       var status = await Permission.photos.status;
       if (!status.isGranted) {
         status = await Permission.photos.request();
@@ -96,7 +94,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         return;
       }
 
-      // Create Pyrosentrix directory in Downloads
       Directory? directory;
       if (Platform.isAndroid) {
         directory = await getExternalStorageDirectory();
@@ -116,11 +113,9 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
         await downloadDir.create(recursive: true);
       }
 
-      // Download the file first
       final fileName = 'alarm_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final filePath = '${downloadDir.path}/$fileName';
 
-      // Download using flutter_downloader
       final taskId = await FlutterDownloader.enqueue(
         url: imageUrl,
         savedDir: downloadDir.path,
@@ -130,7 +125,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
       );
 
       if (taskId != null) {
-        // Also save to gallery using gallery_saver_plus
         try {
           final saved = await GallerySaver.saveImage(imageUrl, albumName: 'Pyrosentrix');
           if (saved == true) {
@@ -247,11 +241,11 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
           selectedYear = latestYear;
 
           var lastAlarmId = alarmLogs.first['id'];
-          if (lastAlarmId != null && lastAlarmId.startsWith('Alarm ')) {
-            alarmCount = int.parse(lastAlarmId.split(' ')[1]);
+          if (lastAlarmId != null && lastAlarmId.startsWith('Alarm ') ){
+          alarmCount = int.parse(lastAlarmId.split(' ')[1]);
           }
-        }
-      });
+          }
+          });
     });
   }
 
@@ -289,38 +283,38 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
 
           if (alarmLogs.isNotEmpty) {
             var lastAlarmId = alarmLogs.first['id'];
-            if (lastAlarmId != null && lastAlarmId.startsWith('Alarm ')) {
-              alarmCount = int.parse(lastAlarmId.split(' ')[1]);
+            if (lastAlarmId != null && lastAlarmId.startsWith('Alarm ') ){
+            alarmCount = int.parse(lastAlarmId.split(' ')[1]);
             }
-          }
-          alarmCount++;
+            }
+            alarmCount++;
 
-          var alarmData = {
+            var alarmData = {
             'id': 'Alarm $alarmCount',
             'timestamp': data['timestamp'],
             'values': data,
             'sensorDataDocId': sensorDataDocId,
             'imageUrl': imageUrl,
             'logged': true,
-          };
+            };
 
-          await _firestore
-              .collection('SensorData')
-              .doc('AlarmLogs')
-              .collection(_selectedProductCode!)
-              .add(alarmData);
+            await _firestore
+                .collection('SensorData')
+      .doc('AlarmLogs')
+          .collection(_selectedProductCode!)
+          .add(alarmData);
 
-          await _firestore
-              .collection('AlarmStatus')
-              .doc(_selectedProductCode)
-              .set({'AlarmLogged': true}, SetOptions(merge: true));
+      await _firestore
+          .collection('AlarmStatus')
+          .doc(_selectedProductCode)
+          .set({'AlarmLogged': true}, SetOptions(merge: true));
 
-          setState(() {
-            alarmLogs.insert(0, alarmData);
-            _filterAlarms();
-          });
-        }
-      }
+      setState(() {
+      alarmLogs.insert(0, alarmData);
+      _filterAlarms();
+      });
+    }
+    }
     });
   }
 
@@ -405,11 +399,8 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: IconThemeData(color: Colors.black),
-      ),
+      appBar: CustomAppBar(),
+      endDrawer: CustomDrawer(),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
           : _devices.isEmpty

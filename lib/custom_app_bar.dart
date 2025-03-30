@@ -7,6 +7,8 @@ import 'device_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'profile.dart';
+import 'devices.dart';
+import 'login.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? selectedProductCode;
@@ -43,7 +45,24 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       leading: IconButton(
         icon: Icon(Icons.arrow_back, color: Colors.black),
         onPressed: () {
-          Navigator.of(context).pop();
+          final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
+          if (deviceProvider.selectedProductCode != null) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (context) => MonitorScreen(productCode: deviceProvider.selectedProductCode!),
+              ),
+                  (route) => false,
+            );
+          } else {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (context) => DevicesScreen(),
+              ),
+                  (route) => false,
+            );
+          }
         },
       ),
     );
@@ -244,16 +263,14 @@ class _CustomDrawerState extends State<CustomDrawer> {
   }
 
   Future<void> _navigateToNamedScreen(BuildContext context, String routeName) async {
-    // Check if we're already on this screen
     if (ModalRoute.of(context)?.settings.name != routeName) {
       await Navigator.pushNamed(context, routeName);
     } else {
-      Navigator.pop(context); // Just close the drawer if we're already there
+      Navigator.pop(context);
     }
   }
 
   Future<void> _navigateToScreen(BuildContext context, Widget screen, {String? routeName}) async {
-    // Check if we're already on this screen by comparing route names
     final currentRoute = ModalRoute.of(context);
     if (currentRoute?.settings.name != routeName) {
       await Navigator.push(
@@ -264,7 +281,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
         ),
       );
     } else {
-      Navigator.pop(context); // Just close the drawer if we're already there
+      Navigator.pop(context);
     }
   }
 }

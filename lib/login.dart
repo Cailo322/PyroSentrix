@@ -18,6 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   bool _isLoading = false;
+  bool _isResetting = false;
   String? _emailError;
   String? _passwordError;
   bool _passwordVisible = false;
@@ -35,11 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _validateForm() {
     bool isValid = true;
-
-    // Email validation
-    if (_emailController.text
-        .trim()
-        .isEmpty) {
+    if (_emailController.text.trim().isEmpty) {
       setState(() {
         _emailError = "Please enter your email";
       });
@@ -55,7 +52,6 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     }
 
-    // Password validation
     if (_passwordController.text.isEmpty) {
       setState(() {
         _passwordError = "Please enter your password";
@@ -73,6 +69,114 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isValidEmail(String email) {
     final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
     return emailRegex.hasMatch(email);
+  }
+
+  Future<void> _sendPasswordResetEmail(BuildContext context) async {
+    final email = _emailController.text.trim();
+
+    if (email.isEmpty) {
+      setState(() {
+        _emailError = "Please enter your email";
+      });
+      return;
+    } else if (!_isValidEmail(email)) {
+      setState(() {
+        _emailError = "Please enter a valid email";
+      });
+      return;
+    }
+
+    final shouldSend = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Reset Password',
+          style: TextStyle(fontFamily: 'Jost', fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Send password reset instructions to $email?',
+          style: TextStyle(fontFamily: 'Jost'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                  fontFamily: 'Jost', color: Colors.deepOrange),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Send',
+              style: TextStyle(
+                  fontFamily: 'Jost',
+                  color: Colors.deepOrange,
+                  fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldSend ?? false) {
+      setState(() {
+        _isResetting = true;
+      });
+
+      try {
+        await _auth.sendPasswordResetEmail(email: email);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Password reset email sent to $email',
+              style: TextStyle(fontFamily: 'Jost'),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } on FirebaseAuthException catch (e) {
+        String errorMessage;
+        switch (e.code) {
+          case 'user-not-found':
+            errorMessage = 'No user found with this email';
+            break;
+          case 'invalid-email':
+            errorMessage = 'Invalid email address';
+            break;
+          case 'user-disabled':
+            errorMessage = 'This account has been disabled';
+            break;
+          default:
+            errorMessage = 'Error sending reset email. Please try again';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              errorMessage,
+              style: TextStyle(fontFamily: 'Jost'),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'An unexpected error occurred',
+              style: TextStyle(fontFamily: 'Jost'),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } finally {
+        setState(() {
+          _isResetting = false;
+        });
+      }
+    }
   }
 
   void _loginUser(BuildContext context) async {
@@ -97,7 +201,6 @@ class _LoginScreenState extends State<LoginScreen> {
           await _updateFcmToken(userCredential.user!.uid, fcmToken);
         }
 
-        // Save login state
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isLoggedIn', true);
 
@@ -108,7 +211,10 @@ class _LoginScreenState extends State<LoginScreen> {
       } else if (!userCredential.user!.emailVerified) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Please verify your email to log in.'),
+            content: Text(
+              'Please verify your email to log in.',
+              style: TextStyle(fontFamily: 'Jost'),
+            ),
             backgroundColor: Colors.orange,
           ),
         );
@@ -146,14 +252,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(errorMessage),
+          content: Text(
+            errorMessage,
+            style: TextStyle(fontFamily: 'Jost'),
+          ),
           backgroundColor: Colors.red,
         ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('An unexpected error occurred'),
+          content: Text(
+            'An unexpected error occurred',
+            style: TextStyle(fontFamily: 'Jost'),
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -175,7 +287,6 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background Image
           Container(
             decoration: BoxDecoration(
               image: DecorationImage(
@@ -185,7 +296,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
 
-          // PYROSENTRIX Text and Additional Text
           Positioned(
             top: 170,
             left: 0,
@@ -217,7 +327,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
 
-          // Login Form
           Column(
             children: [
               Spacer(),
@@ -272,10 +381,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         width: 300,
                         child: Align(
                           alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {
-                              // Add forget password functionality
-                            },
+                          child: _isResetting
+                              ? CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.orange[900]!),
+                          )
+                              : TextButton(
+                            onPressed: () => _sendPasswordResetEmail(context),
                             child: Text(
                               'Forget my password?',
                               style: TextStyle(
@@ -288,7 +400,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       SizedBox(height: 15),
                       _isLoading
-                          ? CircularProgressIndicator()
+                          ? CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            Color(0xFFFFF6200)),
+                      )
                           : ElevatedButton(
                         onPressed: () => _loginUser(context),
                         style: ElevatedButton.styleFrom(
@@ -375,8 +490,7 @@ class _LoginScreenState extends State<LoginScreen> {
           SizedBox(height: 5),
           Container(
             decoration: BoxDecoration(
-              color: _emailError != null ? Colors.orange[50] : Color(
-                  0xFFDDDDDD),
+              color: _emailError != null ? Colors.orange[50] : Color(0xFFDDDDDD),
               borderRadius: BorderRadius.circular(5),
               border: Border.all(
                 color: _emailError != null ? Colors.orange : Colors.transparent,
@@ -445,14 +559,12 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           SizedBox(height: 5),
           Container(
-            height: 50, // Fixed height for consistent alignment
+            height: 50,
             decoration: BoxDecoration(
-              color: _passwordError != null ? Colors.orange[50] : Color(
-                  0xFFDDDDDD),
+              color: _passwordError != null ? Colors.orange[50] : Color(0xFFDDDDDD),
               borderRadius: BorderRadius.circular(5),
               border: Border.all(
-                color: _passwordError != null ? Colors.orange : Colors
-                    .transparent,
+                color: _passwordError != null ? Colors.orange : Colors.transparent,
                 width: 2,
               ),
               boxShadow: [
@@ -468,8 +580,7 @@ class _LoginScreenState extends State<LoginScreen> {
               obscureText: !_passwordVisible,
               decoration: InputDecoration(
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 12), // Adjusted vertical padding
+                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                 suffixIcon: IconButton(
                   icon: Icon(
                     _passwordVisible ? Icons.visibility : Icons.visibility_off,
