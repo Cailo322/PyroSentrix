@@ -572,7 +572,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                 ),
                 SizedBox(width: 10),
                 // Month Dropdown
-                // Month Dropdown
                 Expanded(
                   child: Container(
                     height: 50,
@@ -588,7 +587,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                           alignment: Alignment.centerLeft,
                           child: Text(
                             'Select Month(s)',
-                            style: TextStyle(fontSize: 10),  // Matching font size
+                            style: TextStyle(fontSize: 10),
                           ),
                         ),
                       ),
@@ -600,10 +599,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      'Select All',
-                                      style: TextStyle(fontSize: 10),  // Matching font size
-                                    ),
+                                    Text('Select All'),
                                     StatefulBuilder(
                                       builder: (BuildContext context, StateSetter setState) {
                                         bool allSelected = selectedMonths.values.every((val) => val);
@@ -633,10 +629,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
                               child: StatefulBuilder(
                                 builder: (BuildContext context, StateSetter setState) {
                                   return CheckboxListTile(
-                                    title: Text(
-                                      month,
-                                      style: TextStyle(fontSize: 10),  // Matching font size
-                                    ),
+                                    title: Text(month),
                                     value: selectedMonths[month],
                                     onChanged: (bool? value) {
                                       setState(() {

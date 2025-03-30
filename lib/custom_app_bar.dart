@@ -6,7 +6,7 @@ import 'monitor.dart';
 import 'device_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'profile.dart'; // Added for ProfileScreen navigation
+import 'profile.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? selectedProductCode;
@@ -116,16 +116,9 @@ class _CustomDrawerState extends State<CustomDrawer> {
                     ],
                   ),
                   SizedBox(height: 15),
-                  // Clickable User Card
                   GestureDetector(
                     onTap: () {
-                      if (!isNavigating) {
-                        setState(() => isNavigating = true);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => ProfileScreen()),
-                        ).then((_) => setState(() => isNavigating = false));
-                      }
+                      _navigateToScreen(context, ProfileScreen());
                     },
                     child: Row(
                       children: [
@@ -169,8 +162,8 @@ class _CustomDrawerState extends State<CustomDrawer> {
             ),
             _buildSection('Monitoring', [
               _buildDrawerItem(context, 'Add Device', 'assets/add1.png', '/AddDeviceScreen'),
-              _buildDrawerItem(context, 'Analytics', 'assets/analytics.png', '', isAnalytics: true),
-              _buildDrawerItem(context, 'Dashboard', 'assets/dashboard.png', '', isMonitor: true),
+              _buildDrawerItem(context, 'Analytics', 'assets/analytics.png', '/AnalyticsScreen'),
+              _buildDrawerItem(context, 'Dashboard', 'assets/dashboard.png', '/MonitorScreen'),
               _buildDrawerItem(context, 'Devices', 'assets/devices.png', '/DevicesScreen'),
               _buildDrawerItem(context, 'Alarm logs', 'assets/Alarm-Logs.png', '/AlarmLogScreen'),
             ]),
@@ -207,33 +200,71 @@ class _CustomDrawerState extends State<CustomDrawer> {
     );
   }
 
-  Widget _buildDrawerItem(BuildContext context, String title, String asset, String route, {bool isMonitor = false, bool isAnalytics = false, bool isRed = false, bool isLogout = false}) {
+  Widget _buildDrawerItem(BuildContext context, String title, String asset, String route,
+      {bool isRed = false, bool isLogout = false}) {
     return ListTile(
       leading: Image.asset(asset, width: 40, height: 27, fit: BoxFit.contain),
-      title: Text(title, style: TextStyle(color: isRed ? Colors.red : Color(0xFF494949), fontSize: 17, fontWeight: isRed || isLogout ? FontWeight.bold : FontWeight.normal)),
+      title: Text(title,
+          style: TextStyle(
+              color: isRed ? Colors.red : Color(0xFF494949),
+              fontSize: 17,
+              fontWeight: isRed || isLogout ? FontWeight.bold : FontWeight.normal
+          )
+      ),
       onTap: () async {
         if (isNavigating) return;
         isNavigating = true;
 
-        if (isMonitor) {
-          final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
-          if (deviceProvider.selectedProductCode != null) {
-            await Navigator.pushNamed(context, '/MonitorScreen', arguments: deviceProvider.selectedProductCode!);
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select a device first.')));
-          }
-        } else if (isAnalytics) {
-          await Navigator.pushNamed(context, '/AnalyticsScreen');
-        } else if (isLogout) {
+        if (isLogout) {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('isLoggedIn', false);
           await FirebaseAuth.instance.signOut();
           Navigator.of(context).pushReplacementNamed('/LoginScreen');
         } else if (route.isNotEmpty) {
-          await Navigator.pushNamed(context, route);
+          if (route == '/MonitorScreen') {
+            final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
+            if (deviceProvider.selectedProductCode != null) {
+              await _navigateToScreen(
+                  context,
+                  MonitorScreen(productCode: deviceProvider.selectedProductCode!),
+                  routeName: route
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Please select a device first.'))
+              );
+            }
+          } else {
+            await _navigateToNamedScreen(context, route);
+          }
         }
         isNavigating = false;
       },
     );
+  }
+
+  Future<void> _navigateToNamedScreen(BuildContext context, String routeName) async {
+    // Check if we're already on this screen
+    if (ModalRoute.of(context)?.settings.name != routeName) {
+      await Navigator.pushNamed(context, routeName);
+    } else {
+      Navigator.pop(context); // Just close the drawer if we're already there
+    }
+  }
+
+  Future<void> _navigateToScreen(BuildContext context, Widget screen, {String? routeName}) async {
+    // Check if we're already on this screen by comparing route names
+    final currentRoute = ModalRoute.of(context);
+    if (currentRoute?.settings.name != routeName) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => screen,
+          settings: RouteSettings(name: routeName),
+        ),
+      );
+    } else {
+      Navigator.pop(context); // Just close the drawer if we're already there
+    }
   }
 }

@@ -104,12 +104,26 @@ class _ResetSystemScreenState extends State<ResetSystemScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.grey[300],
+        backgroundColor: Colors.white,
         elevation: 0,
+        centerTitle: true,
+        title: Text(
+          'Device Controls',
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Poppins',
+          ),
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: SingleChildScrollView(
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -123,55 +137,87 @@ class _ResetSystemScreenState extends State<ResetSystemScreen> {
                 Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.only(top: 150, bottom: 30),
+                      padding: const EdgeInsets.only(top: 50, bottom: 30),
                       child: Image.asset('assets/nodevice.png', width: 200, height: 200),
                     ),
-                    Text(
-                      "You don't have any IoT devices connected to your account.",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 18, fontFamily: 'Inter'),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20), // Left and right padding
+                      child: Text(
+                        "You don't have any IoT devices connected to your account.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 18, fontFamily: 'Inter'),
+                      ),
                     ),
                     SizedBox(height: 10),
-                    Text(
-                      "Please add a device or ask your household admin with an IoT device to share access with you.",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16, color: Colors.grey, fontFamily: 'Inter'),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20), // Left and right padding
+                      child: Text(
+                        "Please add a device or ask your household admin with an IoT device to share access with you.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 16, color: Colors.grey, fontFamily: 'Inter'),
+                      ),
                     ),
                   ],
                 )
               else ...[
                   Padding(
-                    padding: const EdgeInsets.only(top: 150, bottom: 20),
+                    padding: const EdgeInsets.only(top: 20, bottom: 20),
                     child: Image.asset('assets/reset.png', width: 150, height: 150),
+                  ),
+                  Center( // Add this block for your description text
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Text(
+                        'The device control screen allows users to silence both the device alarm and mobile alarm, while the Reset feature restores normal operation for both the mobile application and the device.',
+                        style: TextStyle(color: Colors.black, fontSize: 17, fontFamily: 'Inter', fontWeight: FontWeight.w100),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: DropdownButton<String>(
-                        value: _selectedProductCode,
-                        hint: Text('Select Device'),
-                        isExpanded: true,
-                        underline: Container(),
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedProductCode = newValue;
-                          });
-                        },
-                        items: _devices.map<DropdownMenuItem<String>>((Device device) {
-                          return DropdownMenuItem<String>(
-                            value: device.productCode,
-                            child: Text(
-                              device.name,
-                              style: TextStyle(fontSize: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: Text(
+                            'Select your device',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey[700],
                             ),
-                          );
-                        }).toList(),
-                      ),
+                          ),
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: DropdownButton<String>(
+                            value: _selectedProductCode,
+                            hint: Text('Select Device'),
+                            isExpanded: true,
+                            underline: Container(),
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                _selectedProductCode = newValue;
+                              });
+                            },
+                            items: _devices.map<DropdownMenuItem<String>>((Device device) {
+                              return DropdownMenuItem<String>(
+                                value: device.productCode,
+                                child: Text(
+                                  device.name,
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   Row(

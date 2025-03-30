@@ -61,21 +61,25 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: isLoggedIn ? DevicesScreen() : SplashScreen(),
+      // Update the onGenerateRoute section:
       onGenerateRoute: (settings) {
         if (settings.name == '/MonitorScreen') {
           final args = settings.arguments as String;
           return MaterialPageRoute(
             builder: (context) => MonitorScreen(productCode: args),
+            settings: settings, // Important for route tracking
           );
         }
         if (settings.name == '/AlarmLogScreen') {
           return MaterialPageRoute(
             builder: (context) => AlarmLogScreen(),
+            settings: settings, // Important for route tracking
           );
         }
         if (settings.name == '/ResetSystemScreen') {
           return MaterialPageRoute(
             builder: (context) => ResetSystemScreen(),
+            settings: settings, // Important for route tracking
           );
         }
         return null;
