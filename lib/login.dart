@@ -5,13 +5,14 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'devices.dart';
 import 'register.dart';
+import 'dart:math' as math;
 
 class LoginScreen extends StatefulWidget {
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -22,16 +23,27 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _emailError;
   String? _passwordError;
   bool _passwordVisible = false;
+  late AnimationController _loadingController;
 
   @override
   void initState() {
     super.initState();
+    _loadingController = AnimationController(
+      vsync: this,
+      duration: Duration(seconds: 1),
+    )..repeat();
     FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
       User? user = _auth.currentUser;
       if (user != null) {
         await _updateFcmToken(user.uid, newToken);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _loadingController.dispose();
+    super.dispose();
   }
 
   bool _validateForm() {
@@ -91,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
       builder: (context) => AlertDialog(
         title: Text(
           'Reset Password',
-          style: TextStyle(fontFamily: 'Jost', fontWeight: FontWeight.bold),
+          style: TextStyle(fontFamily: 'Jost', fontWeight: FontWeight.w500),
         ),
         content: Text(
           'Send password reset instructions to $email?',
@@ -103,7 +115,10 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Text(
               'Cancel',
               style: TextStyle(
-                  fontFamily: 'Jost', color: Colors.deepOrange),
+                fontFamily: 'Jost',
+                color: Colors.deepOrange,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           TextButton(
@@ -111,9 +126,10 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Text(
               'Send',
               style: TextStyle(
-                  fontFamily: 'Jost',
-                  color: Colors.deepOrange,
-                  fontWeight: FontWeight.bold),
+                fontFamily: 'Jost',
+                color: Colors.deepOrange,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -282,6 +298,41 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  Widget _buildLoadingIndicator() {
+    return Center(
+      child: SizedBox(
+        width: 50,
+        height: 50,
+        child: AnimatedBuilder(
+          animation: _loadingController,
+          builder: (context, child) {
+            return Transform.rotate(
+              angle: _loadingController.value * 6.3,
+              child: Stack(
+                alignment: Alignment.center,
+                children: List.generate(12, (index) {
+                  final angle = index * (6.3 / 12);
+                  return Transform(
+                    transform: Matrix4.identity()
+                      ..translate(20.0 * math.cos(angle), 20.0 * math.sin(angle)),
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.orange.withOpacity((index + 1) / 12),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -295,7 +346,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-
           Positioned(
             top: 170,
             left: 0,
@@ -326,7 +376,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-
           Column(
             children: [
               Spacer(),
@@ -381,13 +430,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         width: 300,
                         child: Align(
                           alignment: Alignment.centerRight,
-                          child: _isResetting
-                              ? CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.orange[900]!),
-                          )
-                              : TextButton(
-                            onPressed: () => _sendPasswordResetEmail(context),
+                          child: TextButton(
+                            onPressed: _isResetting ? null : () => _sendPasswordResetEmail(context),
                             child: Text(
                               'Forget my password?',
                               style: TextStyle(
@@ -400,10 +444,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       SizedBox(height: 15),
                       _isLoading
-                          ? CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                            Color(0xFFFFF6200)),
-                      )
+                          ? _buildLoadingIndicator()
                           : ElevatedButton(
                         onPressed: () => _loginUser(context),
                         style: ElevatedButton.styleFrom(
@@ -467,6 +508,15 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ],
           ),
+          if (_isResetting) ...[
+            ModalBarrier(
+              color: Colors.black.withOpacity(0.3),
+              dismissible: false,
+            ),
+            Center(
+              child: _buildLoadingIndicator(),
+            ),
+          ],
         ],
       ),
     );
