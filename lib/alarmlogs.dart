@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:gallery_saver_plus/gallery_saver.dart';
+import 'package:focus_detector/focus_detector.dart';
 import 'dart:async';
 import 'dart:io';
 import 'custom_app_bar.dart';
@@ -20,6 +21,7 @@ class AlarmLogScreen extends StatefulWidget {
 }
 
 class _AlarmLogScreenState extends State<AlarmLogScreen> {
+  final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   List<Map<String, dynamic>> alarmLogs = [];
@@ -47,7 +49,10 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
   @override
   void initState() {
     super.initState();
-    _loadDeviceNames().then((_) => _fetchDevices());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadDeviceNames().then((_) => _fetchDevices());
+      _refreshIndicatorKey.currentState?.show();
+    });
   }
 
   @override
@@ -206,7 +211,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
     }
   }
 
-  void _fetchAlarmHistory() {
+  Future<void> _fetchAlarmHistory() async {
     if (_selectedProductCode == null) return;
 
     _alarmSubscription?.cancel();
@@ -241,15 +246,15 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
           selectedYear = latestYear;
 
           var lastAlarmId = alarmLogs.first['id'];
-          if (lastAlarmId != null && lastAlarmId.startsWith('Alarm ') ){
-          alarmCount = int.parse(lastAlarmId.split(' ')[1]);
+          if (lastAlarmId != null && lastAlarmId.startsWith('Alarm ')) {
+            alarmCount = int.parse(lastAlarmId.split(' ')[1]);
           }
-          }
-          });
+        }
+      });
     });
   }
 
-  void _listenToLatestSensorData() {
+  Future<void> _listenToLatestSensorData() async {
     if (_selectedProductCode == null) return;
 
     _sensorSubscription?.cancel();
@@ -283,38 +288,57 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
 
           if (alarmLogs.isNotEmpty) {
             var lastAlarmId = alarmLogs.first['id'];
-            if (lastAlarmId != null && lastAlarmId.startsWith('Alarm ') ){
-            alarmCount = int.parse(lastAlarmId.split(' ')[1]);
+            if (lastAlarmId != null && lastAlarmId.startsWith('Alarm ')) {
+              alarmCount = int.parse(lastAlarmId.split(' ')[1]);
             }
-            }
-            alarmCount++;
+          }
+          alarmCount++;
 
-            var alarmData = {
+          var alarmData = {
             'id': 'Alarm $alarmCount',
             'timestamp': data['timestamp'],
             'values': data,
             'sensorDataDocId': sensorDataDocId,
             'imageUrl': imageUrl,
             'logged': true,
-            };
+          };
 
-            await _firestore
-                .collection('SensorData')
-      .doc('AlarmLogs')
-          .collection(_selectedProductCode!)
-          .add(alarmData);
+          await _firestore
+              .collection('SensorData')
+              .doc('AlarmLogs')
+              .collection(_selectedProductCode!)
+              .add(alarmData);
 
-      await _firestore
-          .collection('AlarmStatus')
-          .doc(_selectedProductCode)
-          .set({'AlarmLogged': true}, SetOptions(merge: true));
+          await _firestore
+              .collection('AlarmStatus')
+              .doc(_selectedProductCode)
+              .set({'AlarmLogged': true}, SetOptions(merge: true));
 
-      setState(() {
-      alarmLogs.insert(0, alarmData);
-      _filterAlarms();
-      });
+          setState(() {
+            alarmLogs.insert(0, alarmData);
+            _filterAlarms();
+          });
+        }
+      }
+    });
+  }
+
+  Future<void> _refreshData() async {
+    setState(() {
+      _isLoading = true;
+      alarmLogs.clear();
+      filteredAlarmLogs.clear();
+    });
+
+    await Future.delayed(Duration(milliseconds: 500));
+
+    if (_selectedProductCode != null) {
+      await _fetchAlarmHistory();
+      await _listenToLatestSensorData();
     }
-    }
+
+    setState(() {
+      _isLoading = false;
     });
   }
 
@@ -397,15 +421,28 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: CustomAppBar(),
-      endDrawer: CustomDrawer(),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : _devices.isEmpty
-          ? _buildNoDeviceUI()
-          : _buildAlarmLogsContent(),
+    return FocusDetector(
+      onFocusGained: () {
+        _refreshIndicatorKey.currentState?.show();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: CustomAppBar(),
+        endDrawer: CustomDrawer(),
+        body: _isLoading
+            ? Center(child: CircularProgressIndicator())
+            : _devices.isEmpty
+            ? RefreshIndicator(
+          key: _refreshIndicatorKey,
+          onRefresh: _refreshData,
+          child: _buildNoDeviceUI(),
+        )
+            : RefreshIndicator(
+          key: _refreshIndicatorKey,
+          onRefresh: _refreshData,
+          child: _buildAlarmLogsContent(),
+        ),
+      ),
     );
   }
 

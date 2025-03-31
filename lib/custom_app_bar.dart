@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
-import 'alarmlogs.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'monitor.dart';
-import 'device_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'alarmlogs.dart';
+import 'monitor.dart';
+import 'device_provider.dart';
 import 'profile.dart';
 import 'devices.dart';
 import 'login.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? selectedProductCode;
-
   CustomAppBar({Key? key, this.selectedProductCode})
       : preferredSize = Size.fromHeight(kToolbarHeight),
         super(key: key);
@@ -36,32 +35,23 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
         ),
       ],
-      flexibleSpace: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-        ),
-      ),
       automaticallyImplyLeading: false,
       leading: IconButton(
         icon: Icon(Icons.arrow_back, color: Colors.black),
         onPressed: () {
-          final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
-          if (deviceProvider.selectedProductCode != null) {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(
-                builder: (context) => MonitorScreen(productCode: deviceProvider.selectedProductCode!),
-              ),
-                  (route) => false,
-            );
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
           } else {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(
-                builder: (context) => DevicesScreen(),
-              ),
-                  (route) => false,
-            );
+            final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
+            if (deviceProvider.selectedProductCode != null) {
+              Navigator.pushReplacementNamed(
+                context,
+                '/MonitorScreen',
+                arguments: deviceProvider.selectedProductCode!,
+              );
+            } else {
+              Navigator.pushReplacementNamed(context, '/DevicesScreen');
+            }
           }
         },
       ),
@@ -71,9 +61,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
 class CustomDrawer extends StatefulWidget {
   final String? selectedProductCode;
-
   CustomDrawer({Key? key, this.selectedProductCode}) : super(key: key);
-
   @override
   _CustomDrawerState createState() => _CustomDrawerState();
 }
@@ -116,7 +104,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
           children: <Widget>[
             Container(
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-              child: Column(
+              child: Column(  // Added 'child:' here
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: 15),
@@ -146,14 +134,6 @@ class _CustomDrawerState extends State<CustomDrawer> {
                           decoration: BoxDecoration(
                             color: Colors.grey[300],
                             borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withOpacity(0.5),
-                                spreadRadius: 1,
-                                blurRadius: 4,
-                                offset: Offset(0, 3),
-                              ),
-                            ],
                           ),
                           child: Row(
                             children: [
@@ -165,10 +145,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
                               SizedBox(width: 10),
                               Text(
                                 userName ?? 'Loading...',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.black,
-                                ),
+                                style: TextStyle(fontSize: 18, color: Colors.black),
                               ),
                             ],
                           ),
@@ -243,10 +220,10 @@ class _CustomDrawerState extends State<CustomDrawer> {
           if (route == '/MonitorScreen') {
             final deviceProvider = Provider.of<DeviceProvider>(context, listen: false);
             if (deviceProvider.selectedProductCode != null) {
-              await _navigateToScreen(
-                  context,
-                  MonitorScreen(productCode: deviceProvider.selectedProductCode!),
-                  routeName: route
+              await Navigator.pushNamed(
+                context,
+                route,
+                arguments: deviceProvider.selectedProductCode!,
               );
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -264,7 +241,11 @@ class _CustomDrawerState extends State<CustomDrawer> {
 
   Future<void> _navigateToNamedScreen(BuildContext context, String routeName) async {
     if (ModalRoute.of(context)?.settings.name != routeName) {
-      await Navigator.pushNamed(context, routeName);
+      if (_isRouteAlreadyInStack(context, routeName)) {
+        Navigator.popUntil(context, (route) => route.settings.name == routeName);
+      } else {
+        await Navigator.pushNamed(context, routeName);
+      }
     } else {
       Navigator.pop(context);
     }
@@ -273,15 +254,31 @@ class _CustomDrawerState extends State<CustomDrawer> {
   Future<void> _navigateToScreen(BuildContext context, Widget screen, {String? routeName}) async {
     final currentRoute = ModalRoute.of(context);
     if (currentRoute?.settings.name != routeName) {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => screen,
-          settings: RouteSettings(name: routeName),
-        ),
-      );
+      if (routeName != null && _isRouteAlreadyInStack(context, routeName)) {
+        Navigator.popUntil(context, (route) => route.settings.name == routeName);
+      } else {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => screen,
+            settings: RouteSettings(name: routeName),
+          ),
+        );
+      }
     } else {
       Navigator.pop(context);
     }
+  }
+
+  bool _isRouteAlreadyInStack(BuildContext context, String routeName) {
+    bool isRouteInStack = false;
+    Navigator.of(context).popUntil((route) {
+      if (route.settings.name == routeName) {
+        isRouteInStack = true;
+        return true;
+      }
+      return false;
+    });
+    return isRouteInStack;
   }
 }

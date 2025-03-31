@@ -58,6 +58,7 @@ dependencies:
   flutter_native_splash: ^2.4.4
   html: ^0.15.0
   rxdart: ^0.27.7
+  focus_detector: ^2.0.0
 
 
 

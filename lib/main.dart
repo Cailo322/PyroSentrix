@@ -20,20 +20,17 @@ import 'device_provider.dart';
 import 'analytics.dart';
 import 'profile.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await FlutterDownloader.initialize();
 
-  // Initialize services
   final notificationService = NotificationService();
   notificationService.initialize();
 
   final trendAnalysisService = TrendAnalysisService();
   trendAnalysisService.initialize();
 
-  // Check login state
   final prefs = await SharedPreferences.getInstance();
   final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
 
@@ -51,41 +48,30 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   final bool isLoggedIn;
-
   const MyApp({Key? key, required this.isLoggedIn}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false, // This removes the debug banner
+      debugShowCheckedModeBanner: false,
       title: 'Pyrosentrix',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
       home: isLoggedIn ? DevicesScreen() : SplashScreen(),
-      // Update the onGenerateRoute section:
       onGenerateRoute: (settings) {
-        if (settings.name == '/MonitorScreen') {
-          final args = settings.arguments as String;
-          return MaterialPageRoute(
-            builder: (context) => MonitorScreen(productCode: args),
-            settings: settings, // Important for route tracking
-          );
+        switch (settings.name) {
+          case '/MonitorScreen':
+            final args = settings.arguments as String;
+            return _pageRouteBuilder(MonitorScreen(productCode: args), settings);
+          case '/AlarmLogScreen':
+            return _pageRouteBuilder(AlarmLogScreen(), settings);
+          case '/ResetSystemScreen':
+            return _pageRouteBuilder(ResetSystemScreen(), settings);
+          default:
+            return null;
         }
-        if (settings.name == '/AlarmLogScreen') {
-          return MaterialPageRoute(
-            builder: (context) => AlarmLogScreen(),
-            settings: settings, // Important for route tracking
-          );
-        }
-        if (settings.name == '/ResetSystemScreen') {
-          return MaterialPageRoute(
-            builder: (context) => ResetSystemScreen(),
-            settings: settings, // Important for route tracking
-          );
-        }
-        return null;
       },
       routes: {
         '/AddDeviceScreen': (context) => AddDeviceScreen(),
@@ -99,11 +85,20 @@ class MyApp extends StatelessWidget {
       },
     );
   }
+
+  PageRouteBuilder _pageRouteBuilder(Widget page, RouteSettings settings) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      settings: settings,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return child;
+      },
+    );
+  }
 }
 
 class MyHomePage extends StatelessWidget {
   const MyHomePage({Key? key}) : super(key: key);
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
