@@ -40,7 +40,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
 
   Future<Map<String, dynamic>?> fetchLatestImage() async {
     try {
-      await Future.delayed(Duration(seconds:3));
+      await Future.delayed(Duration(seconds:5));
       QuerySnapshot querySnapshot = await _firestore
           .collection(widget.productCode)
           .orderBy('timestamp', descending: true)
