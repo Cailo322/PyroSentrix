@@ -16,37 +16,52 @@ exports.onImageUpload = onObjectFinalized(
   async (event) => {
     try {
       const object = event.data;
-      const filePath = object.name; // Full file path in the bucket
+      const filePath = object.name;
       const bucket = event.bucket;
-      const imageName = filePath.split("/").pop(); // Extract the file name
-      const pathParts = filePath.split("/"); // Split the file path into parts
+      const pathParts = filePath.split("/");
 
-      // Ensure the file is inside a folder
+      // Validate path structure
       if (pathParts.length < 2) {
         console.log(`Skipping file: ${filePath} (not inside a folder)`);
         return;
       }
 
-      const folderName = pathParts[0]; // Get the first folder in the path
+      const folderName = pathParts[0];
+      const imageName = pathParts.pop();
+      const fileExtension = imageName.split('.').pop().toLowerCase();
+      const validExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+
+      // Validate image type
+      if (!validExtensions.includes(fileExtension)) {
+        console.log(`Skipping non-image file: ${filePath}`);
+        return;
+      }
+
       const file = storage.bucket(bucket).file(filePath);
 
-      // Make the file publicly accessible
+      // Make public if needed (consider security implications)
       await file.makePublic();
 
-      // Construct the public image URL
       const imageUrl = `https://storage.googleapis.com/${bucket}/${filePath}`;
-      const timestamp = object.timeCreated; // Upload timestamp
+      const timestamp = object.timeCreated;
 
-      // Add metadata to Firestore under the collection matching the folder name
-      await db.collection(folderName).add({
+      // Use image name as document ID to prevent duplicates
+      await db.collection(folderName).doc(imageName).set({
         imageName: imageName,
         imageUrl: imageUrl,
         timestamp: timestamp,
-      });
+        contentType: object.contentType,
+        size: object.size,
+        updated: new Date() // Add last updated timestamp
+      }, { merge: true });
 
-      console.log(`Image metadata added to Firestore under '${folderName}' collection for ${imageName}`);
+      console.log(`Image metadata added/updated in '${folderName}' collection for ${imageName}`);
     } catch (error) {
-      console.error("Error adding image metadata to Firestore:", error);
+      console.error("Error processing image upload:", error);
+      // Consider throwing error to retry for certain error types
+      if (error.code === 429 || error.code === 500) {
+        throw new functions.https.HttpsError('internal', 'Retryable error', error);
+      }
     }
   }
 );

@@ -283,7 +283,7 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
 
         if (!alarmStatusDoc.exists || alarmStatusDoc['AlarmLogged'] == false) {
           String sensorDataDocId = latestDoc.id;
-          await Future.delayed(Duration(seconds: 5));
+          await Future.delayed(Duration(seconds: 3));
           String? imageUrl = await _fetchLatestImageUrl();
 
           if (alarmLogs.isNotEmpty) {
