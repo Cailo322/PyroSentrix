@@ -113,8 +113,6 @@ class NotificationService {
         final isAlert = _isThresholdExceeded(combinedData);
         if (isAlert) {
           await _handleAlert(productCode);
-        } else {
-          _clearAlert(productCode);
         }
       }
     } catch (e) {
@@ -144,16 +142,6 @@ class NotificationService {
           'timestamp': FieldValue.serverTimestamp(),
         });
       }
-    }
-  }
-
-  void _clearAlert(String productCode) {
-    if (_alertedProductCodes.contains(productCode)) {
-      _alertedProductCodes.remove(productCode);
-      _alertedDevicesController.add(_alertedProductCodes);
-      _firestore.collection('NotifStatus').doc(productCode).update({
-        'notif': false,
-      });
     }
   }
 
