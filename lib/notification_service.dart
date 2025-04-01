@@ -123,7 +123,7 @@ class NotificationService {
 
   Future<void> _updateDeviceStatus(String productCode, bool isOnline) async {
     try {
-      await _firestore.collection('DevicesStatus').doc(productCode).set({
+      await _firestore.collection('DeviceStatus').doc(productCode).set({
         'online': isOnline,
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
