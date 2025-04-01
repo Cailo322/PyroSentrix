@@ -165,7 +165,6 @@ class _MonitorScreenState extends State<MonitorScreen> {
                   bool shouldShowDialog = await _shouldShowDialog();
                   if (shouldShowDialog) {
                     _isDialogOpen = true;
-                    await _updateDialogStatus(true);
                     showDialog(
                       context: context,
                       builder: (BuildContext context) {
@@ -300,6 +299,9 @@ class _MonitorScreenState extends State<MonitorScreen> {
                       },
                     ).then((_) {
                       _isDialogOpen = false;
+                    });
+                    Future.delayed(Duration(seconds: 8), () {
+                      _updateDialogStatus(true);
                     });
                   }
                 });
