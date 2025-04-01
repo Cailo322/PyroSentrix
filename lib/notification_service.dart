@@ -25,6 +25,7 @@ class NotificationService {
   Set<String> _alertedProductCodes = {};
   Set<String> _activeProductCodes = {};
   Map<String, StreamSubscription<QuerySnapshot>> _productSubscriptions = {};
+  Map<String, Timer> _deviceTimers = {};
   String? _currentUserEmail;
 
   Stream<Set<String>> get alertedDevices => _alertedDevicesController.stream;
@@ -77,6 +78,8 @@ class NotificationService {
     _activeProductCodes.difference(newProductCodes).forEach((removedCode) {
       _productSubscriptions[removedCode]?.cancel();
       _productSubscriptions.remove(removedCode);
+      _deviceTimers[removedCode]?.cancel();
+      _deviceTimers.remove(removedCode);
     });
 
     newProductCodes.difference(_activeProductCodes).forEach((newCode) {
@@ -87,6 +90,9 @@ class NotificationService {
   }
 
   StreamSubscription<QuerySnapshot> _monitorProductCode(String productCode) {
+    // Set initial status to online when monitoring starts
+    _updateDeviceStatus(productCode, true);
+
     return _firestore
         .collection('SensorData')
         .doc('FireAlarm')
@@ -98,8 +104,32 @@ class NotificationService {
       if (snapshot.docs.isNotEmpty) {
         final latestData = snapshot.docs.first.data();
         await _checkThresholds(latestData, productCode);
+
+        // Reset the timer whenever new data arrives
+        _resetDeviceTimer(productCode);
       }
     });
+  }
+
+  void _resetDeviceTimer(String productCode) {
+    // Cancel any existing timer
+    _deviceTimers[productCode]?.cancel();
+
+    // Set a new timer for 20 seconds
+    _deviceTimers[productCode] = Timer(const Duration(seconds: 20), () {
+      _updateDeviceStatus(productCode, false);
+    });
+  }
+
+  Future<void> _updateDeviceStatus(String productCode, bool isOnline) async {
+    try {
+      await _firestore.collection('DevicesStatus').doc(productCode).set({
+        'online': isOnline,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      print('Error updating device status: $e');
+    }
   }
 
   Future<void> _checkThresholds(
@@ -281,7 +311,10 @@ class NotificationService {
     await stopAlarmSound();
   }
 
+  @override
   Future<void> dispose() async {
+    _deviceTimers.values.forEach((timer) => timer.cancel());
+    _deviceTimers.clear();
     _productSubscriptions.values.forEach((sub) => sub.cancel());
     await _audioPlayer.dispose();
     await _alertedDevicesController.close();
