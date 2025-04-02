@@ -142,6 +142,10 @@ flutter:
     - assets/devicefire.png
     - assets/devicewarning.png
     - assets/nodevice.png
+    - assets/matrix.png
+
+
+
   fonts:
     - family: Jost
       fonts:

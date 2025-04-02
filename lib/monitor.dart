@@ -22,6 +22,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
   List<String> _lastDisplayedWarnings = [];
   Set<String> _acknowledgedAlerts = {};
   String _deviceName = 'Device';
+  OverlayEntry? _matrixOverlayEntry;
 
   @override
   void initState() {
@@ -40,7 +41,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
 
   Future<Map<String, dynamic>?> fetchLatestImage() async {
     try {
-      await Future.delayed(Duration(seconds:3));
+      await Future.delayed(Duration(seconds: 3));
       QuerySnapshot querySnapshot = await _firestore
           .collection(widget.productCode)
           .orderBy('timestamp', descending: true)
@@ -88,6 +89,42 @@ class _MonitorScreenState extends State<MonitorScreen> {
         print('Error updating DialogStatus: $e');
       }
     }
+  }
+
+  void _toggleMatrixOverlay() {
+    if (_matrixOverlayEntry == null) {
+      _matrixOverlayEntry = OverlayEntry(
+        builder: (context) => GestureDetector(
+          onTap: () => _toggleMatrixOverlay(),
+          child: Material(
+            color: Colors.black.withOpacity(0.85),
+            child: Center(
+              child: GestureDetector(
+                onTap: () {},
+                child: Container(
+                  padding: EdgeInsets.all(40),
+                  child: Image.asset(
+                    'assets/matrix.png',
+                    width: MediaQuery.of(context).size.width * 0.8,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      Overlay.of(context).insert(_matrixOverlayEntry!);
+    } else {
+      _matrixOverlayEntry?.remove();
+      _matrixOverlayEntry = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _matrixOverlayEntry?.remove();
+    super.dispose();
   }
 
   @override
@@ -326,14 +363,31 @@ class _MonitorScreenState extends State<MonitorScreen> {
                                   child: Image.asset('assets/official-logo.png'),
                                 ),
                                 SizedBox(height: 35),
-                                Text(
-                                  '$_deviceName Display',
-                                  style: TextStyle(
-                                    fontSize: 30,
-                                    fontWeight: FontWeight.w900,
-                                    color: Color(0xFF494949),
-                                    fontFamily: 'Poppins',
-                                  ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      '$_deviceName Display',
+                                      style: TextStyle(
+                                        fontSize: 30,
+                                        fontWeight: FontWeight.w900,
+                                        color: Color(0xFF494949),
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    GestureDetector(
+                                      onTap: () => _toggleMatrixOverlay(),
+                                      child: Opacity(
+                                        opacity: 0.6,
+                                        child: Image.asset(
+                                          'assets/info-icon.png',
+                                          width: 24,
+                                          height: 24,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 SizedBox(height: 3),
                                 Container(

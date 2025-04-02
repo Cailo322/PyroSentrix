@@ -66,7 +66,7 @@ class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateM
 
   Stream<DocumentSnapshot> _getDeviceStatusStream(String productCode) {
     return _firestore
-        .collection('DevicesStatus')
+        .collection('DeviceStatus')
         .doc(productCode)
         .snapshots();
   }
