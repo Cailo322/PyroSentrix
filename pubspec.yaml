@@ -143,6 +143,7 @@ flutter:
     - assets/devicewarning.png
     - assets/nodevice.png
     - assets/matrix.png
+    - assets/silent.png
 
 
 

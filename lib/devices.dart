@@ -71,6 +71,13 @@ class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateM
         .snapshots();
   }
 
+  Stream<DocumentSnapshot> _getHushStatusStream(String productCode) {
+    return _firestore
+        .collection('BooleanConditions')
+        .doc('Alarm')
+        .snapshots();
+  }
+
   Future<void> _loadDeviceNames() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -280,102 +287,128 @@ class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateM
                   : false
                   : false;
 
-              return Card(
-                margin: EdgeInsets.only(bottom: 16),
-                elevation: 2,
-                color: hasAlert
-                    ? _colorAnimation.value
-                    : (isOnline ? Colors.green[50] : Colors.grey[300]),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              return StreamBuilder<DocumentSnapshot>(
+                stream: _getHushStatusStream(productId),
+                builder: (context, hushSnapshot) {
+                  bool isHushed = hushSnapshot.hasData
+                      ? hushSnapshot.data!.exists
+                      ? hushSnapshot.data!['isHushed'] ?? false
+                      : false
+                      : false;
+
+                  return Stack(
+                    clipBehavior: Clip.none,
                     children: [
-                      Row(
-                        children: [
-                          if (hasAlert)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8.0),
-                              child: Image.asset(
-                                'assets/devicewarning.png',
-                                width: 24,
-                                height: 24,
-                              ),
-                            ),
-                          GestureDetector(
-                            onTap: () => _editDeviceName(context, productId),
-                            child: Text(
-                              deviceName,
-                              style: TextStyle(
-                                fontFamily: 'Jost',
-                                fontSize: 20,
-                                fontWeight: FontWeight.w500,
-                                color: hasAlert ? Colors.red[900] : Colors.black,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Row(
+                      Card(
+                        margin: EdgeInsets.only(bottom: 16),
+                        elevation: 2,
+                        color: hasAlert
+                            ? _colorAnimation.value
+                            : (isOnline ? Colors.green[50] : Colors.grey[300]),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                isOnline ? Icons.circle : Icons.circle_outlined,
-                                color: isOnline ? Colors.green : Colors.grey,
-                                size: 12,
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                isOnline ? 'Online' : 'Offline',
-                                style: TextStyle(
-                                  color: isOnline ? Colors.green : Colors.grey,
-                                  fontSize: 12,
-                                ),
+                              Row(
+                                children: [
+                                  if (hasAlert)
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 8.0),
+                                      child: Image.asset(
+                                        'assets/devicewarning.png',
+                                        width: 24,
+                                        height: 24,
+                                      ),
+                                    ),
+                                  GestureDetector(
+                                    onTap: () => _editDeviceName(context, productId),
+                                    child: Text(
+                                      deviceName,
+                                      style: TextStyle(
+                                        fontFamily: 'Jost',
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w500,
+                                        color: hasAlert ? Colors.red[900] : Colors.black,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        isOnline ? Icons.circle : Icons.circle_outlined,
+                                        color: isOnline ? Colors.green : Colors.grey,
+                                        size: 12,
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        isOnline ? 'Online' : 'Offline',
+                                        style: TextStyle(
+                                          color: isOnline ? Colors.green : Colors.grey,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Spacer(),
+                                  PopupMenuButton<String>(
+                                    icon: Icon(Icons.more_vert, color: hasAlert ? Colors.red[900] : Colors.black),
+                                    color: Colors.white,
+                                    onSelected: (value) {
+                                      if (value == 'details') {
+                                        _showDeviceDetails(context, doc);
+                                      } else if (value == 'delete') {
+                                        _deleteDevice(context, doc);
+                                      } else if (value == 'add_people') {
+                                        _addPeople(context, doc);
+                                      } else if (value == 'view_shared') {
+                                        _showSharedUsers(context, doc);
+                                      }
+                                    },
+                                    itemBuilder: (context) => [
+                                      PopupMenuItem(
+                                        value: 'details',
+                                        child: Text('Details', style: TextStyle(color: Colors.black)),
+                                      ),
+                                      if (isAdmin) ...[
+                                        PopupMenuItem(
+                                          value: 'add_people',
+                                          child: Text('Add People', style: TextStyle(color: Colors.black)),
+                                        ),
+                                        PopupMenuItem(
+                                          value: 'view_shared',
+                                          child: Text('Shared Users', style: TextStyle(color: Colors.black)),
+                                        ),
+                                      ],
+                                      PopupMenuItem(
+                                        value: 'delete',
+                                        child: Text('Delete', style: TextStyle(color: Colors.red)),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                          Spacer(),
-                          PopupMenuButton<String>(
-                            icon: Icon(Icons.more_vert, color: hasAlert ? Colors.red[900] : Colors.black),
-                            color: Colors.white,
-                            onSelected: (value) {
-                              if (value == 'details') {
-                                _showDeviceDetails(context, doc);
-                              } else if (value == 'delete') {
-                                _deleteDevice(context, doc);
-                              } else if (value == 'add_people') {
-                                _addPeople(context, doc);
-                              } else if (value == 'view_shared') {
-                                _showSharedUsers(context, doc);
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              PopupMenuItem(
-                                value: 'details',
-                                child: Text('Details', style: TextStyle(color: Colors.black)),
-                              ),
-                              if (isAdmin) ...[
-                                PopupMenuItem(
-                                  value: 'add_people',
-                                  child: Text('Add People', style: TextStyle(color: Colors.black)),
-                                ),
-                                PopupMenuItem(
-                                  value: 'view_shared',
-                                  child: Text('Shared Users', style: TextStyle(color: Colors.black)),
-                                ),
-                              ],
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Text('Delete', style: TextStyle(color: Colors.red)),
-                              ),
-                            ],
-                          ),
-                        ],
+                        ),
                       ),
+                      if (isHushed)
+                        Positioned(
+                          top: -8,
+                          right: -8,
+                          child: Image.asset(
+                            'assets/silent.png',
+                            width: 32,
+                            height: 32,
+                          ),
+                        ),
                     ],
-                  ),
-                ),
+                  );
+                },
               );
             },
           );
