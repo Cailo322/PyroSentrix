@@ -1,0 +1,2 @@
+C:/Users/Cailo Ongsiako/StudioProjects/PyroSentrix/android/app/.cxx/RelWithDebInfo/3a5w5e4r/arm64-v8a/CMakeFiles/edit_cache.dir
+C:/Users/Cailo Ongsiako/StudioProjects/PyroSentrix/android/app/.cxx/RelWithDebInfo/3a5w5e4r/arm64-v8a/CMakeFiles/rebuild_cache.dir

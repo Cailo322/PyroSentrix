@@ -276,48 +276,58 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
       var thresholds = thresholdDoc.data()!;
 
       if (_exceedsThreshold(data, thresholds)) {
-        var alarmStatusDoc = await _firestore
-            .collection('AlarmStatus')
-            .doc(_selectedProductCode)
+        var existingAlarm = await _firestore
+            .collection('SensorData')
+            .doc('AlarmLogs')
+            .collection(_selectedProductCode!)
+            .where('sensorDataDocId', isEqualTo: latestDoc.id)
+            .limit(1)
             .get();
 
-        if (!alarmStatusDoc.exists || alarmStatusDoc['AlarmLogged'] == false) {
-          String sensorDataDocId = latestDoc.id;
-          await Future.delayed(Duration(seconds: 3));
-          String? imageUrl = await _fetchLatestImageUrl();
-
-          if (alarmLogs.isNotEmpty) {
-            var lastAlarmId = alarmLogs.first['id'];
-            if (lastAlarmId != null && lastAlarmId.startsWith('Alarm ')) {
-              alarmCount = int.parse(lastAlarmId.split(' ')[1]);
-            }
-          }
-          alarmCount++;
-
-          var alarmData = {
-            'id': 'Alarm $alarmCount',
-            'timestamp': data['timestamp'],
-            'values': data,
-            'sensorDataDocId': sensorDataDocId,
-            'imageUrl': imageUrl,
-            'logged': true,
-          };
-
-          await _firestore
-              .collection('SensorData')
-              .doc('AlarmLogs')
-              .collection(_selectedProductCode!)
-              .add(alarmData);
-
-          await _firestore
+        if (existingAlarm.docs.isEmpty) {
+          var alarmStatusDoc = await _firestore
               .collection('AlarmStatus')
               .doc(_selectedProductCode)
-              .set({'AlarmLogged': true}, SetOptions(merge: true));
+              .get();
 
-          setState(() {
-            alarmLogs.insert(0, alarmData);
-            _filterAlarms();
-          });
+          if (!alarmStatusDoc.exists || alarmStatusDoc['AlarmLogged'] == false) {
+            String sensorDataDocId = latestDoc.id;
+            await Future.delayed(Duration(seconds: 3));
+            String? imageUrl = await _fetchLatestImageUrl();
+
+            if (alarmLogs.isNotEmpty) {
+              var lastAlarmId = alarmLogs.first['id'];
+              if (lastAlarmId != null && lastAlarmId.startsWith('Alarm ')) {
+                alarmCount = int.parse(lastAlarmId.split(' ')[1]);
+              }
+            }
+            alarmCount++;
+
+            var alarmData = {
+              'id': 'Alarm $alarmCount',
+              'timestamp': data['timestamp'],
+              'values': data,
+              'sensorDataDocId': sensorDataDocId,
+              'imageUrl': imageUrl,
+              'logged': true,
+            };
+
+            await _firestore
+                .collection('SensorData')
+                .doc('AlarmLogs')
+                .collection(_selectedProductCode!)
+                .add(alarmData);
+
+            await _firestore
+                .collection('AlarmStatus')
+                .doc(_selectedProductCode)
+                .set({'AlarmLogged': true}, SetOptions(merge: true));
+
+            setState(() {
+              alarmLogs.insert(0, alarmData);
+              _filterAlarms();
+            });
+          }
         }
       }
     });

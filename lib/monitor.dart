@@ -382,8 +382,8 @@ class _MonitorScreenState extends State<MonitorScreen> {
                                         opacity: 0.6,
                                         child: Image.asset(
                                           'assets/info-icon.png',
-                                          width: 24,
-                                          height: 24,
+                                          width: 20,
+                                          height: 20,
                                         ),
                                       ),
                                     ),

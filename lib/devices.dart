@@ -184,9 +184,9 @@ class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateM
                           Text(
                             'Devices',
                             style: TextStyle(
-                              fontFamily: 'Jost',
+                              fontFamily: 'Poppins',
                               fontSize: 30,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w900,
                               color: Colors.black,
                             ),
                           ),
@@ -295,36 +295,47 @@ class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateM
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
+                          if (hasAlert)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: Image.asset(
+                                'assets/devicewarning.png',
+                                width: 24,
+                                height: 24,
+                              ),
+                            ),
+                          GestureDetector(
+                            onTap: () => _editDeviceName(context, productId),
+                            child: Text(
+                              deviceName,
+                              style: TextStyle(
+                                fontFamily: 'Jost',
+                                fontSize: 20,
+                                fontWeight: FontWeight.w500,
+                                color: hasAlert ? Colors.red[900] : Colors.black,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 8),
                           Row(
                             children: [
-                              if (hasAlert)
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 15.0),
-                                  child: Image.asset(
-                                    'assets/devicewarning.png',
-                                    width: 24,
-                                    height: 24,
-                                  ),
-                                ),
-                              ConstrainedBox(
-                                constraints: BoxConstraints(maxWidth: 200),
-                                child: InkWell(
-                                  onTap: () => _editDeviceName(context, productId),
-                                  child: Text(
-                                    deviceName,
-                                    style: TextStyle(
-                                      fontFamily: 'Jost',
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w500,
-                                      color: hasAlert ? Colors.red[900] : Colors.black,
-                                    ),
-                                  ),
+                              Icon(
+                                isOnline ? Icons.circle : Icons.circle_outlined,
+                                color: isOnline ? Colors.green : Colors.grey,
+                                size: 12,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                isOnline ? 'Online' : 'Offline',
+                                style: TextStyle(
+                                  color: isOnline ? Colors.green : Colors.grey,
+                                  fontSize: 12,
                                 ),
                               ),
                             ],
                           ),
+                          Spacer(),
                           PopupMenuButton<String>(
                             icon: Icon(Icons.more_vert, color: hasAlert ? Colors.red[900] : Colors.black),
                             color: Colors.white,
@@ -359,24 +370,6 @@ class _DevicesScreenState extends State<DevicesScreen> with TickerProviderStateM
                                 child: Text('Delete', style: TextStyle(color: Colors.red)),
                               ),
                             ],
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 1),
-                      Row(
-                        children: [
-                          Icon(
-                            isOnline ? Icons.circle : Icons.circle_outlined,
-                            color: isOnline ? Colors.green : Colors.grey,
-                            size: 12,
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            isOnline ? 'Online' : 'Offline',
-                            style: TextStyle(
-                              color: isOnline ? Colors.green : Colors.grey,
-                              fontSize: 12,
-                            ),
                           ),
                         ],
                       ),
