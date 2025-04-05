@@ -104,7 +104,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
           children: <Widget>[
             Container(
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-              child: Column(  // Added 'child:' here
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: 15),
@@ -211,6 +211,9 @@ class _CustomDrawerState extends State<CustomDrawer> {
         if (isNavigating) return;
         isNavigating = true;
 
+        // Close drawer first
+        Navigator.pop(context);
+
         if (isLogout) {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('isLoggedIn', false);
@@ -231,7 +234,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
               );
             }
           } else {
-            await _navigateToNamedScreen(context, route);
+            await Navigator.pushNamed(context, route);
           }
         }
         isNavigating = false;
@@ -239,46 +242,12 @@ class _CustomDrawerState extends State<CustomDrawer> {
     );
   }
 
-  Future<void> _navigateToNamedScreen(BuildContext context, String routeName) async {
-    if (ModalRoute.of(context)?.settings.name != routeName) {
-      if (_isRouteAlreadyInStack(context, routeName)) {
-        Navigator.popUntil(context, (route) => route.settings.name == routeName);
-      } else {
-        await Navigator.pushNamed(context, routeName);
-      }
-    } else {
-      Navigator.pop(context);
-    }
-  }
-
-  Future<void> _navigateToScreen(BuildContext context, Widget screen, {String? routeName}) async {
-    final currentRoute = ModalRoute.of(context);
-    if (currentRoute?.settings.name != routeName) {
-      if (routeName != null && _isRouteAlreadyInStack(context, routeName)) {
-        Navigator.popUntil(context, (route) => route.settings.name == routeName);
-      } else {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => screen,
-            settings: RouteSettings(name: routeName),
-          ),
-        );
-      }
-    } else {
-      Navigator.pop(context);
-    }
-  }
-
-  bool _isRouteAlreadyInStack(BuildContext context, String routeName) {
-    bool isRouteInStack = false;
-    Navigator.of(context).popUntil((route) {
-      if (route.settings.name == routeName) {
-        isRouteInStack = true;
-        return true;
-      }
-      return false;
-    });
-    return isRouteInStack;
+  Future<void> _navigateToScreen(BuildContext context, Widget screen) async {
+    // Close drawer first
+    Navigator.pop(context);
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => screen),
+    );
   }
 }

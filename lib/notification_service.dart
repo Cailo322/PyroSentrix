@@ -27,6 +27,7 @@ class NotificationService {
   Map<String, StreamSubscription<QuerySnapshot>> _productSubscriptions = {};
   Map<String, Timer> _deviceTimers = {};
   String? _currentUserEmail;
+  late SharedPreferences _prefs;
 
   Stream<Set<String>> get alertedDevices => _alertedDevicesController.stream;
 
@@ -35,10 +36,10 @@ class NotificationService {
     AndroidInitializationSettings('@mipmap/ic_launcher');
     const InitializationSettings initializationSettings =
     InitializationSettings(android: initializationSettingsAndroid);
-
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
     await requestPermissions();
     _currentUserEmail = _auth.currentUser?.email;
+    _prefs = await SharedPreferences.getInstance();
     _listenForActiveProducts();
   }
 
@@ -49,7 +50,6 @@ class NotificationService {
       sound: true,
       provisional: true,
     );
-    print('Notification permission status: ${settings.authorizationStatus}');
   }
 
   void _listenForActiveProducts() {
@@ -59,19 +59,15 @@ class NotificationService {
           .map((doc) => doc['product_code'] as String)
           .where((code) => code != null)
           .toSet();
-
       _updateProductSubscriptions(newProductCodes);
     });
   }
 
   bool _isUserAuthorized(DocumentSnapshot doc) {
     if (_currentUserEmail == null) return false;
-
     final userEmail = doc['user_email'] as String?;
     final sharedUsers = List<String>.from(doc['shared_users'] ?? []);
-
-    return userEmail == _currentUserEmail ||
-        sharedUsers.contains(_currentUserEmail);
+    return userEmail == _currentUserEmail || sharedUsers.contains(_currentUserEmail);
   }
 
   void _updateProductSubscriptions(Set<String> newProductCodes) {
@@ -81,18 +77,14 @@ class NotificationService {
       _deviceTimers[removedCode]?.cancel();
       _deviceTimers.remove(removedCode);
     });
-
     newProductCodes.difference(_activeProductCodes).forEach((newCode) {
       _productSubscriptions[newCode] = _monitorProductCode(newCode);
     });
-
     _activeProductCodes = newProductCodes;
   }
 
   StreamSubscription<QuerySnapshot> _monitorProductCode(String productCode) {
-    // Set initial status to online when monitoring starts
     _updateDeviceStatus(productCode, true);
-
     return _firestore
         .collection('SensorData')
         .doc('FireAlarm')
@@ -104,18 +96,13 @@ class NotificationService {
       if (snapshot.docs.isNotEmpty) {
         final latestData = snapshot.docs.first.data();
         await _checkThresholds(latestData, productCode);
-
-        // Reset the timer whenever new data arrives
         _resetDeviceTimer(productCode);
       }
     });
   }
 
   void _resetDeviceTimer(String productCode) {
-    // Cancel any existing timer
     _deviceTimers[productCode]?.cancel();
-
-    // Set a new timer for 20 seconds
     _deviceTimers[productCode] = Timer(const Duration(seconds: 20), () {
       _updateDeviceStatus(productCode, false);
     });
@@ -127,17 +114,13 @@ class NotificationService {
         'online': isOnline,
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-    } catch (e) {
-      print('Error updating device status: $e');
-    }
+    } catch (e) {}
   }
 
-  Future<void> _checkThresholds(
-      Map<String, dynamic> data, String productCode) async {
+  Future<void> _checkThresholds(Map<String, dynamic> data, String productCode) async {
     try {
       final thresholdDoc = await _firestore.collection('Threshold').doc('Proxy').get();
       final thresholds = thresholdDoc.data();
-
       if (thresholds != null) {
         final combinedData = {...data, ...thresholds};
         final isAlert = _isThresholdExceeded(combinedData);
@@ -145,9 +128,7 @@ class NotificationService {
           await _handleAlert(productCode);
         }
       }
-    } catch (e) {
-      print('Error checking thresholds: $e');
-    }
+    } catch (e) {}
   }
 
   bool _isThresholdExceeded(Map<String, dynamic> combinedData) {
@@ -163,24 +144,14 @@ class NotificationService {
     if (!_alertedProductCodes.contains(productCode)) {
       _alertedProductCodes.add(productCode);
       _alertedDevicesController.add(_alertedProductCodes);
-
-      final notifStatus = await _firestore.collection('NotifStatus').doc(productCode).get();
-      if (!(notifStatus.exists && notifStatus.data()?['notif'] == true)) {
-        await _sendNotification(productCode);
-        await _firestore.collection('NotifStatus').doc(productCode).set({
-          'notif': true,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-      }
+      await _sendNotification(productCode);
     }
   }
 
   Future<String> _getDeviceName(String productCode) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getString('device_name_$productCode') ?? 'Device';
+      return _prefs.getString('device_name_$productCode') ?? 'Device';
     } catch (e) {
-      print('Error getting device name: $e');
       return 'Device';
     }
   }
@@ -194,10 +165,8 @@ class NotificationService {
           .orderBy('timestamp', descending: true)
           .limit(1)
           .get();
-
       return snapshot.docs.isNotEmpty ? snapshot.docs.first.data() : {};
     } catch (e) {
-      print('Error getting sensor data: $e');
       return {};
     }
   }
@@ -207,7 +176,6 @@ class NotificationService {
       final snapshot = await _firestore.collection('Threshold').doc('Proxy').get();
       return snapshot.data() ?? {};
     } catch (e) {
-      print('Error getting thresholds: $e');
       return {};
     }
   }
@@ -217,16 +185,11 @@ class NotificationService {
       final deviceName = await _getDeviceName(productCode);
       final latestData = await _getLatestSensorData(productCode);
       final thresholds = await _getThresholdValues();
-
       if (latestData.isEmpty || thresholds.isEmpty) return;
 
       final combinedData = {...latestData, ...thresholds};
       final exceededThresholds = _getExceededThresholds(combinedData);
-
       if (exceededThresholds.isEmpty) return;
-
-      final title = "$deviceName: Fire Alert!";
-      final body = _createNotificationBody(exceededThresholds);
 
       const androidDetails = AndroidNotificationDetails(
         'channel_id',
@@ -240,51 +203,28 @@ class NotificationService {
 
       await flutterLocalNotificationsPlugin.show(
         0,
-        title,
-        body,
+        "$deviceName: Fire Alert!",
+        _createNotificationBody(exceededThresholds),
         const NotificationDetails(android: androidDetails),
       );
-
       await _playAlarmSound();
-    } catch (e) {
-      print('Error sending notification: $e');
-    }
+    } catch (e) {}
   }
 
   List<String> _getExceededThresholds(Map<String, dynamic> combinedData) {
     final List<String> exceeded = [];
-
-    if (combinedData['carbon_monoxide'] > combinedData['co_threshold']) {
-      exceeded.add('Carbon monoxide');
-    }
-    if (combinedData['smoke_level'] > combinedData['smoke_threshold']) {
-      exceeded.add('Smoke level');
-    }
-    if (combinedData['humidity_dht22'] < combinedData['humidity_threshold']) {
-      exceeded.add('Humidity');
-    }
-    if (combinedData['indoor_air_quality'] > combinedData['iaq_threshold']) {
-      exceeded.add('Air quality');
-    }
-    if (combinedData['temperature_dht22'] > combinedData['temp_threshold']) {
-      exceeded.add('Temperature');
-    }
-    if (combinedData['temperature_mlx90614'] > combinedData['temp_threshold']) {
-      exceeded.add('Infrared temperature');
-    }
-
+    if (combinedData['carbon_monoxide'] > combinedData['co_threshold']) exceeded.add('Carbon monoxide');
+    if (combinedData['smoke_level'] > combinedData['smoke_threshold']) exceeded.add('Smoke level');
+    if (combinedData['humidity_dht22'] < combinedData['humidity_threshold']) exceeded.add('Humidity');
+    if (combinedData['indoor_air_quality'] > combinedData['iaq_threshold']) exceeded.add('Air quality');
+    if (combinedData['temperature_dht22'] > combinedData['temp_threshold']) exceeded.add('Temperature');
+    if (combinedData['temperature_mlx90614'] > combinedData['temp_threshold']) exceeded.add('Infrared temperature');
     return exceeded;
   }
 
   String _createNotificationBody(List<String> exceededThresholds) {
-    if (exceededThresholds.isEmpty) {
-      return "Sensor readings are normal";
-    }
-
-    if (exceededThresholds.length == 1) {
-      return "${exceededThresholds[0]} has exceeded the safe threshold!";
-    }
-
+    if (exceededThresholds.isEmpty) return "Sensor readings are normal";
+    if (exceededThresholds.length == 1) return "${exceededThresholds[0]} has exceeded the safe threshold!";
     return "Multiple thresholds exceeded (${exceededThresholds.join(', ')})";
   }
 
@@ -292,17 +232,13 @@ class NotificationService {
     try {
       await _audioPlayer.setReleaseMode(ReleaseMode.loop);
       await _audioPlayer.play(AssetSource('alarm.mp3'));
-    } catch (e) {
-      print('Error playing alarm: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> stopAlarmSound() async {
     try {
       await _audioPlayer.stop();
-    } catch (e) {
-      print('Error stopping alarm: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> acknowledgeAlerts() async {
@@ -313,9 +249,12 @@ class NotificationService {
 
   @override
   Future<void> dispose() async {
+    _alertedProductCodes.clear();
+    _alertedDevicesController.add(_alertedProductCodes);
     _deviceTimers.values.forEach((timer) => timer.cancel());
     _deviceTimers.clear();
     _productSubscriptions.values.forEach((sub) => sub.cancel());
+    await _audioPlayer.stop();
     await _audioPlayer.dispose();
     await _alertedDevicesController.close();
   }

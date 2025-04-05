@@ -193,7 +193,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
                 bottomIcon = 'assets/warning.png';
               } else if (cautionSensors.isNotEmpty) {
                 String sensorList = _formatSensorList(cautionSensors);
-                bottomText = "CAUTION! $sensorList close to reaching abnormal levels. Please inspect your area immediately.";
+                bottomText = "CAUTION! $sensorList close to reaching critical levels. Please inspect your area immediately.";
                 bottomIcon = 'assets/caution.png';
               }
 
@@ -337,7 +337,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
                     ).then((_) {
                       _isDialogOpen = false;
                     });
-                    Future.delayed(Duration(seconds: 8), () {
+                    Future.delayed(Duration(seconds: 9), () {
                       _updateDialogStatus(true);
                     });
                   }
@@ -569,11 +569,11 @@ class _MonitorScreenState extends State<MonitorScreen> {
 
   String determineStatus(dynamic value, dynamic threshold, String sensorType) {
     if (sensorType == 'humidity') {
-      if (value < threshold) return 'Abnormal';
+      if (value < threshold) return 'Critical';
       if (value < threshold * 1.25) return 'Caution';
       return 'Normal';
     } else {
-      if (value > threshold) return 'Abnormal';
+      if (value > threshold) return 'Critical';
       if (value > threshold * 0.75) return 'Caution';
       return 'Normal';
     }
@@ -795,7 +795,7 @@ class SensorCard extends StatelessWidget {
                 ),
               ],
             ),
-            if (status == 'Abnormal')
+            if (status == 'Critical')
               Positioned(
                 top: -5,
                 right: -5,

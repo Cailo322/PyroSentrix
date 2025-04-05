@@ -309,7 +309,6 @@ class _AlarmLogScreenState extends State<AlarmLogScreen> {
               'values': data,
               'sensorDataDocId': sensorDataDocId,
               'imageUrl': imageUrl,
-              'logged': true,
             };
 
             await _firestore

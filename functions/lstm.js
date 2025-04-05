@@ -2,7 +2,7 @@ const axios = require("axios");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { db } = require("./firebaseInit");
 
-const endpointUrl = "https://asia-southeast1-aiplatform.googleapis.com/v1/projects/firedetection-640fa/locations/asia-southeast1/endpoints/5128179406551908352:predict";
+const endpointUrl = "https://asia-southeast2-aiplatform.googleapis.com/v1/projects/firedetection-640fa/locations/asia-southeast2/endpoints/8477151087269249024:predict";
 
 const minMaxValues = {
   carbon_monoxide: { min: 0.0, max: 16.3 },
