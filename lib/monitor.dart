@@ -129,6 +129,11 @@ class _MonitorScreenState extends State<MonitorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final textScaleFactor = MediaQuery.of(context).textScaleFactor;
+    final isSmallScreen = screenWidth < 360 || textScaleFactor > 1.3;
+    final isLargeScreen = screenWidth > 600 && textScaleFactor <= 1.3;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: CustomAppBar(),
@@ -416,10 +421,10 @@ class _MonitorScreenState extends State<MonitorScreen> {
                             padding: EdgeInsets.only(bottom: 20.0),
                             child: GridView.count(
                               shrinkWrap: true,
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 20,
-                              mainAxisSpacing: 20,
-                              childAspectRatio: 1,
+                              crossAxisCount: isLargeScreen ? 3 : 2,
+                              crossAxisSpacing: isSmallScreen ? 10 : 20,
+                              mainAxisSpacing: isSmallScreen ? 10 : 20,
+                              childAspectRatio: isSmallScreen ? 0.9 : 1,
                               physics: NeverScrollableScrollPhysics(),
                               children: [
                                 SensorCard(
@@ -428,6 +433,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
                                   value: '${sensorData['humidity_dht22']}%',
                                   statusColor: determineStatusColor(sensorData['humidity_dht22'], thresholdData['humidity_threshold'], 'humidity'),
                                   valueColor: determineStatusColor(sensorData['humidity_dht22'], thresholdData['humidity_threshold'], 'humidity'),
+                                  isSmallScreen: isSmallScreen,
                                 ),
                                 SensorCard(
                                   title: 'TEMP.1',
@@ -435,6 +441,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
                                   value: '${sensorData['temperature_dht22']}°C',
                                   statusColor: determineStatusColor(sensorData['temperature_dht22'], thresholdData['temp_threshold'], 'temperature'),
                                   valueColor: determineStatusColor(sensorData['temperature_dht22'], thresholdData['temp_threshold'], 'temperature'),
+                                  isSmallScreen: isSmallScreen,
                                 ),
                                 SensorCard(
                                   title: 'CO',
@@ -442,6 +449,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
                                   value: '${sensorData['carbon_monoxide']}ppm',
                                   statusColor: determineStatusColor(sensorData['carbon_monoxide'], thresholdData['co_threshold'], 'co'),
                                   valueColor: determineStatusColor(sensorData['carbon_monoxide'], thresholdData['co_threshold'], 'co'),
+                                  isSmallScreen: isSmallScreen,
                                 ),
                                 SensorCard(
                                   title: 'SMOKE',
@@ -449,6 +457,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
                                   value: '${sensorData['smoke_level']}µg/m³',
                                   statusColor: determineStatusColor(sensorData['smoke_level'], thresholdData['smoke_threshold'], 'smoke'),
                                   valueColor: determineStatusColor(sensorData['smoke_level'], thresholdData['smoke_threshold'], 'smoke'),
+                                  isSmallScreen: isSmallScreen,
                                 ),
                                 SensorCard(
                                   title: 'TEMP.2',
@@ -456,6 +465,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
                                   value: '${sensorData['temperature_mlx90614']}°C',
                                   statusColor: determineStatusColor(sensorData['temperature_mlx90614'], thresholdData['temp_threshold'], 'temperature'),
                                   valueColor: determineStatusColor(sensorData['temperature_mlx90614'], thresholdData['temp_threshold'], 'temperature'),
+                                  isSmallScreen: isSmallScreen,
                                 ),
                                 SensorCard(
                                   title: 'AIR QUALITY',
@@ -463,6 +473,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
                                   value: '${sensorData['indoor_air_quality']} AQI',
                                   statusColor: determineStatusColor(sensorData['indoor_air_quality'], thresholdData['iaq_threshold'], 'iaq'),
                                   valueColor: determineStatusColor(sensorData['indoor_air_quality'], thresholdData['iaq_threshold'], 'iaq'),
+                                  isSmallScreen: isSmallScreen,
                                   titleStyle: TextStyle(
                                     fontSize: 17,
                                     fontWeight: FontWeight.bold,
@@ -618,21 +629,16 @@ class SensorCard extends StatelessWidget {
   final Color statusColor;
   final Color valueColor;
   final TextStyle? titleStyle;
+  final bool isSmallScreen;
 
-  static const TextStyle defaultTitleStyle = TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.bold,
-    color: Color(0xFF494949),
-    fontFamily: 'Arimo',
-  );
-
-  SensorCard({
+  const SensorCard({
     required this.title,
     required this.status,
     required this.value,
     required this.statusColor,
     required this.valueColor,
-    this.titleStyle = defaultTitleStyle,
+    this.titleStyle,
+    required this.isSmallScreen,
   });
 
   void _showSensorInfoDialog(BuildContext context) {
@@ -661,6 +667,9 @@ class SensorCard extends StatelessWidget {
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        final isSmall = MediaQuery.of(context).size.width < 360 ||
+            MediaQuery.of(context).textScaleFactor > 1.3;
+
         return AlertDialog(
           backgroundColor: Colors.white,
           content: IntrinsicHeight(
@@ -669,10 +678,10 @@ class SensorCard extends StatelessWidget {
               children: [
                 Image.asset(
                   'assets/person.png',
-                  width: 90,
-                  height: 90,
+                  width: isSmall ? 70 : 90,
+                  height: isSmall ? 70 : 90,
                 ),
-                SizedBox(width: 10),
+                SizedBox(width: isSmall ? 5 : 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -681,25 +690,25 @@ class SensorCard extends StatelessWidget {
                       Text(
                         title,
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: isSmall ? 16 : 18,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                         ),
                       ),
-                      SizedBox(height: 4),
+                      SizedBox(height: isSmall ? 2 : 4),
                       Text(
                         'Sensor Information',
                         style: TextStyle(
                           fontStyle: FontStyle.italic,
                           color: Colors.grey,
-                          fontSize: 14,
+                          fontSize: isSmall ? 12 : 14,
                         ),
                       ),
-                      SizedBox(height: 8),
+                      SizedBox(height: isSmall ? 4 : 8),
                       Text(
                         sensorInfo,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: isSmall ? 12 : 14,
                           color: Colors.black87,
                         ),
                       ),
@@ -709,7 +718,12 @@ class SensorCard extends StatelessWidget {
               ],
             ),
           ),
-          contentPadding: EdgeInsets.fromLTRB(16, 20, 16, 10),
+          contentPadding: EdgeInsets.fromLTRB(
+            isSmall ? 12 : 16,
+            isSmall ? 15 : 20,
+            isSmall ? 12 : 16,
+            isSmall ? 5 : 10,
+          ),
           actionsAlignment: MainAxisAlignment.center,
           actions: [],
         );
@@ -719,143 +733,167 @@ class SensorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _showSensorInfoDialog(context),
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.all(16.0),
-        decoration: BoxDecoration(
-          color: Colors.grey[300],
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              spreadRadius: 2,
-              blurRadius: 5,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: titleStyle,
-                ),
-                SizedBox(height: 1),
-                Container(
-                  width: 17,
-                  height: 3,
-                  decoration: BoxDecoration(
-                    color: Color(0xFFB9B9B9),
-                    borderRadius: BorderRadius.circular(3),
+    final textScaleFactor = MediaQuery.of(context).textScaleFactor;
+    final isTextLarge = textScaleFactor > 1.3;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minWidth: double.infinity,
+        minHeight: isSmallScreen ? 140 : 180,
+      ),
+      child: GestureDetector(
+        onTap: () => _showSensorInfoDialog(context),
+        child: Container(
+          padding: EdgeInsets.all(isSmallScreen ? 10.0 : 14.0),
+          decoration: BoxDecoration(
+            color: Colors.grey[300],
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                spreadRadius: 1,
+                blurRadius: 4,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: titleStyle ?? TextStyle(
+                      fontSize: isSmallScreen
+                          ? (isTextLarge ? 14 : 16)
+                          : (isTextLarge ? 16 : 18),
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF494949),
+                      fontFamily: 'Arimo',
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Container(
+                    width: 17,
+                    height: 2,
+                    decoration: BoxDecoration(
+                      color: Color(0xFFB9B9B9),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  SizedBox(height: isSmallScreen ? 4 : 8),
+                  Text(
+                    'Status Level:',
+                    style: TextStyle(
+                      fontSize: isSmallScreen
+                          ? (isTextLarge ? 11 : 13)
+                          : (isTextLarge ? 13 : 16),
+                      color: Color(0xFF494949),
+                      fontFamily: 'Jost',
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    status,
+                    style: TextStyle(
+                      fontSize: isSmallScreen
+                          ? (isTextLarge ? 12 : 14)
+                          : (isTextLarge ? 14 : 18),
+                      fontWeight: FontWeight.bold,
+                      color: statusColor,
+                      fontFamily: 'Arimo',
+                    ),
+                  ),
+                  SizedBox(height: isSmallScreen ? 4 : 8),
+                  Text(
+                    'Value:',
+                    style: TextStyle(
+                      fontSize: isSmallScreen
+                          ? (isTextLarge ? 11 : 13)
+                          : (isTextLarge ? 13 : 16),
+                      color: Color(0xFF494949),
+                      fontFamily: 'Jost',
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: isSmallScreen
+                          ? (isTextLarge ? 12 : 14)
+                          : (isTextLarge ? 14 : 18),
+                      fontWeight: FontWeight.bold,
+                      color: valueColor,
+                      fontFamily: 'Arimo',
+                    ),
+                  ),
+                ],
+              ),
+              if (status == 'Critical')
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Icon(
+                    Icons.warning_rounded,
+                    color: Colors.red,
+                    size: isSmallScreen ? 22 : 28,
                   ),
                 ),
-                SizedBox(height: 10),
-                Text(
-                  'Status Level:',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Color(0xFF494949),
-                    fontFamily: 'Jost',
+              if (title == 'HUMIDITY')
+                Positioned(
+                  bottom: -4,
+                  right: -4,
+                  child: Image.asset(
+                    'assets/humidity.png',
+                    width: isSmallScreen ? 22 : 28,
+                    height: isSmallScreen ? 22 : 28,
                   ),
                 ),
-                SizedBox(height: 5),
-                Text(
-                  status,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: statusColor,
-                    fontFamily: 'Arimo',
+              if (title == 'TEMP.1' || title == 'TEMP.2')
+                Positioned(
+                  bottom: -4,
+                  right: -4,
+                  child: Image.asset(
+                    'assets/temperature.png',
+                    width: isSmallScreen ? 22 : 28,
+                    height: isSmallScreen ? 22 : 28,
                   ),
                 ),
-                SizedBox(height: 10),
-                Text(
-                  'Value:',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Color(0xFF494949),
-                    fontFamily: 'Jost',
+              if (title == 'SMOKE')
+                Positioned(
+                  bottom: -4,
+                  right: -4,
+                  child: Image.asset(
+                    'assets/smoke.png',
+                    width: isSmallScreen ? 22 : 28,
+                    height: isSmallScreen ? 22 : 28,
                   ),
                 ),
-                SizedBox(height: 5),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: valueColor,
-                    fontFamily: 'Arimo',
+              if (title == 'CO')
+                Positioned(
+                  bottom: -4,
+                  right: -4,
+                  child: Image.asset(
+                    'assets/CO.png',
+                    width: isSmallScreen ? 22 : 28,
+                    height: isSmallScreen ? 22 : 28,
                   ),
                 ),
-              ],
-            ),
-            if (status == 'Critical')
-              Positioned(
-                top: -5,
-                right: -5,
-                child: Icon(
-                  Icons.warning_rounded,
-                  color: Colors.red,
-                  size: 30,
+              if (title == 'AIR QUALITY')
+                Positioned(
+                  bottom: -4,
+                  right: -4,
+                  child: Image.asset(
+                    'assets/IAQ.png',
+                    width: isSmallScreen ? 22 : 28,
+                    height: isSmallScreen ? 22 : 28,
+                  ),
                 ),
-              ),
-            if (title == 'HUMIDITY')
-              Positioned(
-                bottom: -5,
-                right: -5,
-                child: Image.asset(
-                  'assets/humidity.png',
-                  width: 30,
-                  height: 30,
-                ),
-              ),
-            if (title == 'TEMP.1' || title == 'TEMP.2')
-              Positioned(
-                bottom: -5,
-                right: -5,
-                child: Image.asset(
-                  'assets/temperature.png',
-                  width: 30,
-                  height: 30,
-                ),
-              ),
-            if (title == 'SMOKE')
-              Positioned(
-                bottom: -5,
-                right: -5,
-                child: Image.asset(
-                  'assets/smoke.png',
-                  width: 30,
-                  height: 30,
-                ),
-              ),
-            if (title == 'CO')
-              Positioned(
-                bottom: -5,
-                right: -5,
-                child: Image.asset(
-                  'assets/CO.png',
-                  width: 30,
-                  height: 30,
-                ),
-              ),
-            if (title == 'AIR QUALITY')
-              Positioned(
-                bottom: -5,
-                right: -5,
-                child: Image.asset(
-                  'assets/IAQ.png',
-                  width: 30,
-                  height: 30,
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
