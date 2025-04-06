@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'splash_screen.dart';
 import 'devices.dart';
 import 'add_device.dart';
@@ -12,6 +13,7 @@ import 'custom_app_bar.dart';
 import 'queries.dart';
 import 'login.dart';
 import 'notification_service.dart';
+import 'status.dart'; // Add this import
 import 'trends.dart';
 import 'about.dart';
 import 'reset_system.dart';
@@ -25,8 +27,16 @@ void main() async {
   await Firebase.initializeApp();
   await FlutterDownloader.initialize();
 
+  // Initialize notifications plugin
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+  FlutterLocalNotificationsPlugin();
+
+  // Initialize services
   final notificationService = NotificationService();
-  notificationService.initialize();
+  await notificationService.initialize();
+
+  final statusMonitor = DeviceStatusMonitor(flutterLocalNotificationsPlugin); // New
+  await statusMonitor.initialize(); // New
 
   final trendAnalysisService = TrendAnalysisService();
   trendAnalysisService.initialize();
@@ -39,6 +49,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (context) => DeviceProvider()),
         Provider<NotificationService>.value(value: notificationService),
+        Provider<DeviceStatusMonitor>.value(value: statusMonitor), // New
         Provider<TrendAnalysisService>.value(value: trendAnalysisService),
       ],
       child: MyApp(isLoggedIn: isLoggedIn),
@@ -97,6 +108,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
+// Rest of your code remains the same...
 class MyHomePage extends StatelessWidget {
   const MyHomePage({Key? key}) : super(key: key);
   @override
