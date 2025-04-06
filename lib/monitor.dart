@@ -310,6 +310,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
                                         width: 2,
                                         color: Colors.white,
                                       ),
+                                      // In the dialog builder part of your code, replace the TextButton for CALL FIRESTATION with this:
                                       Expanded(
                                         child: TextButton(
                                           style: TextButton.styleFrom(
@@ -325,9 +326,19 @@ class _MonitorScreenState extends State<MonitorScreen> {
                                             Navigator.of(context).pop();
                                             Navigator.push(context, MaterialPageRoute(builder: (context) => CallHelpScreen()));
                                           },
-                                          child: Text(
-                                            'CALL FIRESTATION',
-                                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
+                                          child: FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Padding(
+                                              padding: EdgeInsets.symmetric(horizontal: 4.0),
+                                              child: Text(
+                                                'CALL FIRESTATION',
+                                                style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w900
+                                                ),
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
