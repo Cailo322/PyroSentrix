@@ -308,66 +308,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
-          : Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 20.0),
-            child: Column(
-              children: [
-                CircleAvatar(
-                  radius: 50,
-                  backgroundColor: Colors.deepOrange,
-                  child: Icon(Icons.person, size: 50, color: Colors.white),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  _nameController.text,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    fontFamily: 'Inter',
+          : SingleChildScrollView(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 20.0),
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.deepOrange,
+                    child: Icon(Icons.person, size: 50, color: Colors.white),
                   ),
-                ),
-                Text(
-                  _currentUserEmail ?? '',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                    fontFamily: 'Arimo',
+                  SizedBox(height: 10),
+                  Text(
+                    _nameController.text,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: 'Inter',
+                    ),
                   ),
-                ),
-              ],
+                  Text(
+                    _currentUserEmail ?? '',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                      fontFamily: 'Arimo',
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 80.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildSectionButton(
-                  'Your Details',
-                  isActive: _showDetails,
-                  onTap: () => setState(() => _showDetails = true),
-                ),
-                _buildSectionButton(
-                  'Your Devices (${_userDevices.length})',
-                  isActive: !_showDetails,
-                  onTap: () => setState(() => _showDetails = false),
-                ),
-              ],
+            SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final buttonWidth = constraints.maxWidth * 0.45;
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      SizedBox(
+                        width: buttonWidth,
+                        child: _buildSectionButton(
+                          'Your Details',
+                          isActive: _showDetails,
+                          onTap: () => setState(() => _showDetails = true),
+                        ),
+                      ),
+                      SizedBox(
+                        width: buttonWidth,
+                        child: _buildSectionButton(
+                          'Your Devices (${_userDevices.length})',
+                          isActive: !_showDetails,
+                          onTap: () => setState(() => _showDetails = false),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
-          ),
-          SizedBox(height: 20),
-          Divider(color: Colors.grey[200], thickness: 2),
-          SizedBox(height: 10),
-          Expanded(
-            child: Padding(
+            SizedBox(height: 20),
+            Divider(color: Colors.grey[200], thickness: 2),
+            SizedBox(height: 10),
+            Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: _showDetails ? _buildDetailsSection() : _buildDevicesSection(),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -376,7 +387,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        constraints: BoxConstraints(
+          minHeight: 50,
+        ),
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
         decoration: BoxDecoration(
           color: isActive ? Color(0xFFFFDE59) : Colors.grey[200],
           borderRadius: BorderRadius.circular(20),
@@ -389,12 +403,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
           ],
         ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: isActive ? Colors.black : Colors.grey[700],
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isActive ? Colors.black : Colors.grey[700],
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ),
       ),
@@ -402,91 +423,94 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildDetailsSection() {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(vertical: 5),
-            child: Text(
-              'PERSONAL INFORMATION',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
-                color: Colors.grey[600],
-                letterSpacing: 1.5,
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(vertical: 5),
+          child: Text(
+            'PERSONAL INFORMATION',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: Colors.grey[600],
+              letterSpacing: 1.5,
             ),
           ),
-          SizedBox(height: 5),
-          _buildEditableField(
-            label: 'Name',
-            controller: _nameController,
-            isEditing: _isEditingName,
-            onEditPressed: () {
-              setState(() {
-                _isEditingName = true;
-                _isEditingAddress = false;
-              });
-            },
-          ),
-          SizedBox(height: 20),
-          Divider(color: Colors.grey[200], thickness: 1),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Address',
-                    style: TextStyle(
-                      fontFamily: 'Jost',
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black,
+        ),
+        SizedBox(height: 5),
+        _buildEditableField(
+          label: 'Name',
+          controller: _nameController,
+          isEditing: _isEditingName,
+          onEditPressed: () {
+            setState(() {
+              _isEditingName = true;
+              _isEditingAddress = false;
+            });
+          },
+        ),
+        SizedBox(height: 20),
+        Divider(color: Colors.grey[200], thickness: 1),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Address',
+                  style: TextStyle(
+                    fontFamily: 'Jost',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black,
+                  ),
+                ),
+                if (!_isEditingAddress)
+                  IconButton(
+                    icon: Icon(Icons.edit, size: 20, color: Colors.grey[600]),
+                    onPressed: () {
+                      setState(() {
+                        _isEditingAddress = true;
+                        _isEditingName = false;
+                      });
+                    },
+                  ),
+              ],
+            ),
+            SizedBox(height: 0),
+            _isEditingAddress
+                ? Column(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(
+                      color: Colors.deepOrange,
+                      width: 1,
                     ),
                   ),
-                  if (!_isEditingAddress)
-                    IconButton(
-                      icon: Icon(Icons.edit, size: 20, color: Colors.grey[600]),
-                      onPressed: () {
-                        setState(() {
-                          _isEditingAddress = true;
-                          _isEditingName = false;
-                        });
-                      },
+                  padding: EdgeInsets.symmetric(horizontal: 10),
+                  child: TextField(
+                    controller: _addressController,
+                    enabled: true,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
                     ),
-                ],
-              ),
-              SizedBox(height: 0),
-              _isEditingAddress
-                  ? Column(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(
-                        color: Colors.deepOrange,
-                        width: 1,
-                      ),
-                    ),
-                    padding: EdgeInsets.symmetric(horizontal: 10),
-                    child: TextField(
-                      controller: _addressController,
-                      enabled: true,
-                      decoration: InputDecoration(
-                        border: InputBorder.none,
-                      ),
-                      style: TextStyle(fontFamily: 'Jost'),
-                      onChanged: _onAddressChanged,
-                    ),
+                    style: TextStyle(fontFamily: 'Jost'),
+                    onChanged: _onAddressChanged,
                   ),
-                  if (_placePredictions.isNotEmpty)
-                    Container(
+                ),
+                if (_placePredictions.isNotEmpty)
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.3,
+                    ),
+                    child: Container(
                       width: double.infinity,
                       margin: EdgeInsets.only(top: 5),
                       decoration: BoxDecoration(
@@ -516,150 +540,151 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         },
                       ),
                     ),
-                  SizedBox(height: 10),
-                  GestureDetector(
-                    onTap: _getCurrentLocation,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Image.asset(
-                          'assets/location.png',
-                          height: 20,
-                          width: 20,
+                  ),
+                SizedBox(height: 10),
+                GestureDetector(
+                  onTap: _getCurrentLocation,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/location.png',
+                        height: 20,
+                        width: 20,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        "Use my current location",
+                        style: TextStyle(
+                          color: Color(0xFF8B8B8B),
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.underline,
                         ),
-                        SizedBox(width: 8),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+                : Padding(
+              padding: const EdgeInsets.only(left: 2.0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  _addressController.text.isNotEmpty ? _addressController.text : 'Not provided',
+                  style: TextStyle(
+                    fontFamily: 'Jost',
+                    fontSize: 16,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 20),
+        Divider(color: Colors.grey[200], thickness: 1),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(vertical: 10),
+          child: Text(
+            'NEAREST FIRE STATIONS',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: Colors.grey[600],
+              letterSpacing: 1.5,
+            ),
+          ),
+        ),
+        SizedBox(height: 10),
+        if (_updatingFireStations)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: Column(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 8),
+                Text(
+                  'Updating fire stations...',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
+          )
+        else if (_fireStations.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: Text(
+              'No fire stations found for your address',
+              style: TextStyle(color: Colors.grey),
+            ),
+          )
+        else
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: _fireStations.map((station) => Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12.0, top: 2.0),
+                    child: Image.asset(
+                      'assets/fire-station.png',
+                      width: 24,
+                      height: 24,
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          "Use my current location",
+                          station['name'] ?? 'Fire Station',
                           style: TextStyle(
-                            color: Color(0xFF8B8B8B),
-                            fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.underline,
+                            fontSize: 16,
                           ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          '${station['distance_km']} km away',
+                          style: TextStyle(color: Colors.grey[600]),
                         ),
                       ],
                     ),
                   ),
                 ],
-              )
-                  : Padding(
-                padding: const EdgeInsets.only(left: 2.0),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    _addressController.text.isNotEmpty ? _addressController.text : 'Not provided',
-                    style: TextStyle(
-                      fontFamily: 'Jost',
-                      fontSize: 16,
-                      color: Colors.black,
-                    ),
-                  ),
+              ),
+            )).toList(),
+          ),
+        if (_isEditingName || _isEditingAddress)
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: ElevatedButton(
+              onPressed: _updateUserData,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFFFFDE59),
+                minimumSize: Size(double.infinity, 45),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(40),
                 ),
               ),
-            ],
-          ),
-          SizedBox(height: 20),
-          Divider(color: Colors.grey[200], thickness: 1),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(vertical: 10),
-            child: Text(
-              'NEAREST FIRE STATIONS',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
-                color: Colors.grey[600],
-                letterSpacing: 1.5,
-              ),
-            ),
-          ),
-          SizedBox(height: 10),
-          if (_updatingFireStations)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16.0),
-              child: Column(
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 8),
-                  Text(
-                    'Updating fire stations...',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-            )
-          else if (_fireStations.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16.0),
               child: Text(
-                'No fire stations found for your address',
-                style: TextStyle(color: Colors.grey),
-              ),
-            )
-          else
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: _fireStations.map((station) => Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(right: 12.0, top: 2.0),
-                      child: Image.asset(
-                        'assets/fire-station.png',
-                        width: 24,
-                        height: 24,
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            station['name'] ?? 'Fire Station',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            '${station['distance_km']} km away',
-                            style: TextStyle(color: Colors.grey[600]),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              )).toList(),
-            ),
-          if (_isEditingName || _isEditingAddress)
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: ElevatedButton(
-                onPressed: _updateUserData,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFFFDE59),
-                  minimumSize: Size(double.infinity, 45),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(40),
-                  ),
-                ),
-                child: Text(
-                  'SAVE CHANGES',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                'SAVE CHANGES',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+        SizedBox(height: 20),
+      ],
     );
   }
 
@@ -752,84 +777,92 @@ class _ProfileScreenState extends State<ProfileScreen> {
               "Add a device or ask to be shared access",
               style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
+            SizedBox(height: 20),
           ],
         ),
       );
     }
 
-    return ListView.builder(
-      itemCount: _userDevices.length,
-      itemBuilder: (context, index) {
-        final device = _userDevices[index];
-        return Card(
-          margin: EdgeInsets.symmetric(vertical: 8),
-          elevation: 2,
-          color: Colors.orange[100],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Row(
-              children: [
-                Image.asset(
-                  'assets/PyroSentrix-Alarm.png',
-                  width: 30,
-                  height: 30,
-                ),
-                SizedBox(width: 15),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+    return Column(
+      children: [
+        ListView.builder(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          itemCount: _userDevices.length,
+          itemBuilder: (context, index) {
+            final device = _userDevices[index];
+            return Card(
+              margin: EdgeInsets.symmetric(vertical: 8),
+              elevation: 2,
+              color: Colors.orange[100],
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Row(
+                  children: [
+                    Image.asset(
+                      'assets/PyroSentrix-Alarm.png',
+                      width: 30,
+                      height: 30,
+                    ),
+                    SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            device.name,
-                            style: TextStyle(
-                              fontFamily: 'Jost',
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          if (device.isShared)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 8.0),
-                              child: Container(
-                                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue[50],
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  'Shared',
-                                  style: TextStyle(
-                                    color: Colors.blue[800],
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                          Row(
+                            children: [
+                              Text(
+                                device.name,
+                                style: TextStyle(
+                                  fontFamily: 'Jost',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
+                              if (device.isShared)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 8.0),
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue[50],
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'Shared',
+                                      style: TextStyle(
+                                        color: Colors.blue[800],
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'ID: ${device.productCode}',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 12,
+                              color: Colors.grey[600],
                             ),
+                          ),
                         ],
                       ),
-                      SizedBox(height: 4),
-                      Text(
-                        'ID: ${device.productCode}',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        );
-      },
+              ),
+            );
+          },
+        ),
+        SizedBox(height: 20),
+      ],
     );
   }
 }

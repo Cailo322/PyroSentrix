@@ -127,30 +127,33 @@ class _CustomDrawerState extends State<CustomDrawer> {
                     onTap: () {
                       _navigateToScreen(context, ProfileScreen());
                     },
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.5,
+                      ),
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundColor: Colors.deepOrange,
+                            child: Icon(Icons.person, size: 25, color: Colors.white),
                           ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 20,
-                                backgroundColor: Colors.deepOrange,
-                                child: Icon(Icons.person, size: 25, color: Colors.white),
-                              ),
-                              SizedBox(width: 10),
-                              Text(
-                                userName ?? 'Loading...',
-                                style: TextStyle(fontSize: 18, color: Colors.black),
-                              ),
-                            ],
+                          SizedBox(width: 10),
+                          Flexible(
+                            child: Text(
+                              userName ?? 'Loading...',
+                              style: TextStyle(fontSize: 18, color: Colors.black),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ],
