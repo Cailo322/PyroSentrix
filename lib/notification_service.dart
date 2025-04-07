@@ -76,6 +76,7 @@ class NotificationService {
       _productSubscriptions.remove(removedCode);
       _deviceTimers[removedCode]?.cancel();
       _deviceTimers.remove(removedCode);
+      _updateDeviceStatus(removedCode, false);
     });
     newProductCodes.difference(_activeProductCodes).forEach((newCode) {
       _productSubscriptions[newCode] = _monitorProductCode(newCode);
@@ -84,7 +85,6 @@ class NotificationService {
   }
 
   StreamSubscription<QuerySnapshot> _monitorProductCode(String productCode) {
-    _updateDeviceStatus(productCode, true);
     return _firestore
         .collection('SensorData')
         .doc('FireAlarm')
@@ -97,13 +97,14 @@ class NotificationService {
         final latestData = snapshot.docs.first.data();
         await _checkThresholds(latestData, productCode);
         _resetDeviceTimer(productCode);
+        _updateDeviceStatus(productCode, true);
       }
     });
   }
 
   void _resetDeviceTimer(String productCode) {
     _deviceTimers[productCode]?.cancel();
-    _deviceTimers[productCode] = Timer(const Duration(seconds: 20), () {
+    _deviceTimers[productCode] = Timer(const Duration(seconds: 13), () {
       _updateDeviceStatus(productCode, false);
     });
   }

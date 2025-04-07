@@ -17,7 +17,7 @@ class TrendAnalysisService {
   final Map<String, double> sensorThresholds = {
     'carbon_monoxide': 10.0,
     'indoor_air_quality': 15.0,
-    'smoke_level': 0.04,
+    'smoke_level': 0.02,
     'temperature_dht22': 3.0,
     'temperature_mlx90614': 3.0,
   };
