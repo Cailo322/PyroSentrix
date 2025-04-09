@@ -104,7 +104,7 @@ class NotificationService {
 
   void _resetDeviceTimer(String productCode) {
     _deviceTimers[productCode]?.cancel();
-    _deviceTimers[productCode] = Timer(const Duration(seconds: 13), () {
+    _deviceTimers[productCode] = Timer(const Duration(seconds: 17), () {
       _updateDeviceStatus(productCode, false);
     });
   }

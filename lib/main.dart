@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'splash_screen.dart';
 import 'devices.dart';
 import 'add_device.dart';
@@ -13,7 +14,7 @@ import 'custom_app_bar.dart';
 import 'queries.dart';
 import 'login.dart';
 import 'notification_service.dart';
-import 'status.dart'; // Add this import
+import 'status.dart';
 import 'trends.dart';
 import 'about.dart';
 import 'reset_system.dart';
@@ -21,6 +22,8 @@ import 'alarmlogs.dart';
 import 'device_provider.dart';
 import 'analytics.dart';
 import 'profile.dart';
+import 'connectivity_service.dart';
+import 'no_internet_popup.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,8 +38,8 @@ void main() async {
   final notificationService = NotificationService();
   await notificationService.initialize();
 
-  final statusMonitor = DeviceStatusMonitor(flutterLocalNotificationsPlugin); // New
-  await statusMonitor.initialize(); // New
+  final statusMonitor = DeviceStatusMonitor(flutterLocalNotificationsPlugin);
+  await statusMonitor.initialize();
 
   final trendAnalysisService = TrendAnalysisService();
   trendAnalysisService.initialize();
@@ -48,8 +51,9 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => DeviceProvider()),
+        ChangeNotifierProvider(create: (context) => ConnectivityService()),
         Provider<NotificationService>.value(value: notificationService),
-        Provider<DeviceStatusMonitor>.value(value: statusMonitor), // New
+        Provider<DeviceStatusMonitor>.value(value: statusMonitor),
         Provider<TrendAnalysisService>.value(value: trendAnalysisService),
       ],
       child: MyApp(isLoggedIn: isLoggedIn),
@@ -70,29 +74,29 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: isLoggedIn ? DevicesScreen() : SplashScreen(),
+      home: isLoggedIn ? InternetWrapper(child: DevicesScreen()) : SplashScreen(),
       onGenerateRoute: (settings) {
         switch (settings.name) {
           case '/MonitorScreen':
             final args = settings.arguments as String;
-            return _pageRouteBuilder(MonitorScreen(productCode: args), settings);
+            return _pageRouteBuilder(InternetWrapper(child: MonitorScreen(productCode: args)), settings);
           case '/AlarmLogScreen':
-            return _pageRouteBuilder(AlarmLogScreen(), settings);
+            return _pageRouteBuilder(InternetWrapper(child: AlarmLogScreen()), settings);
           case '/ResetSystemScreen':
-            return _pageRouteBuilder(ResetSystemScreen(), settings);
+            return _pageRouteBuilder(InternetWrapper(child: ResetSystemScreen()), settings);
           default:
             return null;
         }
       },
       routes: {
-        '/AddDeviceScreen': (context) => AddDeviceScreen(),
-        '/CallHelpScreen': (context) => CallHelpScreen(),
-        '/QueriesScreen': (context) => QueriesScreen(),
-        '/DevicesScreen': (context) => DevicesScreen(),
+        '/AddDeviceScreen': (context) => InternetWrapper(child: AddDeviceScreen()),
+        '/CallHelpScreen': (context) => InternetWrapper(child: CallHelpScreen()),
+        '/QueriesScreen': (context) => InternetWrapper(child: QueriesScreen()),
+        '/DevicesScreen': (context) => InternetWrapper(child: DevicesScreen()),
         '/LoginScreen': (context) => LoginScreen(),
-        '/AnalyticsScreen': (context) => AnalyticsScreen(),
-        '/AboutScreen': (context) => AboutScreen(),
-        '/ProfileScreen': (context) => ProfileScreen(),
+        '/AnalyticsScreen': (context) => InternetWrapper(child: AnalyticsScreen()),
+        '/AboutScreen': (context) => InternetWrapper(child: AboutScreen()),
+        '/ProfileScreen': (context) => InternetWrapper(child: ProfileScreen()),
       },
     );
   }
@@ -104,6 +108,29 @@ class MyApp extends StatelessWidget {
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         return child;
       },
+    );
+  }
+}
+
+class InternetWrapper extends StatelessWidget {
+  final Widget child;
+  const InternetWrapper({Key? key, required this.child}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final connectivity = Provider.of<ConnectivityService>(context);
+
+    return Stack(
+      children: [
+        child,
+        if (!connectivity.hasInternet)
+          const ModalBarrier(
+            color: Colors.black54,
+            dismissible: false,
+          ),
+        if (!connectivity.hasInternet)
+          const NoInternetPopup(),
+      ],
     );
   }
 }
