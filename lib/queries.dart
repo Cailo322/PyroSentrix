@@ -59,7 +59,7 @@ class _QueriesScreenState extends State<QueriesScreen> {
               SizedBox(height: 16), // Space between logo-title and the list
               _buildSectionTitle('About PyroSentrix'),
               _buildListTile('assets/OL_NB_Black.png', 'About PyroSentrix'), // Using the OL_NB_Black for About PyroSentrix
-              _buildListTileWithIcon(Icons.phone_android, 'Application Features'), // Restoring the phone icon for Application Features
+             // _buildListTileWithIcon(Icons.phone_android, 'Application Features'), // Restoring the phone icon for Application Features
               SizedBox(height: 16),
               _buildSectionTitle('Often Asked Questions'),
               _buildFaqTile(0, 'How to setup the Iot device?'),

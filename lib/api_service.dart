@@ -66,7 +66,7 @@ class ApiService {
         for (int i = 0; i < stations.length; i++) {
           stations[i]['distance_km'] = distances[i]['distance'];
           stations[i]['duration'] = distances[i]['duration'];
-          stations[i]['straight_distance_km'] = _calculateStraightDistance(
+          stations[i]['travel_distance_km'] = _calculateStraightDistance(
             location['lat']!,
             location['lng']!,
             stations[i]['location']['lat'],
@@ -75,7 +75,7 @@ class ApiService {
         }
 
         stations.sort((a, b) => double.parse(a['distance_km']).compareTo(double.parse(b['distance_km'])));
-        List<Map<String, dynamic>> topStations = stations.take(3).toList();
+        List<Map<String, dynamic>> topStations = stations.take(4).toList(); // Changed from 3 to 4 here
 
         for (var station in topStations) {
           try {
