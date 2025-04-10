@@ -85,7 +85,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> with SingleTickerProv
         return true;
       }
       return false;
-    } catch (e) {
+    } catch (e) { 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Scan failed: $e')),
