@@ -57,8 +57,8 @@ class _TutorialScreenState extends State<TutorialScreen> {
   ];
 
   int _currentIndex = 0;
-  late VideoPlayerController _videoPlayerController;
-  late ChewieController _chewieController;
+  VideoPlayerController? _videoPlayerController;
+  ChewieController? _chewieController;
   bool _isVideoInitialized = false;
 
   @override
@@ -67,63 +67,104 @@ class _TutorialScreenState extends State<TutorialScreen> {
     _initializeVideoPlayer();
   }
 
-  void _initializeVideoPlayer() {
-    _videoPlayerController = VideoPlayerController.asset(videoAssets[_currentIndex])
-      ..initialize().then((_) {
-        if (mounted) {
-          setState(() {
-            _isVideoInitialized = true;
-          });
+  Future<void> _initializeVideoPlayer() async {
+    await _disposeControllers();
+
+    final newController = VideoPlayerController.asset(videoAssets[_currentIndex]);
+
+    try {
+      await newController.initialize();
+      if (!mounted) return;
+
+      _videoPlayerController = newController;
+
+      _chewieController = ChewieController(
+        videoPlayerController: _videoPlayerController!,
+        autoPlay: true,
+        looping: false,
+        aspectRatio: 16 / 9,
+        placeholder: Container(
+          color: Colors.black,
+          child: const Center(child: CircularProgressIndicator()),
+        ),
+        autoInitialize: true,
+        errorBuilder: (context, errorMessage) {
+          return Center(
+            child: Text(
+              'Video playback error: ${errorMessage.split(':').last.trim()}',
+              style: const TextStyle(color: Colors.white),
+            ),
+          );
+        },
+        showControls: true,
+        materialProgressColors: ChewieProgressColors(
+          playedColor: const Color(0xFFFFDE59),
+          handleColor: const Color(0xFFFFDE59),
+          backgroundColor: Colors.grey,
+          bufferedColor: Colors.grey.withOpacity(0.5),
+        ),
+        // These settings help remove the loading indicator
+        hideControlsTimer: const Duration(seconds: 3),
+        allowMuting: false,
+        allowPlaybackSpeedChanging: false,
+        showControlsOnInitialize: true,
+        // Disable the default seeking animation
+        customControls: const CupertinoControls(
+          backgroundColor: Colors.transparent,
+          iconColor: Colors.white,
+        ),
+      );
+
+      // Listen to player events to prevent default seeking behavior
+      _videoPlayerController?.addListener(() {
+        if (_videoPlayerController?.value.isBuffering == true) {
+          // Force the player to not show buffering state
+          _videoPlayerController?.value = _videoPlayerController!.value.copyWith(
+            isBuffering: false,
+          );
         }
       });
 
-    _chewieController = ChewieController(
-      videoPlayerController: _videoPlayerController,
-      autoPlay: true,
-      looping: false,
-      aspectRatio: 16 / 9,
-      placeholder: _isVideoInitialized ? null : Container(
-        color: Colors.black,
-        child: const Center(child: CircularProgressIndicator()),
-      ),
-      autoInitialize: true,
-      errorBuilder: (context, errorMessage) {
-        return Center(
-          child: Text(
-            errorMessage,
-            style: const TextStyle(color: Colors.white),
-          ),
+      if (mounted) {
+        setState(() {
+          _isVideoInitialized = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load video: ${e.toString()}')),
         );
-      },
-      showControls: true,
-      materialProgressColors: ChewieProgressColors(
-        playedColor: const Color(0xFFFFDE59),
-        handleColor: const Color(0xFFFFDE59),
-        backgroundColor: Colors.grey,
-        bufferedColor: Colors.grey.withOpacity(0.5),
-      ),
-    );
+      }
+      await newController.dispose();
+    }
+  }
+
+  Future<void> _disposeControllers() async {
+    if (_chewieController != null) {
+      _chewieController!.dispose();
+      _chewieController = null;
+    }
+    if (_videoPlayerController != null) {
+      await _videoPlayerController!.dispose();
+      _videoPlayerController = null;
+    }
   }
 
   Future<void> _changeVideo(int newIndex) async {
-    if (newIndex >= 0 && newIndex < videoAssets.length) {
-      await _videoPlayerController.dispose();
-      _chewieController.dispose();
+    if (newIndex < 0 || newIndex >= videoAssets.length || !mounted) return;
 
-      if (mounted) {
-        setState(() {
-          _currentIndex = newIndex;
-          _isVideoInitialized = false;
-          _initializeVideoPlayer();
-        });
-      }
-    }
+    setState(() {
+      _currentIndex = newIndex;
+      _isVideoInitialized = false;
+    });
+
+    await _initializeVideoPlayer();
   }
 
   @override
   void dispose() {
-    _videoPlayerController.dispose();
-    _chewieController.dispose();
+    _disposeControllers();
     super.dispose();
   }
 
@@ -169,7 +210,12 @@ class _TutorialScreenState extends State<TutorialScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: AspectRatio(
                 aspectRatio: 16 / 9,
-                child: Chewie(controller: _chewieController),
+                child: _chewieController != null && _videoPlayerController?.value.isInitialized == true
+                    ? Chewie(controller: _chewieController!)
+                    : Container(
+                  color: Colors.black,
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
               ),
             ),
           ),
