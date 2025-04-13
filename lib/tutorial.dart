@@ -11,12 +11,49 @@ class TutorialScreen extends StatefulWidget {
 
 class _TutorialScreenState extends State<TutorialScreen> {
   final List<String> videoAssets = [
-    'assets/adduser.mp4',
     'assets/add-device.mp4',
+    'assets/adduser.mp4',
+    'assets/demo.mp4',
   ];
+
   final List<String> videoTitles = [
-    'How to Add a User',
     'How to Add a Device',
+    'How to Add a User',
+    'Emergency Response Demo',
+  ];
+
+  final List<TextSpan> videoSubtitles = [
+    TextSpan(
+      text: 'Users can register their IoT device to the app to start monitoring sensor data and receive real-time alerts.',
+    ),
+    TextSpan(
+      text: 'Owners of the IoT device can easily add fellow household members to share access and monitor the device together.',
+    ),
+    TextSpan(
+      children: [
+        const TextSpan(text: 'This demo takes you through the entire process: starting with a '),
+        TextSpan(
+          text: 'smart notification',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const TextSpan(text: ' that warns you of rising air quality, followed by an '),
+        TextSpan(
+          text: 'alarm trigger',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const TextSpan(text: ' once thresholds are exceeded. You\'ll also see how to '),
+        TextSpan(
+          text: 'call the fire station',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const TextSpan(text: ' and check your '),
+        TextSpan(
+          text: 'alarm history',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const TextSpan(text: ' for a complete safety response.'),
+      ],
+    ),
   ];
 
   int _currentIndex = 0;
@@ -33,12 +70,11 @@ class _TutorialScreenState extends State<TutorialScreen> {
   void _initializeVideoPlayer() {
     _videoPlayerController = VideoPlayerController.asset(videoAssets[_currentIndex])
       ..initialize().then((_) {
-        setState(() {
-          _isVideoInitialized = true;
-        });
-
-        // Add listener for video completion
-        _videoPlayerController.addListener(_videoListener);
+        if (mounted) {
+          setState(() {
+            _isVideoInitialized = true;
+          });
+        }
       });
 
     _chewieController = ChewieController(
@@ -46,9 +82,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
       autoPlay: true,
       looping: false,
       aspectRatio: 16 / 9,
-      placeholder: _isVideoInitialized
-          ? null
-          : Container(
+      placeholder: _isVideoInitialized ? null : Container(
         color: Colors.black,
         child: const Center(child: CircularProgressIndicator()),
       ),
@@ -61,46 +95,33 @@ class _TutorialScreenState extends State<TutorialScreen> {
           ),
         );
       },
-      // Show controls when video ends
       showControls: true,
-      // Customize the controls
       materialProgressColors: ChewieProgressColors(
-        playedColor: Colors.blue,
-        handleColor: Colors.blue,
+        playedColor: const Color(0xFFFFDE59),
+        handleColor: const Color(0xFFFFDE59),
         backgroundColor: Colors.grey,
         bufferedColor: Colors.grey.withOpacity(0.5),
       ),
     );
   }
 
-  void _videoListener() {
-    if (_videoPlayerController.value.isInitialized &&
-        !_videoPlayerController.value.isBuffering &&
-        !_videoPlayerController.value.isPlaying &&
-        _videoPlayerController.value.position == _videoPlayerController.value.duration) {
-      // Video ended - force show controls by rebuilding
-      setState(() {});
-    }
-  }
-
-  void _changeVideo(int newIndex) {
+  Future<void> _changeVideo(int newIndex) async {
     if (newIndex >= 0 && newIndex < videoAssets.length) {
-      // Remove old listener
-      _videoPlayerController.removeListener(_videoListener);
+      await _videoPlayerController.dispose();
+      _chewieController.dispose();
 
-      setState(() {
-        _currentIndex = newIndex;
-        _isVideoInitialized = false;
-        _videoPlayerController.dispose();
-        _chewieController.dispose();
-        _initializeVideoPlayer();
-      });
+      if (mounted) {
+        setState(() {
+          _currentIndex = newIndex;
+          _isVideoInitialized = false;
+          _initializeVideoPlayer();
+        });
+      }
     }
   }
 
   @override
   void dispose() {
-    _videoPlayerController.removeListener(_videoListener);
     _videoPlayerController.dispose();
     _chewieController.dispose();
     super.dispose();
@@ -113,21 +134,36 @@ class _TutorialScreenState extends State<TutorialScreen> {
         title: const Text('Video Tutorials'),
         centerTitle: true,
         elevation: 0,
+        backgroundColor: const Color(0xFFFFDE59),
       ),
       body: Column(
         children: [
-          // Video Title
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
-            child: Text(
-              videoTitles[_currentIndex],
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+            child: Column(
+              children: [
+                Text(
+                  videoTitles[_currentIndex],
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                RichText(
+                  text: TextSpan(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[800],
+                      height: 1.4,
+                    ),
+                    children: [videoSubtitles[_currentIndex]],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
-
-          // Video Player
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -137,37 +173,41 @@ class _TutorialScreenState extends State<TutorialScreen> {
               ),
             ),
           ),
-
-          // Navigation Controls
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 32.0),
+            padding: const EdgeInsets.fromLTRB(32, 16, 32, 32),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Back Button
                 ElevatedButton(
                   onPressed: _currentIndex > 0 ? () => _changeVideo(_currentIndex - 1) : null,
                   style: ElevatedButton.styleFrom(
                     shape: const CircleBorder(),
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(16),
+                    backgroundColor: _currentIndex > 0 ? const Color(0xFFFFDE59) : Colors.grey[400],
                   ),
-                  child: const Icon(Icons.arrow_back, size: 28),
+                  child: Icon(Icons.arrow_back, size: 28, color: _currentIndex > 0 ? Colors.black : Colors.white),
                 ),
-
-                // Progress Indicator
-                Text(
-                  '${_currentIndex + 1} of ${videoAssets.length}',
-                  style: Theme.of(context).textTheme.titleMedium,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFDE59).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${_currentIndex + 1} of ${videoAssets.length}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-
-                // Next Button
                 ElevatedButton(
                   onPressed: _currentIndex < videoAssets.length - 1 ? () => _changeVideo(_currentIndex + 1) : null,
                   style: ElevatedButton.styleFrom(
                     shape: const CircleBorder(),
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(16),
+                    backgroundColor: _currentIndex < videoAssets.length - 1 ? const Color(0xFFFFDE59) : Colors.grey[400],
                   ),
-                  child: const Icon(Icons.arrow_forward, size: 28),
+                  child: Icon(Icons.arrow_forward, size: 28, color: _currentIndex < videoAssets.length - 1 ? Colors.black : Colors.white),
                 ),
               ],
             ),
