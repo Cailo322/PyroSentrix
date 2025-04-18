@@ -30,6 +30,7 @@ void main() async {
   await Firebase.initializeApp();
   await FlutterDownloader.initialize();
 
+
   // Initialize notifications plugin
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
   FlutterLocalNotificationsPlugin();
