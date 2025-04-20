@@ -24,6 +24,7 @@ import 'analytics.dart';
 import 'profile.dart';
 import 'connectivity_service.dart';
 import 'no_internet_popup.dart';
+import 'tutorial.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -98,7 +99,7 @@ class MyApp extends StatelessWidget {
         '/AnalyticsScreen': (context) => InternetWrapper(child: AnalyticsScreen()),
         '/AboutScreen': (context) => InternetWrapper(child: AboutScreen()),
         '/ProfileScreen': (context) => InternetWrapper(child: ProfileScreen()),
-      },
+        '/TutorialScreen': (context) => InternetWrapper(child: TutorialScreen()),      },
     );
   }
 
