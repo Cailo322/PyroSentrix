@@ -16,6 +16,7 @@ Device status
 The app provides users with real-time monitoring, immediate alarms, predictive fire risk warnings, and emergency assistance tools — all designed to enhance fire safety.
 
 Features
+
 🔥 Real-Time Monitoring
 Continuously displays live sensor data sent by the IoT device.
 
