@@ -54,10 +54,3 @@ Firebase Firestore (Real-time database)
 Python (LSTM Model) (Cloud function integration)
 
 Google APIs (Fire station locator)
-graph TD;
-    IoT_Device -->|Sensor Data| Firebase_Firestore
-    Firebase_Firestore -->|Fetch Data| PyroSentrix_App
-    PyroSentrix_App -->|Display| User
-    Firebase_Firestore -->|Send Data| LSTM_Model
-    LSTM_Model -->|Predict Trend| PyroSentrix_App
-    PyroSentrix_App -->|Send Notification| User
