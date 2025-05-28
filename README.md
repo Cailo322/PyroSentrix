@@ -1,5 +1,5 @@
 # 🔥 PyroSentrix  
-*Mobile Application with Multi-Sensor Internet of Things (IoT) Device for Smoke and Heat Detection Using Long Short-Term Memory (LSTM)
+Mobile Application with Multi-Sensor Internet of Things (IoT) Device for Smoke and Heat Detection Using Long Short-Term Memory (LSTM)
 
 
 ---
