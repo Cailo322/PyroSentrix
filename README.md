@@ -35,9 +35,10 @@
   - Displays real-time sensor values using color-coded levels based on thresholds.
 - **Data Visualization & Insights**  
   - Built-in dashboard with user-friendly visualizations and analytics
-- **Immediate Alarm Notification**  
+- **Alarm Notification**  
   - Sounds an alarm on both the device and mobile app  
   - Captures and displays the image from the IoT device
+  - Shows a popup for what sensor is triggered, image captured, and call button to call the nearest firestation
 - **Smart Prediction Alerts (LSTM-based)**  
   - LSTM model trained on 60,000+ real sensor readings (R² score: **85%**)  
   - Predicts **rising trends in sensor data** to alert users *before* danger thresholds are reached
@@ -86,17 +87,7 @@
 
 ---
 
-## 📈 Future Improvements
-
-- Fine-tune LSTM for multi-class fire risk classification  
-- Add SMS or voice-call alert capabilities  
-- Integrate auto emergency dialer for critical events  
-- Offline mode & battery backup alerts  
-- Expand maps/fire station database for rural areas
-
----
-
-## 👨‍💻 Authors
+## 👨‍💻 Developers
 
 **PyroSentrix Capstone Project**  
 Capstone 2 — BS Information Technology  
