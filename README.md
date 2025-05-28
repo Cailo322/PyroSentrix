@@ -103,7 +103,7 @@ Capstone 2 — BS Information Technology
 Technological Institute of the Philippines (TIP)
 
 Developed by:
-- Cailo Nehru P. Ongsicako  
-- Veronica Maxine D. Parags  
+- Cailo Nehru P. Ongsiako  
+- Veronica Maxine D. Paragas  
 - Jasper Casile
 
