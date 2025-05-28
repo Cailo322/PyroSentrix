@@ -28,6 +28,7 @@
 - Powered by data collected from the IoT device and stored in **BigQuery**
 - Predicts sensor value trends to generate **early warning notifications** before critical levels are reached
 - Achieved **85% R² score** on test data
+  
 
 ### 🔧 IoT Device (ESP32-based)
 - Equipped with **5 sensors**:  
@@ -38,6 +39,7 @@
   - 💧 Humidity  
 - 📸 **Built-in Camera**: Automatically captures an image when the alarm is triggered.
 - 📶 **Wi-Fi Setup via QR Code** for easy connectivity.
+  
 
 ### 📱 Mobile Application (Flutter)
 - **Live Sensor Dashboard**  
