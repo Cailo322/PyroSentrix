@@ -33,6 +33,8 @@
 ### 📱 Mobile Application (Flutter)
 - **Live Sensor Dashboard**  
   - Displays real-time sensor values using color-coded levels based on thresholds.
+- **Data Visualization & Insights**  
+  - Built-in dashboard with user-friendly visualizations and analytics
 - **Immediate Alarm Notification**  
   - Sounds an alarm on both the device and mobile app  
   - Captures and displays the image from the IoT device
@@ -47,9 +49,7 @@
   - Remotely **reset** or **hush** the alarm from the mobile app
 - **Household Sharing**  
   - Owners can **invite household members** to monitor the device from their own phones
-- **Data Visualization & Insights**  
-  - Built-in dashboard with user-friendly visualizations and analytics
-
+    
 ---
 
 ## 🧠 LSTM Integration
