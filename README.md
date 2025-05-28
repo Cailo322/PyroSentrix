@@ -92,23 +92,18 @@
 - Add SMS or voice-call alert capabilities  
 - Integrate auto emergency dialer for critical events  
 - Offline mode & battery backup alerts  
-- Expand maps/fire station database for rural areas  
+- Expand maps/fire station database for rural areas
 
 ---
 
-## 👨‍💻 Author
-
+## 👨‍💻 Authors
 
 **PyroSentrix Capstone Project**  
 Capstone 2 — BS Information Technology  
-[Your School Name]
+Technological Institute of the Philippines (TIP)
 
----
+Developed by:
+- Cailo Nehru P. Ongsicako  
+- Veronica Maxine D. Parags  
+- Jasper Casile
 
-## 📬 Contact
-
-For questions, feedback, or collaboration:  
-📧 [YourEmail@example.com]  
-🔗 [LinkedIn Profile or GitHub Profile] *(optional)*
-
----
