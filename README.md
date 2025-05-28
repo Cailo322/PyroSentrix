@@ -21,7 +21,7 @@
 
 ## 📦 Key Features
 
-## 📊 LSTM Integration
+### 📊 LSTM Integration
 - Trained on **60,000 rows** of sensor data using Python in Google Colab.
 - Analyzed sensor data to identify upward trends indicating rising sensor values.
 - Deployed using **Google Cloud Platform (GCP)**
