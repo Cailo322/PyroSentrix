@@ -1,57 +1,114 @@
-# pyrosentrixapp
+# 🔥 PyroSentrix  
+*A Mobile Monitoring Application with Multi-Sensor IoT Fire Detection Using LSTM Prediction*
 
-PyroSentrix Mobile Application
-PyroSentrix is a mobile application that connects to a custom IoT-based multi-sensor fire alarm system through Firebase Firestore. It fetches and displays:
+---
 
-Sensor values (e.g., Carbon Monoxide, Humidity, IAQ, Smoke, Temperature)
+## 🚀 Project Overview
 
-Alarm logs
+**PyroSentrix** is a smart fire monitoring system that integrates a multi-sensor IoT device with a mobile application, enhanced by machine learning (LSTM). The system is designed to **advance traditional fire alarm systems** by providing **real-time sensor data, intelligent early warnings, and user-friendly mobile monitoring** — reducing fire-related risks before they escalate.
 
-Smart notifications
+---
 
-Threshold values (researched and approved by an expert)
+## 🎯 Objectives
 
-Device status
+- Improve fire detection accuracy and responsiveness
+- Provide predictive fire risk alerts using LSTM
+- Enable mobile monitoring of real-time sensor data
+- Assist in proactive decision-making through smart insights and visualizations
 
-The app provides users with real-time monitoring, immediate alarms, predictive fire risk warnings, and emergency assistance tools — all designed to enhance fire safety.
+---
 
-Features
+## 📦 Key Features
 
-🔥 Real-Time Monitoring
-Continuously displays live sensor data sent by the IoT device.
+### 🔧 IoT Device (ESP32-based)
+- Equipped with **5 sensors**:  
+  - 🔥 Temperature  
+  - 💨 Smoke  
+  - ☠️ Carbon Monoxide (CO)  
+  - 🌫️ Air Quality  
+  - 💧 Humidity  
+- 📸 **Built-in Camera**: Automatically captures an image when the alarm is triggered.
+- 📶 **Wi-Fi Setup via QR Code** for easy connectivity.
 
-🔥 Smart Fire Detection (LSTM Integration)
-Integrated with a Long Short-Term Memory (LSTM) model trained on 60,000+ rows of real-world sensor data.
+### 📱 Mobile Application (Flutter)
+- **Live Sensor Dashboard**  
+  - Displays real-time sensor values using color-coded levels based on thresholds.
+- **Immediate Alarm Notification**  
+  - Sounds an alarm on both the device and mobile app  
+  - Captures and displays the image from the IoT device
+- **Smart Prediction Alerts (LSTM-based)**  
+  - LSTM model trained on 60,000+ real sensor readings (R² score: **85%**)  
+  - Predicts **rising trends in sensor data** to alert users *before* danger thresholds are reached
+- **Fire Station Locator**  
+  - Uses **Google Maps API** to fetch contact info for the **4 nearest fire stations** based on user location
+- **Alarm History**  
+  - Saves past incident logs and alarm triggers
+- **Device Controls**  
+  - Remotely **reset** or **hush** the alarm from the mobile app
+- **Household Sharing**  
+  - Owners can **invite household members** to monitor the device from their own phones
+- **Data Visualization & Insights**  
+  - Built-in dashboard with user-friendly visualizations and analytics
 
-Achieved an R² score of 83% during model evaluation.
+---
 
-Sends smart notifications when predicted sensor values show an upward trend, indicating an increased fire risk.
+## 🧠 LSTM Integration
 
-🔥 Threshold-Based Alarms
-Instant alerts when actual sensor readings exceed predefined critical thresholds.
+- Trained using **Python on Google Colab**
+- Deployed using **Google Cloud Platform (GCP)**
+- Powered by data collected from the IoT device and stored in **BigQuery**
+- Predicts sensor value trends to generate **early warning notifications** before critical levels are reached
+- Achieved **85% R² score** on test data
 
-Thresholds are carefully researched and validated by an expert to ensure reliable fire detection.
+---
 
-🔥 Fire Station Locator
-Integrated with Google APIs to automatically fetch the four nearest fire stations based on the user's address.
+## ☁️ Cloud Architecture
 
-Displays the fire stations' names and contact numbers for quick emergency access.
+| Component              | Platform/Tool                 |
+|------------------------|-------------------------------|
+| Realtime DB            | Firebase Firestore            |
+| Hosting & Functions    | Firebase / Google Cloud       |
+| ML Model Deployment    | Google Cloud Platform (GCP)   |
+| Data Storage for ML    | BigQuery                      |
+| Maps & Location        | Google Maps API               |
 
-About the IoT Device
-The PyroSentrix IoT device is a custom-built multi-sensor fire detection unit designed for home and kitchen environments.
-It continuously collects environmental data to detect early signs of fire through:
+---
 
-Direct threshold checks (immediate alarm)
+## 🛠 Tech Stack
 
-Predictive trend analysis (smart warning)
+| Layer        | Tools Used                           |
+|--------------|--------------------------------------|
+| IoT Hardware | ESP32, DHT11, MQ2, MQ135, Camera     |
+| Backend      | Firebase Firestore, Cloud Functions  |
+| Frontend     | Flutter (Dart)                       |
+| ML Model     | Python (LSTM, Google Colab)          |
+| Cloud Tools  | Google Cloud Platform, BigQuery, Maps API |
 
-The device sends sensor data to Firebase Firestore every 10 seconds, ensuring real-time updates to the mobile app.
+---
 
-Technologies Used
-Flutter (Mobile Application)
+## 📈 Future Improvements
 
-Firebase Firestore (Real-time database)
+- Fine-tune LSTM for multi-class fire risk classification  
+- Add SMS or voice-call alert capabilities  
+- Integrate auto emergency dialer for critical events  
+- Offline mode & battery backup alerts  
+- Expand maps/fire station database for rural areas  
 
-Python (LSTM Model) (Cloud function integration)
+---
 
-Google APIs (Fire station locator)
+## 👨‍💻 Author
+
+
+**PyroSentrix Capstone Project**  
+Capstone 2 — BS Information Technology  
+[Your School Name]
+
+---
+
+## 📬 Contact
+
+For questions, feedback, or collaboration:  
+📧 [YourEmail@example.com]  
+🔗 [LinkedIn Profile or GitHub Profile] *(optional)*
+
+---
