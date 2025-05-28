@@ -1,5 +1,6 @@
 # 🔥 PyroSentrix  
-*A Mobile Monitoring Application with Multi-Sensor IoT Fire Detection Using LSTM Prediction*
+*Mobile Application with Multi-Sensor Internet of Things (IoT) Device for Smoke and Heat Detection Using Long Short-Term Memory (LSTM)
+
 
 ---
 
