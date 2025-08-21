@@ -98,5 +98,5 @@ Technological Institute of the Philippines (TIP)
 Developed by:
 - Cailo Nehru P. Ongsiako  
 - Veronica Maxine D. Paragas  
-- Jasper Casile
+- Jasper Riley P. Casile
 
